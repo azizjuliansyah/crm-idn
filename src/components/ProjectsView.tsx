@@ -80,7 +80,7 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
           *,
           client:clients(*),
           lead_profile:profiles!projects_lead_id_fkey(*),
-          team_members:project_team_members(user_id, profiles(*))
+          team_members:project_team_members(user_id, profile:profiles(*))
         `)
         .eq('pipeline_id', pipelineId)
         .order('id', { ascending: false });
@@ -294,8 +294,8 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
                            </div>
                            <div className="flex -space-x-2">
                               {p.team_members?.slice(0, 3).map((tm, idx) => (
-                                <div key={idx} className="w-7 h-7 rounded-full bg-white border border-gray-200 flex items-center justify-center text-[8px] font-bold text-gray-400" title={tm.profiles?.full_name}>
-                                  {tm.profiles?.full_name.charAt(0)}
+                                <div key={idx} className="w-7 h-7 rounded-full bg-white border border-gray-200 flex items-center justify-center text-[8px] font-bold text-gray-400" title={tm.profile?.full_name}>
+                                  {tm.profile?.full_name.charAt(0)}
                                 </div>
                               ))}
                               {(p.team_members?.length || 0) > 3 && (
@@ -387,8 +387,8 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
                                  {p.lead_profile?.full_name.charAt(0)}
                               </div>
                               {p.team_members?.slice(0, 2).map((tm, idx) => (
-                                <div key={idx} className="w-6 h-6 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center text-[7px] font-bold text-gray-400" title={tm.profiles?.full_name}>
-                                  {tm.profiles?.full_name.charAt(0)}
+                                <div key={idx} className="w-6 h-6 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center text-[7px] font-bold text-gray-400" title={tm.profile?.full_name}>
+                                  {tm.profile?.full_name.charAt(0)}
                                 </div>
                               ))}
                            </div>

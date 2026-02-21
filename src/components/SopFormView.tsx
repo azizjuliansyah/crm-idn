@@ -53,7 +53,7 @@ export const SopFormView: React.FC<Props> = ({ company, sopId }) => {
               .sort((a: any, b: any) => a.sort_order - b.sort_order);
             
             if (contentSteps.length > 0) {
-                setSteps(contentSteps.map((s, i) => ({ ...s, sort_order: i + 1 })));
+                setSteps(contentSteps.map((s: any, i: number) => ({ ...s, sort_order: i + 1 })));
             }
           }
         }

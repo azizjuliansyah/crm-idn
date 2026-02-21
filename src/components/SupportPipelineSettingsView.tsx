@@ -99,9 +99,7 @@ export const SupportPipelineSettingsView: React.FC<Props> = ({ company }) => {
         id: s.id, 
         company_id: company.id, 
         name: s.name, 
-        sort_order: i + 1,
-        // Preserve other fields
-        color: s.color 
+        sort_order: i + 1
     }));
     
     await supabase.from('support_stages').upsert(updates);

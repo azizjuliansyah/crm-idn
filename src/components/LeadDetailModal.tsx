@@ -49,7 +49,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
     try {
       const { data } = await supabase
         .from('lead_activities')
-        .select('*, profiles(*)')
+        .select('*, profile:profiles(*)')
         .eq('lead_id', lead.id)
         .order('created_at', { ascending: false });
       if (data) setActivities(data);
@@ -308,7 +308,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                            </div>
                            <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
-                                 <span className="text-xs font-bold text-gray-900">{act.profiles?.full_name}</span>
+                                 <span className="text-xs font-bold text-gray-900">{act.profile?.full_name}</span>
                                  <span className="text-[9px] font-bold text-gray-300 uppercase">
                                     {new Date(act.created_at).toLocaleDateString('id-ID', { month: 'short', day: 'numeric' })}
                                  </span>

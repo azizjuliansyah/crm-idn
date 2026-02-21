@@ -226,7 +226,7 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-2">
                        <User size={12} className="text-gray-300" />
-                       <span className="text-[11px] font-bold text-gray-600">{r.profiles?.full_name}</span>
+                       <span className="text-[11px] font-bold text-gray-600">{r.profile?.full_name}</span>
                     </div>
                   </td>
                   <td className="px-8 py-6 text-center">

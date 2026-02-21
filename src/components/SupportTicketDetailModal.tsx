@@ -34,7 +34,7 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
     if (!ticket?.id) return;
     setLoadingActivities(true);
     try {
-      const { data } = await supabase.from('lead_activities').select('*, profiles(*)').eq('ticket_id', ticket.id).order('created_at', { ascending: false });
+      const { data } = await supabase.from('lead_activities').select('*, profile:profiles(*)').eq('ticket_id', ticket.id).order('created_at', { ascending: false });
       if (data) setActivities(data as any);
     } finally {
       setLoadingActivities(false);
@@ -178,7 +178,7 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
                          {i < activities.length - 1 && <div className="absolute left-[17.5px] top-6 bottom-[-24px] w-px bg-gray-100"></div>}
                          <div className="shrink-0"><div className="w-9 h-9 rounded border border-gray-200 bg-white flex items-center justify-center text-gray-400">{act.activity_type === 'status_change' ? <RefreshCw size={14} className="text-blue-500" /> : <MessageSquare size={14} />}</div></div>
                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1"><span className="text-xs font-bold text-gray-900">{act.profiles?.full_name}</span><span className="text-[9px] font-bold text-gray-300 uppercase">{new Date(act.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span></div>
+                            <div className="flex items-center gap-2 mb-1"><span className="text-xs font-bold text-gray-900">{act.profile?.full_name}</span><span className="text-[9px] font-bold text-gray-300 uppercase">{new Date(act.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span></div>
                             <p className={`text-[12px] font-medium leading-relaxed ${act.activity_type === 'status_change' ? 'text-gray-400 italic' : 'text-gray-600'}`}>{act.content}</p>
                          </div>
                       </div>
@@ -204,7 +204,7 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
                 <div className="space-y-1.5"><label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider ml-0.5">Judul Ticket</label><input type="text" value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full h-11 bg-gray-50 border border-gray-100 rounded-sm px-4 text-xs font-bold outline-none focus:bg-white focus:border-rose-400 transition-all shadow-inner" /></div>
                 <div className="grid grid-cols-2 gap-4">
                    <div className="space-y-1.5"><label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider ml-0.5">Client Terkait</label><select value={form.client_id || ''} onChange={e => setForm({...form, client_id: Number(e.target.value)})} className="w-full h-11 bg-gray-50 border border-gray-100 rounded-sm px-3 text-xs font-bold outline-none focus:bg-white focus:border-rose-400 transition-all cursor-pointer">{clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-                   <div className="space-y-1.5"><label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider ml-0.5">Assigned Tim</label><select value={form.assigned_id || ''} onChange={e => setForm({...form, assigned_id: e.target.value})} className="w-full h-11 bg-gray-50 border border-gray-100 rounded-sm px-3 text-xs font-bold outline-none focus:bg-white focus:border-rose-400 transition-all cursor-pointer">{members.map(m => m.profiles && <option key={m.profiles.id} value={m.profiles.id}>{m.profiles.full_name}</option>)}</select></div>
+                   <div className="space-y-1.5"><label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider ml-0.5">Assigned Tim</label><select value={form.assigned_id || ''} onChange={e => setForm({...form, assigned_id: e.target.value})} className="w-full h-11 bg-gray-50 border border-gray-100 rounded-sm px-3 text-xs font-bold outline-none focus:bg-white focus:border-rose-400 transition-all cursor-pointer">{members.map(m => m.profile && <option key={m.profile.id} value={m.profile.id}>{m.profile.full_name}</option>)}</select></div>
                 </div>
                 <div className="space-y-1.5"><label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider ml-0.5">Deskripsi Kendala</label><textarea value={form.description || ''} onChange={e => setForm({...form, description: e.target.value})} className="w-full min-h-[140px] bg-gray-50 border border-gray-100 rounded-sm p-4 text-xs font-medium outline-none focus:bg-white focus:border-rose-400 transition-all resize-none shadow-inner" /></div>
              </div>

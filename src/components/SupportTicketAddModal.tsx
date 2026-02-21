@@ -22,7 +22,7 @@ export const SupportTicketAddModal: React.FC<Props> = ({
     title: '',
     description: '',
     client_id: null,
-    assigned_id: members[0]?.profiles?.id || '',
+    assigned_id: members[0]?.profile?.id || '',
     status: stages[0]?.name.toLowerCase() || 'open',
     priority: 'normal',
     type: 'ticket'
@@ -44,7 +44,7 @@ export const SupportTicketAddModal: React.FC<Props> = ({
       if (error) throw error;
       onSuccess();
       onClose();
-      setForm({ title: '', description: '', client_id: null, assigned_id: members[0]?.profiles?.id || '', status: stages[0]?.name.toLowerCase() || 'open', priority: 'normal', type: 'ticket' });
+      setForm({ title: '', description: '', client_id: null, assigned_id: members[0]?.profile?.id || '', status: stages[0]?.name.toLowerCase() || 'open', priority: 'normal', type: 'ticket' });
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -107,7 +107,7 @@ export const SupportTicketAddModal: React.FC<Props> = ({
            <div className="space-y-2">
               <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Assign ke Tim Support</label>
               <select value={form.assigned_id || ''} onChange={e => setForm({...form, assigned_id: e.target.value})} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-xl font-bold outline-none cursor-pointer focus:bg-white transition-all">
-                {members.map(m => m.profiles && <option key={m.profiles.id} value={m.profiles.id}>{m.profiles.full_name}</option>)}
+                {members.map(m => m.profile && <option key={m.profile.id} value={m.profile.id}>{m.profile.full_name}</option>)}
               </select>
            </div>
            <div className="space-y-2">

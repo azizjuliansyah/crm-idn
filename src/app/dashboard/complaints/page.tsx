@@ -6,6 +6,6 @@ import { ComplaintsView } from '@/components/ComplaintsView';
 
 export default function ComplaintsPage() {
   const { activeCompany, user } = useDashboard();
-  if (!user) return null;
+  if (!user || !activeCompany) return null;
   return <ComplaintsView activeCompany={activeCompany} activeView="complaints" user={user} />;
 }

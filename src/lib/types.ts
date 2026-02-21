@@ -161,7 +161,7 @@ export interface LeadActivity {
   content: string;
   activity_type: 'comment' | 'status_change' | 'system';
   created_at: string;
-  profiles?: Profile;
+  profile?: Profile;
 }
 
 export interface Client {
@@ -352,7 +352,7 @@ export interface InvoiceRequest {
   status: 'Pending' | 'Approved' | 'Rejected';
   notes?: string;
   created_at: string;
-  profiles?: Profile;
+  profile?: Profile;
   client?: Client;
   quotation?: { number: string };
   proforma?: { number: string };
@@ -402,7 +402,7 @@ export interface Project {
   created_at: string;
   client?: Client;
   lead_profile?: Profile;
-  team_members?: { user_id: string; profiles?: Profile }[];
+  team_members?: { user_id: string; profile?: Profile }[];
 }
 
 export interface TaskStage {
@@ -427,7 +427,7 @@ export interface Task {
 }
 
 export interface SupportStage {
-  id: string;
+  id: number;
   company_id: number;
   name: string;
   sort_order: number;

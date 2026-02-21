@@ -159,7 +159,7 @@ export const KnowledgeBaseChat: React.FC<Props> = ({
         }
       });
 
-      const botMsg = response.response.text() || 'Maaf, saya tidak dapat memproses jawaban saat ini.';
+      const botMsg = response?.text || 'Maaf, saya tidak dapat memproses jawaban saat ini.';
       setChatMessages(prev => [...prev, { role: 'bot', text: botMsg, references: relevantArticles }]);
     } catch (err: any) {
       console.error("AI Error:", err);

@@ -40,7 +40,7 @@ export const DealDetailModal: React.FC<Props> = ({
     setLoadingActivities(true);
     try {
       const { data, error } = await supabase
-        .from('lead_activities').select('*, profiles(*)').eq('deal_id', deal.id).order('created_at', { ascending: false });
+        .from('lead_activities').select('*, profile:profiles(*)').eq('deal_id', deal.id).order('created_at', { ascending: false });
       
       if (error) {
         console.error("Fetch Activities Error:", error);
@@ -336,7 +336,7 @@ export const DealDetailModal: React.FC<Props> = ({
                            </div>
                            <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
-                                 <span className="text-xs font-bold text-gray-900">{act.profiles?.full_name}</span>
+                                 <span className="text-xs font-bold text-gray-900">{act.profile?.full_name}</span>
                                  <span className="text-[9px] font-bold text-gray-300 uppercase">
                                     {new Date(act.created_at).toLocaleDateString('id-ID', { month: 'short', day: 'numeric' })}
                                  </span>

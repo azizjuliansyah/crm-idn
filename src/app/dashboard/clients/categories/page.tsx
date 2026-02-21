@@ -6,5 +6,6 @@ import { ClientCompanyCategoriesSettingsView } from '@/components/ClientCompanyC
 
 export default function ClientCompanyCategoriesPage() {
   const { activeCompany } = useDashboard();
+  if (!activeCompany) return null;
   return <ClientCompanyCategoriesSettingsView company={activeCompany} />;
 }

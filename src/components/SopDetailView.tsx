@@ -208,7 +208,7 @@ export const SopDetailView: React.FC<Props> = ({ company, sopId }) => {
       theme: 'grid'
     });
 
-    const tableBody = [];
+    const tableBody: any[][] = [];
     tableBody.push(["MULAI", "", "", ""]);
     if (contentSteps) {
         for (let i = 0; i < contentSteps.length; i++) {

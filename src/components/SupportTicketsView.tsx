@@ -50,7 +50,7 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
         supabase.from('support_tickets').select('*, assigned_profile:profiles(*), client:clients(*)').eq('company_id', company.id).order('id', { ascending: false }),
         supabase.from('support_stages').select('*').eq('company_id', company.id).order('sort_order', { ascending: true }),
         supabase.from('clients').select('*').eq('company_id', company.id).order('name'),
-        supabase.from('company_members').select('*, profiles(*)').eq('company_id', company.id)
+        supabase.from('company_members').select('*, profile:profiles(*)').eq('company_id', company.id)
       ]);
 
       if (ticketsRes.data) setTickets(ticketsRes.data as SupportTicket[]);
