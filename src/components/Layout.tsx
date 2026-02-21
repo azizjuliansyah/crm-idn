@@ -144,7 +144,7 @@ export const Layout: React.FC<LayoutProps> = ({
           setUserPermissions(perms);
         } else if (isAdmin) {
           setUserPermissions(ALL_POSSIBLE_MENU_LABELS);
-          setCurrentRoleName('Owner (Admin Platform)');
+          setCurrentRoleName('Super Admin');
         } else {
           setUserPermissions(['Dashboard', 'Data Client', 'Perusahaan Client', 'Produk', 'Penjualan', 'Knowledge Base', 'Customer Support', 'SOP', 'AI Assistant']);
           setCurrentRoleName('Member');
@@ -256,7 +256,7 @@ export const Layout: React.FC<LayoutProps> = ({
               <div className="flex-1 text-left overflow-hidden">
                 <p className="text-[10px] text-gray-400 font-medium uppercase tracking-[0.15em] mb-1">Workspace</p>
                 <h1 className="text-[13px] font-medium text-gray-900 truncate tracking-tight">
-                  {(!activeCompany && isAdmin) ? platformSettings.name : (activeCompany?.name || 'Pilih Tim')}
+                  {(!activeCompany && isAdmin) ? 'Platform Central' : (activeCompany?.name || 'Pilih Tim')}
                 </h1>
               </div>
               <ChevronDown size={14} className={`text-gray-300 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
@@ -450,44 +450,54 @@ export const Layout: React.FC<LayoutProps> = ({
 
               {canShow('AI Assistant') && renderMenuItem('ai_assistant', 'AI Assistant', <Sparkles />, 'bg-indigo-600')}
 
-              <div className="space-y-0.5">
-                <button onClick={() => setIsSettingsOpen(!isSettingsOpen)} className="w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all text-gray-500 hover:bg-gray-50 font-medium">
-                  <div className="flex items-center gap-4">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-50 text-white shadow-md"><Settings size={14} className="text-amber-500" /></div>
-                    <span className="text-[13px] tracking-tight">Workspace Setup</span>
-                  </div>
-                  <ChevronRight size={14} className={`transition-transform duration-200 ${isSettingsOpen ? 'rotate-90 text-blue-500' : ''}`} />
-                </button>
-                {isSettingsOpen && (
-                  <div className="pl-4 space-y-0.5 mt-0.5 ml-6 animate-in slide-in-from-top-1 pb-4">
-                    {canShow('Perusahaan') && renderSubMenuLevel1('pengaturan_perusahaan', 'Identitas Umum', <Building2 />, activeView === 'pengaturan_perusahaan')}
-                    {canShow('Konfigurasi Email') && renderSubMenuLevel1('workspace_email_config', 'Konfigurasi Email', <Mail />, activeView === 'workspace_email_config')}
-                    {canShow('Anggota Tim') && renderSubMenuLevel1('anggota_tim', 'Anggota Tim', <Users />, activeView === 'anggota_tim')}
-                    {canShow('Manajemen Role') && renderSubMenuLevel1('manajemen_role', 'Manajemen Role', <ShieldAlert />, activeView === 'manajemen_role')}
-                    {canShow('Pengaturan Leads') && renderSubMenuLevel1('pengaturan_leads', 'Leads Pipeline', <Target />, activeView === 'pengaturan_leads')}
-                    {canShow('Pengaturan Sumber Leads') && renderSubMenuLevel1('pengaturan_sumber_leads', 'Lead Sources', <Globe />, activeView === 'pengaturan_sumber_leads')}
-                    {canShow('Pengaturan Deals Pipeline') && renderSubMenuLevel1('pengaturan_deals_pipeline', 'Deals Pipeline', <Layers />, activeView === 'pengaturan_deals_pipeline')}
-                    {canShow('Project Pipeline') && renderSubMenuLevel1('pengaturan_project_pipeline', 'Project Pipeline', <Workflow />, activeView === 'pengaturan_project_pipeline')}
-                    {canShow('Task Pipeline') && renderSubMenuLevel1('pengaturan_task_pipeline', 'Task Pipeline', <CheckSquare />, activeView === 'pengaturan_task_pipeline')}
-                    {canShow('Support Pipeline') && renderSubMenuLevel1('support_pipeline', 'Support Pipeline', <LifeBuoy />, activeView === 'support_pipeline')}
-                    {canShow('Pengaturan Kategori Client') && renderSubMenuLevel1('pengaturan_kategori_client', 'Kategori Client', <Tags />, activeView === 'pengaturan_kategori_client')}
-                    {canShow('Penomoran Otomatis') && renderSubMenuLevel1('penomoran_otomatis', 'Format Nomor', <Hash />, activeView === 'penomoran_otomatis')}
-                    {canShow('Pengaturan Pajak') && renderSubMenuLevel1('pengaturan_pajak', 'Pajak & Fee', <Coins />, activeView === 'pengaturan_pajak')}
-                    {canShow('Template Dokumen') && renderSubMenuLevel1('pengaturan_template_pdf', 'PDF Templates', <Palette />, activeView === 'pengaturan_template_pdf')}
-                    {canShow('Kategori Produk') && renderSubMenuLevel1('kategori_produk', 'Kategori Produk', <LayoutGrid />, activeView === 'kategori_produk')}
-                    {canShow('Satuan') && renderSubMenuLevel1('satuan_produk', 'Satuan Produk', <Weight />, activeView === 'satuan_produk')}
-                    {canShow('Pengaturan AI') && renderSubMenuLevel1('pengaturan_ai', 'Konfigurasi Gemini', <BrainCircuit />, activeView === 'pengaturan_ai')}
-                  </div>
-                )}
-              </div>
+              {(canShow('Perusahaan') || canShow('Konfigurasi Email') || canShow('Anggota Tim') || canShow('Manajemen Role') || 
+                canShow('Pengaturan Leads') || canShow('Pengaturan Sumber Leads') || canShow('Pengaturan Deals Pipeline') || 
+                canShow('Project Pipeline') || canShow('Task Pipeline') || canShow('Support Pipeline') || canShow('Pengaturan Kategori Client') || 
+                canShow('Penomoran Otomatis') || canShow('Pengaturan Pajak') || canShow('Template Dokumen') || canShow('Kategori Produk') || 
+                canShow('Satuan') || canShow('Pengaturan AI')) && (
+                <div className="space-y-0.5">
+                  <button onClick={() => setIsSettingsOpen(!isSettingsOpen)} className="w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all text-gray-500 hover:bg-gray-50 font-medium">
+                    <div className="flex items-center gap-4">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-50 text-white shadow-md"><Settings size={14} className="text-amber-500" /></div>
+                      <span className="text-[13px] tracking-tight">Workspace Setup</span>
+                    </div>
+                    <ChevronRight size={14} className={`transition-transform duration-200 ${isSettingsOpen ? 'rotate-90 text-blue-500' : ''}`} />
+                  </button>
+                  {isSettingsOpen && (
+                    <div className="pl-4 space-y-0.5 mt-0.5 ml-6 animate-in slide-in-from-top-1 pb-4">
+                      {canShow('Perusahaan') && renderSubMenuLevel1('pengaturan_perusahaan', 'Identitas Umum', <Building2 />, activeView === 'pengaturan_perusahaan')}
+                      {canShow('Konfigurasi Email') && renderSubMenuLevel1('workspace_email_config', 'Konfigurasi Email', <Mail />, activeView === 'workspace_email_config')}
+                      {canShow('Anggota Tim') && renderSubMenuLevel1('anggota_tim', 'Anggota Tim', <Users />, activeView === 'anggota_tim')}
+                      {canShow('Manajemen Role') && renderSubMenuLevel1('manajemen_role', 'Manajemen Role', <ShieldAlert />, activeView === 'manajemen_role')}
+                      {canShow('Pengaturan Leads') && renderSubMenuLevel1('pengaturan_leads', 'Leads Pipeline', <Target />, activeView === 'pengaturan_leads')}
+                      {canShow('Pengaturan Sumber Leads') && renderSubMenuLevel1('pengaturan_sumber_leads', 'Lead Sources', <Globe />, activeView === 'pengaturan_sumber_leads')}
+                      {canShow('Pengaturan Deals Pipeline') && renderSubMenuLevel1('pengaturan_deals_pipeline', 'Deals Pipeline', <Layers />, activeView === 'pengaturan_deals_pipeline')}
+                      {canShow('Project Pipeline') && renderSubMenuLevel1('pengaturan_project_pipeline', 'Project Pipeline', <Workflow />, activeView === 'pengaturan_project_pipeline')}
+                      {canShow('Task Pipeline') && renderSubMenuLevel1('pengaturan_task_pipeline', 'Task Pipeline', <CheckSquare />, activeView === 'pengaturan_task_pipeline')}
+                      {canShow('Support Pipeline') && renderSubMenuLevel1('support_pipeline', 'Support Pipeline', <LifeBuoy />, activeView === 'support_pipeline')}
+                      {canShow('Pengaturan Kategori Client') && renderSubMenuLevel1('pengaturan_kategori_client', 'Kategori Client', <Tags />, activeView === 'pengaturan_kategori_client')}
+                      {canShow('Penomoran Otomatis') && renderSubMenuLevel1('penomoran_otomatis', 'Format Nomor', <Hash />, activeView === 'penomoran_otomatis')}
+                      {canShow('Pengaturan Pajak') && renderSubMenuLevel1('pengaturan_pajak', 'Pajak & Fee', <Coins />, activeView === 'pengaturan_pajak')}
+                      {canShow('Template Dokumen') && renderSubMenuLevel1('pengaturan_template_pdf', 'PDF Templates', <Palette />, activeView === 'pengaturan_template_pdf')}
+                      {canShow('Kategori Produk') && renderSubMenuLevel1('kategori_produk', 'Kategori Produk', <LayoutGrid />, activeView === 'kategori_produk')}
+                      {canShow('Satuan') && renderSubMenuLevel1('satuan_produk', 'Satuan Produk', <Weight />, activeView === 'satuan_produk')}
+                      {canShow('Pengaturan AI') && renderSubMenuLevel1('pengaturan_ai', 'Konfigurasi Gemini', <BrainCircuit />, activeView === 'pengaturan_ai')}
+                    </div>
+                  )}
+                </div>
+              )}
             </React.Fragment>
           ) : (
             <div className="space-y-1">
               {renderMenuItem('dashboard', 'Dashboard', <LayoutDashboard />, 'bg-blue-500')}
-              {renderMenuItem('perusahaan', 'Workspace', <Building2 />, 'bg-emerald-500')}
-              {renderMenuItem('pengguna', 'Pengguna', <Users />, 'bg-purple-500')}
-              {renderMenuItem('pengaturan', 'Platform', <ShieldCheck />, 'bg-orange-500')}
-              {renderMenuItem('pengaturan_email', 'Email System', <Mail />, 'bg-indigo-500')}
+              {isAdmin && (
+                <>
+                  {renderMenuItem('perusahaan', 'Workspace', <Building2 />, 'bg-emerald-500')}
+                  {renderMenuItem('pengguna', 'Pengguna', <Users />, 'bg-purple-500')}
+                  {renderMenuItem('pengaturan', 'Platform', <ShieldCheck />, 'bg-orange-500')}
+                  {renderMenuItem('pengaturan_email', 'Email System', <Mail />, 'bg-indigo-500')}
+                </>
+              )}
             </div>
           )}
         </nav>

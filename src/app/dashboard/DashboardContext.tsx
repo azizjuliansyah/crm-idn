@@ -32,12 +32,12 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     checkSession();
   }, []);
 
-  // Set initial active company if none selected
+  // Set initial active company if none selected (Regular users only)
   useEffect(() => {
-    if (!activeCompany && companies.length > 0) {
+    if (!activeCompany && companies.length > 0 && user?.platform_role !== 'ADMIN') {
       setActiveCompany(companies[0]);
     }
-  }, [companies]);
+  }, [companies, user]);
 
   const checkSession = async () => {
     try {

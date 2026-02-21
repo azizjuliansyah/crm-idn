@@ -222,13 +222,19 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
     >
       {/* Logic from DashboardApp.tsx moved here */}
       {(() => {
+          const activeView = getActiveView();
+
+          // Prioritize Profile View regardless of Admin/Workspace status
+          if (activeView === 'profil_saya') {
+             return children;
+          }
+
           if (user.platform_role === 'ADMIN' && !activeCompany) {
-             // We need to import PlatformAdminView
-             // But PlatformAdminView was also a "View". 
-             // If we are route-based, /dashboard should probably show AdminView if admin?
-             // Or maybe we treat AdminView as just another child?
-             // BUT, if we conform to "renderContent" logic:
-             return <PlatformAdminView activeView={getActiveView()} onSettingsUpdate={() => {}} onRefresh={() => window.location.reload()} />;
+             return <PlatformAdminView activeView={activeView} onSettingsUpdate={() => {}} onRefresh={() => window.location.reload()} />;
+          }
+
+          if (user.platform_role === 'USER' && (companies?.length || 0) === 0) {
+              return <CompanyWizard userId={user.id} onSuccess={() => window.location.reload()} />;
           }
 
           if (!activeCompany) {
