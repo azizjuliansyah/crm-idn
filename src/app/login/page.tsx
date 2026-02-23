@@ -1,5 +1,5 @@
 
-import { LoginView } from '@/components/LoginView';
+import { LoginView } from '@/components/features/auth/LoginView';
 import { supabase } from '@/lib/supabase';
 
 export default async function LoginPage() {

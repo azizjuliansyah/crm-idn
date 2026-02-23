@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useDashboard } from '@/app/dashboard/DashboardContext';
-import { EmailSettingsView } from '@/components/EmailSettingsView';
+import { EmailSettingsView } from '@/components/features/settings/EmailSettingsView';
 
 export default function EmailSettingsPage() {
   const { activeCompany: company } = useDashboard();

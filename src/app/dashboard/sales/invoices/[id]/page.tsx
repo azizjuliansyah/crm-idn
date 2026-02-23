@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useDashboard } from '../../../DashboardContext';
-import { InvoiceFormView } from '@/components/InvoiceFormView';
+import { InvoiceFormView } from '@/components/features/invoices/InvoiceFormView';
 import { useRouter, useParams } from 'next/navigation';
 
 export default function EditInvoicePage() {

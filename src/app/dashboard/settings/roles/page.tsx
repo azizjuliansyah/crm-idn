@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useDashboard } from '../../DashboardContext';
-import { RolesManagementView } from '@/components/RolesManagementView';
+import { RolesManagementView } from '@/components/features/admin/RolesManagementView';
 import { supabase } from '@/lib/supabase';
 import { CompanyRole } from '@/lib/types';
 import { Loader2 } from 'lucide-react';

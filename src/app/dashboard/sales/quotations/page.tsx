@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useDashboard } from '../../DashboardContext';
-import { QuotationsView } from '@/components/QuotationsView';
+import { QuotationsView } from '@/components/features/quotations/QuotationsView';
 
 export default function QuotationsPage() {
   const { activeCompany } = useDashboard();

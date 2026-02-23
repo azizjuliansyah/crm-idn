@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useDashboard } from '@/app/dashboard/DashboardContext';
-import { InvoiceRequestFormView } from '@/components/InvoiceRequestFormView';
+import { InvoiceRequestFormView } from '@/components/features/invoices/InvoiceRequestFormView';
 import { useRouter } from 'next/navigation';
 
 export default function CreateInvoiceRequestsPage() {

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useDashboard } from '../../../DashboardContext';
-import { QuotationFormView } from '@/components/QuotationFormView';
+import { QuotationFormView } from '@/components/features/quotations/QuotationFormView';
 import { useRouter } from 'next/navigation';
 
 export default function CreateQuotationPage() {

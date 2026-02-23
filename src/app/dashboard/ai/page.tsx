@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useDashboard } from '@/app/dashboard/DashboardContext';
-import { AiAssistantView } from '@/components/AiAssistantView';
+import { AiAssistantView } from '@/components/features/ai/AiAssistantView';
 
 export default function AiAssistantPage() {
   const { activeCompany: company, user } = useDashboard();

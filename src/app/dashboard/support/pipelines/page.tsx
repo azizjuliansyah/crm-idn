@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useDashboard } from '@/app/dashboard/DashboardContext';
-import { SupportPipelineSettingsView } from '@/components/SupportPipelineSettingsView';
+import { SupportPipelineSettingsView } from '@/components/features/support/SupportPipelineSettingsView';
 
 export default function SupportPipelinesPage() {
   const { activeCompany: company } = useDashboard();

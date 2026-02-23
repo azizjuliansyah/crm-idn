@@ -17,20 +17,33 @@ interface DashboardContextType {
   logout: () => Promise<void>;
 }
 
+interface DashboardProviderProps {
+  children: React.ReactNode;
+  initialData?: {
+    user: Profile | null;
+    companies: Company[];
+    platformSettings: PlatformSettings;
+  };
+}
+
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
 
-export function DashboardProvider({ children }: { children: React.ReactNode }) {
+export function DashboardProvider({ children, initialData }: DashboardProviderProps) {
   const router = useRouter();
-  const [user, setUser] = useState<Profile | null>(null);
-  const [companies, setCompanies] = useState<Company[]>([]);
+  const [user, setUser] = useState<Profile | null>(initialData?.user || null);
+  const [companies, setCompanies] = useState<Company[]>(initialData?.companies || []);
   const [activeCompany, setActiveCompany] = useState<Company | null>(null);
   const [activeCompanyMembers, setActiveCompanyMembers] = useState<CompanyMember[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [platformSettings, setPlatformSettings] = useState<PlatformSettings>({ name: 'CRM Platform', is_singleton: false });
+  const [loading, setLoading] = useState(!initialData);
+  const [platformSettings, setPlatformSettings] = useState<PlatformSettings>(
+    initialData?.platformSettings || { name: 'CRM Platform', is_singleton: false }
+  );
 
   useEffect(() => {
-    checkSession();
-  }, []);
+    if (!initialData) {
+      checkSession();
+    }
+  }, [initialData]);
 
   // Set initial active company if none selected (Regular users only)
   useEffect(() => {
@@ -41,30 +54,31 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
 
   const checkSession = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
         router.push('/login');
         return;
       }
 
-      // Fetch Profile
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
+      // Parallelize Profile, Settings, and Companies fetching
+      const [profileRes, settingsRes] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', authUser.id).single(),
+        supabase.from('platform_settings').select('*').single()
+      ]);
       
+      const profile = profileRes.data;
       if (!profile) {
         console.error("No profile found");
+        router.push('/login');
         return;
       }
       setUser(profile);
 
-      // Fetch Platform Settings
-      const { data: settings } = await supabase.from('platform_settings').select('*').single();
-      if (settings) setPlatformSettings(settings);
+      if (settingsRes.data) {
+        setPlatformSettings(settingsRes.data);
+      }
 
-      // Fetch Companies associated with user
+      // Fetch Companies based on role
       if (profile.platform_role === 'ADMIN') {
         const { data: allCompanies } = await supabase.from('companies').select('*');
         if (allCompanies) setCompanies(allCompanies);
@@ -72,7 +86,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         const { data: memberCompanies } = await supabase
             .from('company_members')
             .select('company:companies(*)')
-            .eq('user_id', session.user.id);
+            .eq('user_id', authUser.id);
         
         if (memberCompanies) {
             setCompanies(memberCompanies.map((mc: any) => mc.company));

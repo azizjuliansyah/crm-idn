@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useDashboard } from '@/app/dashboard/DashboardContext';
-import { KnowledgeBaseView } from '@/components/KnowledgeBaseView';
+import { KnowledgeBaseView } from '@/components/features/knowledge-base/KnowledgeBaseView';
 
 export default function KnowledgeBasePage() {
   const { activeCompany: company } = useDashboard();

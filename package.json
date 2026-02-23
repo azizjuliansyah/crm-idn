@@ -11,7 +11,8 @@
   "dependencies": {
     "@google/genai": "^1.41.0",
     "@hcaptcha/react-hcaptcha": "^2.0.2",
-    "@supabase/supabase-js": "^2.96.0",
+    "@supabase/ssr": "^0.8.0",
+    "@supabase/supabase-js": "^2.97.0",
     "jspdf": "^4.1.0",
     "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.574.0",

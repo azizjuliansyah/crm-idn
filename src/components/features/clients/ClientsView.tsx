@@ -1,0 +1,400 @@
+'use client';
+
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { supabase } from '@/lib/supabase';
+import { Company, Client, ClientCompany, ClientCompanyCategory } from '@/lib/types';
+import { 
+  Plus, Search, Edit2, Trash2, Loader2, Contact, 
+  MapPin, Mail, Phone, ChevronRight, X, Save, Building, Check, Tags, Info,
+  ChevronUp, ChevronDown, AlertTriangle, ArrowUpDown, CheckCircle2
+} from 'lucide-react';
+import { SearchInput } from '@/components/ui';
+
+import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
+import { ConfirmBulkDeleteModal } from '@/components/shared/modals/ConfirmBulkDeleteModal';
+import { NotificationModal } from '@/components/shared/modals/NotificationModal';
+import { ClientFormModal } from './components/ClientFormModal';
+
+interface Props {
+  company: Company;
+}
+
+type SortKey = 'name' | 'company' | 'email' | 'whatsapp' | 'id';
+type SortConfig = { key: SortKey; direction: 'asc' | 'desc' } | null;
+
+export const ClientsView: React.FC<Props> = ({ company }) => {
+  const [items, setItems] = useState<Client[]>([]);
+  const [rawCompanies, setRawCompanies] = useState<ClientCompany[]>([]);
+  const [categories, setCategories] = useState<ClientCompanyCategory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'id', direction: 'desc' });
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
+  // Custom Modal States
+  const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; name: string }>({ isOpen: false, id: null, name: '' });
+  const [isConfirmBulkOpen, setIsConfirmBulkOpen] = useState(false);
+  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({ 
+    isOpen: false, title: '', message: '', type: 'success' 
+  });
+
+  const [form, setForm] = useState<Partial<Client>>({
+    salutation: '', name: '', client_company_id: null, email: '', whatsapp: ''
+  });
+
+  const fetchData = useCallback(async () => {
+    if (!company?.id) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const [clientsRes, cosRes, catsRes] = await Promise.all([
+        supabase.from('clients').select('*').eq('company_id', company.id).order('id', { ascending: false }),
+        supabase.from('client_companies').select('*').eq('company_id', company.id).order('name'),
+        supabase.from('client_company_categories').select('*').eq('company_id', company.id).order('name')
+      ]);
+
+      if (clientsRes.data) setItems(clientsRes.data);
+      if (cosRes.data) setRawCompanies(cosRes.data);
+      if (catsRes.data) setCategories(catsRes.data);
+      setSelectedIds([]);
+    } catch (error) {
+      console.error("Fetch Data Error:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [company?.id]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const clientCompanies = useMemo(() => {
+    return rawCompanies.map(co => ({
+      ...co,
+      client_company_categories: categories.find(cat => cat.id === co.category_id)
+    }));
+  }, [rawCompanies, categories]);
+
+  const clientsWithData = useMemo(() => {
+    let result = items.map(item => ({
+      ...item,
+      client_company: clientCompanies.find(co => co.id === item.client_company_id)
+    }));
+
+    if (searchTerm) {
+      result = result.filter(i => 
+        i.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        (i.client_company?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (sortConfig) {
+      result.sort((a, b) => {
+        let valA: any, valB: any;
+        
+        switch(sortConfig.key) {
+          case 'name': valA = a.name; valB = b.name; break;
+          case 'company': valA = a.client_company?.name || ''; valB = b.client_company?.name || ''; break;
+          case 'email': valA = a.email || ''; valB = b.email || ''; break;
+          case 'whatsapp': valA = a.whatsapp || ''; valB = b.whatsapp || ''; break;
+          default: valA = a.id; valB = b.id;
+        }
+
+        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return result;
+  }, [items, clientCompanies, searchTerm, sortConfig]);
+
+  const handleSort = (key: SortKey) => {
+    setSortConfig(prev => {
+      if (prev?.key === key) {
+        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { key, direction: 'asc' };
+    });
+  };
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === clientsWithData.length) setSelectedIds([]);
+    else setSelectedIds(clientsWithData.map(i => i.id));
+  };
+
+  const showNotification = (title: string, message: string, type: 'success' | 'error' = 'success') => {
+    setNotification({ isOpen: true, title, message, type });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase.from('clients').delete().in('id', selectedIds);
+      if (error) throw error;
+      await fetchData();
+      setIsConfirmBulkOpen(false);
+      showNotification('Berhasil', `Berhasil menghapus ${selectedIds.length} data client.`);
+    } catch (err: any) {
+      showNotification('Gagal', err.message, 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleQuickAddCatInCo = async (newCatName: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('client_company_categories')
+        .insert({ name: newCatName, company_id: company.id })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      setCategories(prev => [...prev, data as any].sort((a, b) => a.name.localeCompare(b.name)));
+      return data;
+    } catch (err: any) {
+      showNotification('Gagal', err.message, 'error');
+      return null;
+    }
+  };
+
+  const handleQuickAddCo = async (newCoData: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('client_companies')
+        .insert(newCoData)
+        .select('*')
+        .single();
+      
+      if (error) throw error;
+      setRawCompanies(prev => [...prev, data as any].sort((a, b) => a.name.localeCompare(b.name)));
+      return data;
+    } catch (err: any) {
+      showNotification('Gagal', err.message, 'error');
+      return null;
+    }
+  };
+
+  const handleSave = async (formData: Partial<Client>) => {
+    if (!formData.name) {
+       showNotification('Nama Wajib Diisi', 'Silakan masukkan nama client.', 'error');
+       return;
+    }
+    setIsProcessing(true);
+    try {
+      const payload = {
+          salutation: formData.salutation,
+          name: formData.name,
+          client_company_id: formData.client_company_id ? Number(formData.client_company_id) : null,
+          email: formData.email,
+          whatsapp: formData.whatsapp,
+          company_id: company.id
+      };
+      
+      if (formData.id) {
+        await supabase.from('clients').update(payload).eq('id', formData.id);
+      } else {
+        await supabase.from('clients').insert(payload);
+      }
+      setIsModalOpen(false);
+      await fetchData();
+      showNotification('Tersimpan', `Profil ${formData.name} telah diperbarui.`, 'success');
+    } catch (err: any) {
+      showNotification('Gagal Menyimpan', err.message, 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const executeDelete = async () => {
+    if (!confirmDelete.id) return;
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase.from('clients').delete().eq('id', confirmDelete.id);
+      if (error) throw error;
+      await fetchData();
+      setConfirmDelete({ isOpen: false, id: null, name: '' });
+      showNotification('Berhasil', `Data client ${confirmDelete.name} telah dihapus.`);
+    } catch (err: any) {
+      showNotification('Gagal Menghapus', err.message, 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const SortIcon = ({ col }: { col: SortKey }) => {
+    if (sortConfig?.key !== col) return <ArrowUpDown size={12} className="ml-1 opacity-20" />;
+    return sortConfig.direction === 'asc' ? <ChevronUp size={12} className="ml-1 text-blue-600" /> : <ChevronDown size={12} className="ml-1 text-blue-600" />;
+  };
+
+  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-emerald-600 mb-4" /><p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Mensinkronisasi Data Client...</p></div>;
+
+  return (
+    <div className="flex flex-col gap-6 h-full text-gray-900">
+      <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0 overflow-x-auto custom-scrollbar">
+        <div className="flex items-center gap-4 shrink-0">
+          <div className="w-[400px]">
+             <SearchInput 
+               placeholder="Cari client atau perusahaan..." 
+               value={searchTerm}
+               onChange={e => setSearchTerm(e.target.value)}
+               className="rounded-xl border-gray-100 shadow-none bg-gray-50/30"
+             />
+          </div>
+          {selectedIds.length > 0 && (
+            <button 
+              onClick={() => setIsConfirmBulkOpen(true)}
+              className="px-4 py-3 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl font-bold text-[10px] uppercase tracking-widest flex items-center gap-2 hover:bg-rose-600 hover:text-white transition-all shadow-sm"
+            >
+              <Trash2 size={14} /> Hapus {selectedIds.length} Client
+            </button>
+          )}
+        </div>
+        <button 
+          onClick={() => { 
+            setForm({ salutation: '', name: '', client_company_id: null, email: '', whatsapp: '' }); 
+            setIsModalOpen(true); 
+          }}
+          className="px-6 py-3.5 bg-emerald-600 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 hover:bg-emerald-700 transition-all active:scale-95 shrink-0 ml-auto"
+        >
+          <Plus size={14} strokeWidth={3} /> Client Baru
+        </button>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm flex-1 min-h-[400px]">
+        <div className="overflow-x-auto h-full custom-scrollbar">
+          <table className="w-full text-left border-collapse">
+            <thead className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur-sm">
+              <tr>
+                <th className="px-6 py-5 border-b border-gray-100 w-12 text-center">
+                  <button onClick={toggleSelectAll} className={`w-5 h-5 rounded-md flex items-center justify-center border transition-all mx-auto ${selectedIds.length > 0 && selectedIds.length === clientsWithData.length ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-200 text-transparent'}`}>
+                    <Check size={12} strokeWidth={4} />
+                  </button>
+                </th>
+                <th onClick={() => handleSort('name')} className="px-6 py-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 cursor-pointer group">
+                  <div className="flex items-center">Client / Kontak <SortIcon col="name" /></div>
+                </th>
+                <th onClick={() => handleSort('company')} className="px-6 py-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 cursor-pointer group">
+                   <div className="flex items-center">Perusahaan <SortIcon col="company" /></div>
+                </th>
+                <th className="px-6 py-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100">Kontak Detail</th>
+                <th className="px-8 py-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {clientsWithData.map(item => (
+                <tr key={item.id} className={`hover:bg-gray-50/30 group transition-colors ${selectedIds.includes(item.id) ? 'bg-emerald-50/30' : ''}`}>
+                  <td className="px-6 py-6 text-center">
+                    <button onClick={() => toggleSelect(item.id)} className={`w-5 h-5 rounded-md flex items-center justify-center border transition-all mx-auto ${selectedIds.includes(item.id) ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-gray-200 text-transparent'}`}>
+                      <Check size={12} strokeWidth={4} />
+                    </button>
+                  </td>
+                  <td className="px-6 py-6">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center font-bold text-[10px]">
+                        {item.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-gray-900 tracking-tight">
+                            {item.salutation && <span className="text-emerald-500 mr-1 font-bold">{item.salutation}</span>}
+                            {item.name}
+                        </p>
+                        <p className="text-[9px] text-gray-400 font-bold uppercase mt-1 tracking-tighter italic">ID: {String(item.id).padStart(4, '0')}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-6">
+                    {item.client_company ? (
+                        <div className="flex items-center gap-2">
+                             <Building size={12} className="text-indigo-400" />
+                             <span className="text-[11px] font-bold text-indigo-600 uppercase tracking-tight">{item.client_company.name}</span>
+                        </div>
+                    ) : (
+                        <span className="text-[9px] font-bold uppercase tracking-tighter text-gray-300 italic">Personal</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-6">
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-bold text-gray-600 flex items-center gap-2"><Mail size={12} className="text-gray-300" /> {item.email || '-'}</p>
+                      <p className="text-[10px] font-bold text-gray-600 flex items-center gap-2"><Phone size={12} className="text-gray-300" /> {item.whatsapp || '-'}</p>
+                    </div>
+                  </td>
+                  <td className="px-8 py-6 text-center">
+                    <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => { setForm(item); setIsModalOpen(true); }} className="p-2 text-indigo-500 hover:bg-indigo-50 rounded-lg"><Edit2 size={16} /></button>
+                      <button onClick={() => setConfirmDelete({ isOpen: true, id: item.id, name: item.name })} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg"><Trash2 size={16} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {clientsWithData.length === 0 && (
+                <tr>
+                   <td colSpan={5} className="py-24 text-center">
+                      <Contact size={48} className="mx-auto mb-4 opacity-10 text-gray-400" />
+                      <p className="text-xs font-bold uppercase tracking-widest text-gray-300">Belum ada data client</p>
+                   </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <ClientFormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSave}
+        form={form}
+        setForm={setForm}
+        isProcessing={isProcessing}
+        clientCompanies={rawCompanies}
+        categories={categories}
+        companyId={company.id}
+        onQuickAddCompany={handleQuickAddCo}
+        onQuickAddCategory={handleQuickAddCatInCo}
+      />
+
+      <ConfirmDeleteModal
+        isOpen={confirmDelete.isOpen}
+        onClose={() => setConfirmDelete({ isOpen: false, id: null, name: '' })}
+        onConfirm={executeDelete}
+        itemName={`Data client ${confirmDelete.name}`}
+        description="Anda akan menghapus data ini secara permanen. Seluruh riwayat transaksi yang terhubung dengan client ini mungkin terpengaruh."
+        isProcessing={isProcessing}
+      />
+
+      <ConfirmBulkDeleteModal
+        isOpen={isConfirmBulkOpen}
+        onClose={() => setIsConfirmBulkOpen(false)}
+        onConfirm={handleBulkDelete}
+        count={selectedIds.length}
+        description={`Apakah Anda yakin ingin menghapus seluruh client yang dipilih secara permanen? Tindakan ini tidak dapat dibatalkan.`}
+        isProcessing={isProcessing}
+      />
+
+      <NotificationModal
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+        title={notification.title}
+        message={notification.message}
+        type={notification.type}
+      />
+
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+      `}</style>
+    </div>
+  );
+};

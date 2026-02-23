@@ -3,8 +3,8 @@
 
 import React, { useState } from 'react';
 import { useDashboard } from '../../DashboardContext';
-import { LeadSourcesSettingsView } from '@/components/leads/LeadSourcesSettingsView';
-import { LeadStagesSettingsView } from '@/components/leads/LeadStagesSettingsView';
+import { LeadSourcesSettingsView } from '@/components/features/leads/LeadSourcesSettingsView';
+import { LeadStagesSettingsView } from '@/components/features/leads/LeadStagesSettingsView';
 import { Settings, Globe, GripVertical } from 'lucide-react';
 
 export default function LeadSettingsPage() {
@@ -54,7 +54,7 @@ export default function LeadSettingsPage() {
         </button>
       </div>
 
-      <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div>
         {activeTab === 'stages' ? (
           <LeadStagesSettingsView company={activeCompany} />
         ) : (

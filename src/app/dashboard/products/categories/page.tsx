@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useDashboard } from '../../DashboardContext';
-import { ProductCategoriesView } from '@/components/ProductCategoriesView';
+import { ProductCategoriesView } from '@/components/features/products/ProductCategoriesView';
 
 export default function ProductCategoriesPage() {
   const { activeCompany } = useDashboard();

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useDashboard } from '../DashboardContext';
-import { DealsView } from '@/components/DealsView';
+import { DealsView } from '@/components/features/deals/DealsView';
 
 export default function DealsPage() {
   const { activeCompany, user } = useDashboard();

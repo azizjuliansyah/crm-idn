@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useDashboard } from '@/app/dashboard/DashboardContext';
-import { DealsView } from '@/components/DealsView';
+import { DealsView } from '@/components/features/deals/DealsView';
 
 import { useParams } from 'next/navigation';
 

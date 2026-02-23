@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useDashboard } from '@/app/dashboard/DashboardContext';
-import { InvoiceRequestsView } from '@/components/InvoiceRequestsView';
+import { InvoiceRequestsView } from '@/components/features/invoices/InvoiceRequestsView';
 
 export default function InvoiceRequestsPage() {
   const { activeCompany: company } = useDashboard();

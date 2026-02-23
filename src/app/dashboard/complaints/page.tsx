@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useDashboard } from '../DashboardContext';
-import { ComplaintsView } from '@/components/ComplaintsView';
+import { ComplaintsView } from '@/components/features/complaints/ComplaintsView';
 
 export default function ComplaintsPage() {
   const { activeCompany, user } = useDashboard();

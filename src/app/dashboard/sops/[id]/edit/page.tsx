@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useDashboard } from '@/app/dashboard/DashboardContext';
-import { SopFormView } from '@/components/SopFormView';
+import { SopFormView } from '@/components/features/sop/SopFormView';
 
 import { useParams } from 'next/navigation';
 

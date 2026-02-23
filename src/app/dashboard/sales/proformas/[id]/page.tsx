@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useDashboard } from '@/app/dashboard/DashboardContext';
-import { ProformaFormView } from '@/components/ProformaFormView';
+import { ProformaFormView } from '@/components/features/proformas/ProformaFormView';
 import { useRouter } from 'next/navigation';
 
 export default function EditProformaPage({ params }: { params: { id: string } }) {

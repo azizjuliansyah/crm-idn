@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useDashboard } from '@/app/dashboard/DashboardContext';
-import { SopDetailView } from '@/components/SopDetailView';
+import { SopDetailView } from '@/components/features/sop/SopDetailView';
 
 import { useParams } from 'next/navigation';
 

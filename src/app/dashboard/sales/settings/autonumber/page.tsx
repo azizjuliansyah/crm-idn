@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useDashboard } from '../../../DashboardContext';
-import { SalesAutonumberView } from '@/components/SalesAutonumberView';
+import { SalesAutonumberView } from '@/components/features/settings/SalesAutonumberView';
 
 export default function SalesAutonumberPage() {
   const { activeCompany } = useDashboard();

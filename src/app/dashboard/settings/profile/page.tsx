@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useDashboard } from '../../DashboardContext';
-import { ProfileEditView } from '@/components/ProfileEditView';
+import { ProfileEditView } from '@/components/features/auth/ProfileEditView';
 
 export default function ProfileSettingsPage() {
   const { user } = useDashboard();

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useDashboard } from '../../../DashboardContext';
-import { TaxSettingsView } from '@/components/TaxSettingsView';
+import { TaxSettingsView } from '@/components/features/settings/TaxSettingsView';
 
 export default function TaxSettingsPage() {
   const { activeCompany } = useDashboard();

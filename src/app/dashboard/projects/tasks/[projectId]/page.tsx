@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useDashboard } from '@/app/dashboard/DashboardContext';
-import { TasksView } from '@/components/TasksView';
+import { TasksView } from '@/components/features/tasks/TasksView';
 import { useParams } from 'next/navigation';
 
 export default function ProjectTasksPage() {

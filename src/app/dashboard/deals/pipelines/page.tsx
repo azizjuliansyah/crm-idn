@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useDashboard } from '@/app/dashboard/DashboardContext';
-import { DealsPipelineSettingsView } from '@/components/DealsPipelineSettingsView';
+import { DealsPipelineSettingsView } from '@/components/features/deals/DealsPipelineSettingsView';
 
 export default function DealsPipelineSettingsPage() {
   const { activeCompany: company } = useDashboard();

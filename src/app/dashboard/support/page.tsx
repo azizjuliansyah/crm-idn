@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useDashboard } from '../DashboardContext';
-import { SupportTicketsView } from '@/components/SupportTicketsView';
+import { SupportTicketsView } from '@/components/features/support/SupportTicketsView';
 
 export default function SupportPage() {
   const { activeCompany, user } = useDashboard();

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useDashboard } from '../../DashboardContext';
-import { TeamMembersView } from '@/components/TeamMembersView';
+import { TeamMembersView } from '@/components/features/admin/TeamMembersView';
 import { supabase } from '@/lib/supabase';
 import { CompanyMember, CompanyRole } from '@/lib/types';
 import { Loader2 } from 'lucide-react';

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useDashboard } from '@/app/dashboard/DashboardContext';
-import { ProjectPipelinesSettingsView } from '@/components/ProjectPipelinesSettingsView';
+import { ProjectPipelinesSettingsView } from '@/components/features/projects/ProjectPipelinesSettingsView';
 
 export default function ProjectPipelinesPage() {
   const { activeCompany } = useDashboard();

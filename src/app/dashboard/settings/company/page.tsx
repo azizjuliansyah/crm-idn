@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useDashboard } from '../../DashboardContext';
-import { CompanySettingsView } from '@/components/CompanySettingsView';
+import { CompanySettingsView } from '@/components/features/settings/CompanySettingsView';
 
 export default function CompanySettingsPage() {
   const { activeCompany, refreshCompanyData } = useDashboard();
