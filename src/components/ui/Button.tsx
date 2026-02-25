@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react';
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'success';
   size?: 'sm' | 'md' | 'lg';
+  align?: 'left' | 'center' | 'right';
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
@@ -11,8 +12,9 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 export const Button: React.FC<ButtonProps> = ({
   children,
-  variant = 'primary',
+  variant = 'ghost',
   size = 'md',
+  align = 'center',
   isLoading = false,
   leftIcon,
   rightIcon,
@@ -20,8 +22,8 @@ export const Button: React.FC<ButtonProps> = ({
   disabled,
   ...props
 }) => {
-  const baseStyles = 'inline-flex items-center justify-center font-bold uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none cursor-pointer';
-  
+  const baseStyles = 'inline-flex items-center uppercase tracking-tight transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none cursor-pointer';
+
   const variants = {
     primary: 'bg-blue-600 text-white shadow-lg shadow-blue-100 hover:bg-blue-700',
     secondary: 'bg-gray-100 text-gray-600 hover:bg-gray-200',
@@ -31,14 +33,20 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   const sizes = {
-    sm: 'px-4 py-2 text-[8px] rounded-lg gap-1.5',
-    md: 'px-6 py-3.5 text-[10px] rounded-xl gap-2',
-    lg: 'px-8 py-4 text-[12px] rounded-2xl gap-3',
+    sm: 'px-4 py-2 text-[10px] rounded-lg gap-1.5',
+    md: 'px-6 py-3.5 text-[12px] rounded-xl gap-2',
+    lg: 'px-8 py-4 text-[14px] rounded-2xl gap-3',
+  };
+
+  const alignments = {
+    left: 'justify-start text-left',
+    center: 'justify-center text-center',
+    right: 'justify-end text-right',
   };
 
   return (
     <button
-      className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${alignments[align]} ${className}`}
       disabled={isLoading || disabled}
       {...props}
     >

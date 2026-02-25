@@ -2,18 +2,15 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+
+import { Input, Button, H1, H3, Subtext, Label } from '@/components/ui';
+
+
 import { supabase } from '@/lib/supabase';
 import { ArrowRight, Mail, Lock, Loader2, ChevronLeft, CheckCircle2, AlertTriangle, Info, RefreshCw } from 'lucide-react';
 import { PlatformSettings } from '@/lib/types';
 import HCaptcha from '@hcaptcha/react-hcaptcha';
 import { useRouter } from 'next/navigation';
-import { 
-  Button, 
-  Input, 
-  Subtext, 
-  H3, 
-  Label 
-} from '@/components/ui';
 
 interface Props {
   platformSettings: PlatformSettings;
@@ -31,7 +28,7 @@ export const LoginView: React.FC<Props> = ({ platformSettings }) => {
   const [success, setSuccess] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | undefined>();
   const [technicalError, setTechnicalError] = useState<string | null>(null);
-  
+
   const captchaRef = useRef<HCaptcha>(null);
 
   // Debugging log untuk memantau sinkronisasi pengaturan
@@ -67,10 +64,10 @@ export const LoginView: React.FC<Props> = ({ platformSettings }) => {
 
     // Proteksi sisi client
     if (platformSettings.hcaptcha_enabled && platformSettings.hcaptcha_site_key && !captchaToken) {
-       setError("Harap centang kotak verifikasi keamanan hCaptcha di bawah.");
-       return;
+      setError("Harap centang kotak verifikasi keamanan hCaptcha di bawah.");
+      return;
     }
-    
+
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -82,7 +79,7 @@ export const LoginView: React.FC<Props> = ({ platformSettings }) => {
           password,
           options: { captchaToken }
         });
-        
+
         if (signInError) throw signInError;
         router.push('/dashboard');
       } else {
@@ -90,19 +87,19 @@ export const LoginView: React.FC<Props> = ({ platformSettings }) => {
           redirectTo: window.location.origin + '/reset-password', // Adjusted for Next.js structure
           captchaToken
         });
-        
+
         if (resetError) throw resetError;
         setSuccess("Link reset password telah dikirim ke email Anda.");
         setLoading(false);
       }
     } catch (err: any) {
       console.error("Auth Exception:", err);
-      
+
       if (captchaRef.current) {
         captchaRef.current.resetCaptcha();
         setCaptchaToken(undefined);
       }
-      
+
       let friendlyMessage = err.message;
       if (err.message?.includes('Invalid login credentials')) {
         friendlyMessage = "Email atau password salah.";
@@ -110,7 +107,7 @@ export const LoginView: React.FC<Props> = ({ platformSettings }) => {
         friendlyMessage = "Verifikasi gagal (Server Error).";
         setTechnicalError("Troubleshoot: Jika widget muncul tapi validasi gagal (Error 500), pastikan HCAPTCHA_SECRET_KEY di dashboard Supabase (Authentication > Protection) sudah benar.");
       }
-      
+
       setError(friendlyMessage);
       setLoading(false);
     }
@@ -119,23 +116,26 @@ export const LoginView: React.FC<Props> = ({ platformSettings }) => {
   return (
     <div className="min-h-screen w-full flex bg-white font-sans text-gray-900 relative overflow-hidden">
       <div className="absolute top-0 right-0 w-1/2 h-full bg-blue-50/20 -z-10 translate-x-1/3 rounded-full blur-[120px]"></div>
-      
+
       <div className="hidden lg:flex lg:w-1/2 bg-gray-50 items-center justify-center p-24 border-r border-gray-100 relative">
         <div className="max-w-md w-full relative z-10">
           {platformSettings.logo_url ? (
             <div className="mb-10 w-24 h-24 flex items-center justify-center overflow-hidden bg-white rounded-3xl shadow-sm p-4 border border-gray-100">
-               <img src={platformSettings.logo_url} className="max-w-full max-h-full object-contain" alt="Logo" />
+              <img src={platformSettings.logo_url} className="max-w-full max-h-full object-contain" alt="Logo" />
             </div>
           ) : (
-            <div className="w-16 h-16 bg-blue-600 rounded-[24px] flex items-center justify-center text-white font-bold text-3xl shadow-2xl shadow-blue-200 mb-10">CP</div>
+            <div className="w-16 h-16 bg-blue-600 rounded-[24px] flex items-center justify-center text-white  text-3xl shadow-2xl shadow-blue-200 mb-10">CP</div>
           )}
-          
-          <h1 className="text-5xl font-bold text-gray-900 tracking-tighter leading-[1.1] mb-6">
-            Kelola Bisnis Jadi Lebih <span className="text-blue-600 underline decoration-blue-100 underline-offset-8">Pintar</span>.
-          </h1>
-          <p className="text-lg text-gray-500 font-medium leading-relaxed">
+
+          <H1 className="text-[44px] !font-bold text-gray-900 tracking-tight leading-[1.1] mb-6">
+            Kelola Bisnis Jadi <br /> Lebih <span className="text-blue-600 relative inline-block">
+              Pintar
+              <span className="absolute bottom-1 left-0 w-full h-[6px] bg-blue-100/60 -z-10 rounded-full"></span>
+            </span>.
+          </H1>
+          <Subtext className="text-[17px] text-gray-400 font-medium leading-[1.6]">
             Platform {platformSettings.name} membantu Anda mengelola ekosistem bisnis dalam satu dashboard yang aman dan terintegrasi.
-          </p>
+          </Subtext>
         </div>
       </div>
 
@@ -145,64 +145,68 @@ export const LoginView: React.FC<Props> = ({ platformSettings }) => {
             {platformSettings.logo_url ? (
               <img src={platformSettings.logo_url} className="h-12 w-auto object-contain" alt="Logo" />
             ) : (
-              <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-xl">CP</div>
+              <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white  text-xl">CP</div>
             )}
           </div>
-          
+
           {mode === 'login' ? (
             <>
-              <H3 className="text-3xl normal-case text-center lg:text-left mb-2">Akses Portal</H3>
-              <Subtext className="mb-10 text-center lg:text-left">Masuk untuk melanjutkan ke dashboard Anda.</Subtext>
+              <h2 className="text-[32px] font-bold text-[#0F172A] mb-1">Akses Portal</h2>
+              <Subtext className="mb-10 text-[15px] text-gray-400 font-medium">Masuk untuk melanjutkan ke dashboard Anda.</Subtext>
             </>
           ) : (
             <>
-              <button 
+              <Button
                 onClick={() => { setMode('login'); setError(null); setSuccess(null); }}
-                className="flex items-center gap-2 text-gray-400 hover:text-blue-600 font-bold text-[10px] uppercase tracking-widest mb-6 transition-colors"
+                className="flex items-center gap-2 !font-bold text-gray-400 hover:text-blue-600  text-[10px] uppercase tracking-tight mb-6 transition-colors"
               >
                 <ChevronLeft size={14} /> Kembali Login
-              </button>
-              <H3 className="text-3xl normal-case mb-2">Lupa Kata Sandi?</H3>
-              <Subtext className="mb-10">Masukkan email untuk mendapatkan tautan pemulihan.</Subtext>
+              </Button>
+              <H3 className="text-3xl !font-bold mb-2">Lupa Kata Sandi?</H3>
+              <Subtext className="mb-10 font-medium">Masukkan email untuk mendapatkan tautan pemulihan.</Subtext>
             </>
           )}
 
           {success && (
             <div className="mb-8 p-5 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-start gap-3">
               <CheckCircle2 className="text-emerald-500 shrink-0 mt-0.5" size={18} />
-              <Subtext className="text-emerald-700 font-bold leading-relaxed">{success}</Subtext>
+              <Subtext className="text-emerald-700  leading-relaxed">{success}</Subtext>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <Input 
-              label="Alamat Email"
-              type="email" 
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@company.com"
-              leftIcon={<Mail size={18} />}
-              required
-            />
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.1em] ml-1">ALAMAT EMAIL</label>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@company.com"
+                leftIcon={<Mail size={18} className="text-gray-300" />}
+                className="rounded-xl border-gray-100 bg-white"
+                required
+              />
+            </div>
 
             {mode === 'login' && (
-              <div className="space-y-2">
+              <div className="">
                 <div className="flex items-center justify-between px-1">
-                  <Label>Password</Label>
-                  <button 
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.1em]">PASSWORD</label>
+                  <Button
                     type="button"
                     onClick={() => { setMode('forgot'); setError(null); setSuccess(null); }}
-                    className="text-[10px] font-bold text-blue-600 uppercase tracking-widest hover:underline"
+                    className="text-[10px] font-bold !text-blue-600 uppercase tracking-tight hover:underline"
                   >
                     Lupa Password?
-                  </button>
+                  </Button>
                 </div>
-                <Input 
-                  type="password" 
+                <Input
+                  type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  leftIcon={<Lock size={18} />}
+                  leftIcon={<Lock size={18} className="text-gray-300" />}
+                  className="rounded-xl border-gray-100 bg-white"
                   required={mode === 'login'}
                 />
               </div>
@@ -224,11 +228,11 @@ export const LoginView: React.FC<Props> = ({ platformSettings }) => {
                     <div className="w-full p-4 bg-indigo-50 border border-indigo-100 rounded-xl flex items-start gap-3 text-left">
                       <Info size={14} className="text-indigo-600 shrink-0 mt-0.5" />
                       <div className="space-y-1">
-                         <Label className="text-indigo-900 block">Technical Info</Label>
-                         <Subtext className="text-indigo-700 leading-relaxed text-[10px]">{technicalError}</Subtext>
-                         <button type="button" onClick={() => window.location.reload()} className="flex items-center gap-1.5 text-[9px] font-bold text-indigo-600 uppercase hover:underline mt-2">
-                           <RefreshCw size={10} /> Reload Widget
-                         </button>
+                        <Label className="text-indigo-900 block">Technical Info</Label>
+                        <Subtext className="text-indigo-700 leading-relaxed text-[10px]">{technicalError}</Subtext>
+                        <Button type="button" onClick={() => window.location.reload()} className="flex items-center gap-1.5 text-[9px]  text-indigo-600 uppercase hover:underline mt-2">
+                          <RefreshCw size={10} /> Reload Widget
+                        </Button>
                       </div>
                     </div>
                   )}
@@ -249,23 +253,26 @@ export const LoginView: React.FC<Props> = ({ platformSettings }) => {
             {error && (
               <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl text-rose-600 flex items-start gap-3 text-left">
                 <AlertTriangle size={16} className="shrink-0" />
-                <Subtext className="text-rose-600 font-bold leading-relaxed">{error}</Subtext>
+                <Subtext className="text-rose-600  leading-relaxed">{error}</Subtext>
               </div>
             )}
 
-            <Button 
+            <Button
               type="submit"
               isLoading={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 shadow-blue-100"
-              rightIcon={!loading && <ArrowRight size={18} />}
+              variant="primary"
+              className="w-full !py-6 bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-100/50 rounded-2xl font-bold text-sm tracking-tight flex items-center justify-center gap-2 group !normal-case"
+              rightIcon={!loading && <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />}
             >
               Masuk Sekarang
             </Button>
           </form>
 
-          <p className="mt-12 text-center text-[10px] font-bold text-gray-300 uppercase tracking-[0.3em]">
-             CRM ID-Networkers
-          </p>
+          <div className="mt-16 text-center">
+            <Subtext className="text-[10px] font-bold text-gray-300 uppercase tracking-[0.4em]">
+              CRM ID-NETWORKERS
+            </Subtext>
+          </div>
         </div>
       </div>
     </div>

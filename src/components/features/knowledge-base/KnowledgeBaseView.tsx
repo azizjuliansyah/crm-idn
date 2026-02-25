@@ -1,17 +1,20 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, Subtext, Label, SearchInput } from '@/components/ui';
+
+
 import { supabase } from '@/lib/supabase';
 import { Company, KbCategory, KbArticle, AiSetting } from '@/lib/types';
-import { 
-  Plus, Search, Edit2, Trash2, Loader2, BookOpen, 
+import {
+  Plus, Search, Edit2, Trash2, Loader2, BookOpen,
   Tags, FileText, Calendar, Eye
 } from 'lucide-react';
 import { KnowledgeBaseChat } from './KnowledgeBaseChat';
 import { KnowledgeBaseArticleModal } from './KnowledgeBaseArticleModal';
 import { KnowledgeBaseCategoryModal } from './KnowledgeBaseCategoryModal';
 import { useRouter } from 'next/navigation';
-import { Button, SearchInput, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty } from '@/components/ui';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 
 interface Props {
@@ -24,14 +27,14 @@ export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
   const [categories, setCategories] = useState<KbCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // Modals & Chat
   const [isArticleModalOpen, setIsArticleModalOpen] = useState(false);
   const [selectedArticle, setSelectedArticle] = useState<KbArticle | null>(null);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState<{isOpen: boolean, id: number | null, title: string}>({ isOpen: false, id: null, title: '' });
-  
+  const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean, id: number | null, title: string }>({ isOpen: false, id: null, title: '' });
+
   const [aiSetting, setAiSetting] = useState<AiSetting | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -56,8 +59,8 @@ export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
   }, [fetchData]);
 
   const filteredArticles = useMemo(() => {
-    return articles.filter(a => 
-      a.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    return articles.filter(a =>
+      a.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       a.content.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [articles, searchTerm]);
@@ -78,33 +81,33 @@ export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
     setIsArticleModalOpen(true);
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-blue-600 mb-4" /><p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Sinkronisasi Basis Pengetahuan...</p></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-blue-600 mb-4" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Sinkronisasi Basis Pengetahuan...</Subtext></div>;
 
   return (
     <div className="space-y-6 relative pb-20">
       <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0 overflow-x-auto custom-scrollbar">
         <div className="w-[400px] shrink-0">
-          <SearchInput 
-            placeholder="Cari artikel bantuan..." 
+          <SearchInput
+            placeholder="Cari artikel bantuan..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             className="rounded-xl border-gray-100 shadow-none bg-gray-50/30"
           />
         </div>
         <div className="flex items-center gap-2 shrink-0 ml-auto">
-          <Button 
+          <Button
             onClick={() => setIsCategoryModalOpen(true)}
             variant="ghost"
             leftIcon={<Tags size={14} />}
-            className="px-6 py-3.5 bg-gray-50 text-gray-600 border border-gray-200 rounded-xl font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-gray-100 transition-all active:scale-95"
+            size='sm'
           >
             Kelola Kategori
           </Button>
-          <Button 
+          <Button
             onClick={handleNewArticle}
             variant="success"
             leftIcon={<Plus size={14} strokeWidth={3} />}
-            className="px-6 py-3.5 bg-emerald-600 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 hover:bg-emerald-700 transition-all active:scale-95"
+            size='sm'
           >
             Artikel Baru
           </Button>
@@ -114,11 +117,11 @@ export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-gray-50/50 border-b border-gray-100">
-              <TableCell className="px-8 py-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Artikel & Konten</TableCell>
-              <TableCell className="px-8 py-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Kategori</TableCell>
-              <TableCell className="px-8 py-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tanggal Dibuat</TableCell>
-              <TableCell className="px-8 py-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Aksi</TableCell>
+            <TableRow>
+              <TableCell isHeader>Artikel & Konten</TableCell>
+              <TableCell isHeader>Kategori</TableCell>
+              <TableCell isHeader>Tanggal Dibuat</TableCell>
+              <TableCell isHeader className="text-center">Aksi</TableCell>
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-gray-50">
@@ -130,52 +133,53 @@ export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
                       <FileText size={18} />
                     </div>
                     <div className="overflow-hidden">
-                      <button 
-                        onClick={() => handleOpenArticle(article)}
-                        className="text-sm font-bold text-gray-900 tracking-tight text-left hover:text-indigo-600 transition-colors uppercase truncate block w-full"
-                      >
-                        {article.title}
-                      </button>
-                      <p className="text-xs text-gray-400 mt-1 line-clamp-1 leading-relaxed italic">
+                      <span className="tracking-tight uppercase font-medium">{article.title}</span>
+                      <Subtext className="text-xs text-gray-400 mt-1 line-clamp-1 leading-relaxed italic tracking-tight">
                         {article.content}
-                      </p>
+                      </Subtext>
                     </div>
                   </div>
                 </TableCell>
                 <TableCell className="px-8 py-6">
-                  <span className="px-3 py-1 bg-white border border-indigo-100 rounded-full text-[9px] font-bold text-indigo-600 uppercase tracking-tighter shadow-sm">
+                  <Label className="px-3 py-1 bg-white border border-indigo-100 rounded-full text-[9px] text-indigo-600 uppercase tracking-tight shadow-sm">
                     {article.kb_categories?.name || 'UMUM'}
-                  </span>
+                  </Label>
                 </TableCell>
-                <TableCell className="px-8 py-6 text-xs font-bold text-gray-400 whitespace-nowrap">
+                <TableCell className="px-8 py-6 text-xs text-gray-500 whitespace-nowrap">
                   <div className="flex items-center gap-2">
-                     <Calendar size={12} className="opacity-40" />
-                     {new Date(article.created_at || '').toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    <Calendar size={12} className="opacity-40" />
+                    {new Date(article.created_at || '').toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </div>
                 </TableCell>
-                <TableCell className="px-8 py-6">
-                  <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                     <button 
+                <TableCell>
+                  <div className="flex items-center justify-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => handleOpenArticle(article)}
-                      className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg"
-                      title="Edit Artikel"
-                     >
-                       <Edit2 size={16} />
-                     </button>
-                     <button 
-                      onClick={() => setConfirmDelete({ isOpen: true, id: article.id, title: article.title })}
-                      className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg"
-                      title="Hapus Artikel"
-                     >
-                       <Trash2 size={16} />
-                     </button>
-                     <button 
-                      onClick={() => handleOpenArticle(article)}
-                      className="p-2 text-emerald-500 hover:bg-emerald-50 rounded-lg"
+                      className="!p-2 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors"
                       title="Baca Artikel"
-                     >
-                       <Eye size={16} />
-                     </button>
+                    >
+                      <Eye size={14} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleOpenArticle(article)}
+                      className="!p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Edit Artikel"
+                    >
+                      <Edit2 size={14} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setConfirmDelete({ isOpen: true, id: article.id, title: article.title })}
+                      className="!p-2 text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg"
+                      title="Hapus Artikel"
+                    >
+                      <Trash2 size={14} />
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>
@@ -183,7 +187,7 @@ export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
             {filteredArticles.length === 0 && (
               <TableRow>
                 <TableCell className="text-center py-32">
-                  <TableEmpty 
+                  <TableEmpty
                     colSpan={4}
                     icon={<BookOpen size={32} />}
                     message="Basis pengetahuan belum tersedia"
@@ -195,8 +199,8 @@ export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
         </Table>
       </div>
 
-      <KnowledgeBaseChat 
-        isOpen={isChatOpen} 
+      <KnowledgeBaseChat
+        isOpen={isChatOpen}
         onClose={() => setIsChatOpen(prev => !prev)}
         articles={articles}
         aiSetting={aiSetting}
@@ -205,7 +209,7 @@ export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
       />
 
       {isArticleModalOpen && (
-        <KnowledgeBaseArticleModal 
+        <KnowledgeBaseArticleModal
           isOpen={isArticleModalOpen}
           onClose={() => setIsArticleModalOpen(false)}
           company={company}
@@ -214,7 +218,7 @@ export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
           onSuccess={fetchData}
         />
       )}
-      
+
       {isCategoryModalOpen && (
         <KnowledgeBaseCategoryModal
           isOpen={isCategoryModalOpen}
@@ -224,16 +228,16 @@ export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
           onSuccess={fetchData}
         />
       )}
-      
-      <ConfirmDeleteModal 
-        isOpen={confirmDelete.isOpen} 
-        onClose={() => setConfirmDelete({ isOpen: false, id: null, title: '' })} 
+
+      <ConfirmDeleteModal
+        isOpen={confirmDelete.isOpen}
+        onClose={() => setConfirmDelete({ isOpen: false, id: null, title: '' })}
         onConfirm={() => {
           if (confirmDelete.id) {
             handleDeleteArticle(confirmDelete.id);
           }
         }}
-        title="Hapus Artikel" 
+        title="Hapus Artikel"
         itemName={confirmDelete.title}
         description="Apakah Anda yakin ingin menghapus artikel ini dari basis pengetahuan?"
       />

@@ -1,17 +1,9 @@
-
 import React, { useState } from 'react';
+import { Input, Button, H3, Subtext, Label, Avatar, Card } from '@/components/ui';
+
 import { supabase } from '@/lib/supabase';
 import { Profile } from '@/lib/types';
 import { User, Mail, Phone, Camera, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
-import { 
-  Card, 
-  Input, 
-  Button, 
-  Avatar, 
-  Subtext, 
-  H3, 
-  Label 
-} from '@/components/ui';
 
 interface Props {
   user: Profile;
@@ -147,10 +139,10 @@ export const ProfileEditView: React.FC<Props> = ({ user, onUpdate }) => {
                   <Loader2 className="animate-spin text-blue-600" size={24} />
                 </div>
               )}
-              <label className="absolute -bottom-2 -right-2 w-10 h-10 bg-gray-900 text-white rounded-lg flex items-center justify-center cursor-pointer hover:bg-black transition-all shadow-lg active:scale-90 border-2 border-white aspect-square z-20">
+              <Label className="absolute -bottom-2 -right-2 w-10 h-10 bg-gray-900 text-white rounded-lg flex items-center justify-center cursor-pointer hover:bg-black transition-all shadow-lg active:scale-90 border-2 border-white aspect-square z-20">
                 <Camera size={18} />
-                <input type="file" className="hidden" accept="image/*" onChange={handleUploadAvatar} disabled={uploading} />
-              </label>
+                <Input type="file" className="hidden" accept="image/*" onChange={handleUploadAvatar} disabled={uploading} />
+              </Label>
             </div>
             <div className="text-center sm:text-left space-y-1">
               <Label className="text-gray-900 normal-case text-sm">Foto Profil</Label>
@@ -161,7 +153,7 @@ export const ProfileEditView: React.FC<Props> = ({ user, onUpdate }) => {
           {message && (
             <div className={`p-4 rounded-lg flex items-center gap-3 ${message.type === 'success' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
               {message.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
-              <p className="text-xs font-bold leading-none">{message.text}</p>
+              <Subtext className="text-xs  leading-none">{message.text}</Subtext>
             </div>
           )}
 

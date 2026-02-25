@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
+import { Input, Select, Textarea, Button, Modal } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
-import { Company, CompanyMember, SupportStage, Client, SupportTicket } from '@/lib/types';
+import { Company, CompanyMember, SupportStage, Client, SupportTicket, TicketTopic } from '@/lib/types';
 import { Loader2, Save } from 'lucide-react';
-import { Modal, Button, Input, Select, Textarea, Label } from '@/components/ui';
 
 interface Props {
   isOpen: boolean;
@@ -11,17 +11,19 @@ interface Props {
   members: CompanyMember[];
   stages: SupportStage[];
   clients: Client[];
+  topics: TicketTopic[];
   onSuccess: () => void;
 }
 
 export const ComplaintAddModal: React.FC<Props> = ({ 
-  isOpen, onClose, company, members, stages, clients, onSuccess 
+  isOpen, onClose, company, members, stages, clients, topics, onSuccess 
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [form, setForm] = useState<Partial<SupportTicket>>({
     title: '',
     description: '',
     client_id: null,
+    topic_id: null,
     assigned_id: members[0]?.user_id || '',
     status: stages[0]?.name.toLowerCase() || 'open',
     priority: 'high',
@@ -44,7 +46,7 @@ export const ComplaintAddModal: React.FC<Props> = ({
       if (error) throw error;
       onSuccess();
       onClose();
-      setForm({ title: '', description: '', client_id: null, assigned_id: members[0]?.user_id || '', status: stages[0]?.name.toLowerCase() || 'open', priority: 'high', type: 'complaint' });
+      setForm({ title: '', description: '', client_id: null, topic_id: null, assigned_id: members[0]?.user_id || '', status: stages[0]?.name.toLowerCase() || 'open', priority: 'high', type: 'complaint' });
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -100,6 +102,15 @@ export const ComplaintAddModal: React.FC<Props> = ({
              onChange={e => setForm({...form, assigned_id: e.target.value})}
            >
              {members.map(m => <option key={m.user_id} value={m.user_id}>{m.profile?.full_name || 'Tanpa Nama'}</option>)}
+           </Select>
+
+           <Select 
+             label="Topik Keluhan (Opsional)" 
+             value={form.topic_id || ''} 
+             onChange={e => setForm({...form, topic_id: e.target.value ? Number(e.target.value) : null})}
+           >
+             <option value="">-- Pilih Topik --</option>
+             {topics.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
            </Select>
 
            <Select 

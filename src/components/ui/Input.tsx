@@ -16,7 +16,7 @@ export const Input: React.FC<InputProps> = ({
   return (
     <div className="space-y-2 w-full">
       {label && (
-        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
+        <label className="text-[10px] font-medium text-gray-400 uppercase tracking-tight ml-1">
           {label}
         </label>
       )}
@@ -27,11 +27,11 @@ export const Input: React.FC<InputProps> = ({
           </div>
         )}
         <input
-          className={`w-full ${leftIcon ? 'pl-11' : 'px-5'} py-4 bg-gray-50 border border-gray-100 rounded-xl font-bold text-sm outline-none focus:bg-white focus:border-blue-500 transition-all shadow-inner ${error ? 'border-rose-300 focus:border-rose-500' : ''} ${className}`}
+          className={`w-full ${leftIcon ? 'pl-11' : 'px-5'} py-3.5 bg-white border border-gray-200 rounded-md font-medium text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all hover:border-gray-300 ${error ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-50/50' : ''} ${className}`}
           {...props}
         />
       </div>
-      {error && <p className="text-[9px] text-rose-500 font-bold uppercase ml-1">{error}</p>}
+      {error && <p className="text-[9px] text-rose-500  uppercase ml-1">{error}</p>}
     </div>
   );
 };
@@ -51,17 +51,17 @@ export const Select: React.FC<SelectProps> = ({
   return (
     <div className="space-y-2 w-full">
       {label && (
-        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
+        <label className="text-[10px] font-medium text-gray-400 uppercase tracking-tight ml-1">
           {label}
         </label>
       )}
       <select
-        className={`w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-xl font-bold text-sm outline-none focus:bg-white focus:border-blue-500 transition-all cursor-pointer ${error ? 'border-rose-300 focus:border-rose-500' : ''} ${className}`}
+        className={`w-full px-5 py-3.5 bg-white border border-gray-200 rounded-md font-medium text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all cursor-pointer  hover:border-gray-300 ${error ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-50/50' : ''} ${className}`}
         {...props}
       >
         {children}
       </select>
-      {error && <p className="text-[9px] text-rose-500 font-bold uppercase ml-1">{error}</p>}
+      {error && <p className="text-[9px] text-rose-500  uppercase ml-1">{error}</p>}
     </div>
   );
 };

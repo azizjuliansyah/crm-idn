@@ -1,16 +1,21 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, H3, Subtext, Label } from '@/components/ui';
+
+
 import { supabase } from '@/lib/supabase';
 import { Company, ClientCompanyCategory, ClientCompany } from '@/lib/types';
-import { 
-  Plus, Search, Edit2, Trash2, Loader2, Tags, 
+import {
+  Plus, Search, Edit2, Trash2, Loader2, Tags,
   Save, AlertTriangle, List, Building2, CheckCircle2, X
 } from 'lucide-react';
 
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { NotificationModal } from '@/components/shared/modals/NotificationModal';
 import { ClientCompanyCategoryFormModal } from './components/ClientCompanyCategoryFormModal';
+
 
 interface Props {
   company: Company;
@@ -27,8 +32,8 @@ export const ClientCompanyCategoriesSettingsView: React.FC<Props> = ({ company }
   });
 
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; name: string }>({ isOpen: false, id: null, name: '' });
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({ 
-    isOpen: false, title: '', message: '', type: 'success' 
+  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
+    isOpen: false, title: '', message: '', type: 'success'
   });
 
   const fetchData = useCallback(async () => {
@@ -39,7 +44,7 @@ export const ClientCompanyCategoriesSettingsView: React.FC<Props> = ({ company }
         .select('*')
         .eq('company_id', company.id)
         .order('name');
-      
+
       const { data: cosData } = await supabase
         .from('client_companies')
         .select('id, category_id')
@@ -102,66 +107,66 @@ export const ClientCompanyCategoriesSettingsView: React.FC<Props> = ({ company }
     }
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-blue-600 mb-4" /><p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Memuat Kategori...</p></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-blue-600 mb-4" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Memuat Kategori...</Subtext></div>;
 
   return (
     <div className="max-w-3xl space-y-8">
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="p-10 border-b border-gray-50 flex items-center justify-between">
           <div>
-            <h3 className="text-2xl font-bold text-gray-900 tracking-tighter">Kategori Perusahaan Client</h3>
-            <p className="text-sm text-gray-400 font-medium mt-1">Kelola kategori untuk mengelompokkan klien bisnis Anda.</p>
+            <H3 className="text-2xl  text-gray-900 tracking-tight">Kategori Perusahaan Client</H3>
+            <Subtext className="text-sm text-gray-400 font-medium mt-1">Kelola kategori untuk mengelompokkan klien bisnis Anda.</Subtext>
           </div>
-          <button 
+          <Button
             onClick={() => { setForm({ name: '' }); setIsModalOpen(true); }}
-            className="px-6 py-3.5 bg-indigo-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-indigo-100 flex items-center gap-2 hover:bg-indigo-700 transition-all active:scale-95"
+            variant="primary"
           >
             <Plus size={16} /> Kategori Baru
-          </button>
+          </Button>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-gray-50/50">
-              <tr>
-                <th className="px-10 py-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Nama Kategori</th>
-                <th className="px-10 py-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Jumlah Perusahaan</th>
-                <th className="px-10 py-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
+          <Table className="w-full text-left">
+            <TableHeader className="bg-gray-50/50">
+              <TableRow>
+                <TableCell isHeader>Nama Kategori</TableCell>
+                <TableCell isHeader className="text-center">Jumlah Perusahaan</TableCell>
+                <TableCell isHeader className="text-center">Aksi</TableCell>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-gray-50">
               {categoriesWithCounts.map(item => (
-                <tr key={item.id} className="hover:bg-gray-50/30 group">
-                  <td className="px-10 py-6">
+                <TableRow key={item.id} className="hover:bg-gray-50/30 group">
+                  <TableCell className="px-10 py-6">
                     <div className="flex items-center gap-4">
                       <div className="w-9 h-9 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600">
                         <Tags size={16} />
                       </div>
-                      <span className="text-sm font-bold text-gray-900 tracking-tight">{item.name}</span>
+                      <Label className="text-sm text-gray-900 tracking-tight">{item.name}</Label>
                     </div>
-                  </td>
-                  <td className="px-10 py-6 text-center">
+                  </TableCell>
+                  <TableCell className="px-10 py-6 text-center">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-gray-50 border border-gray-100 rounded-full">
-                        <Building2 size={12} className="text-gray-400" />
-                        <span className="text-[10px] font-bold text-indigo-600 uppercase">
-                            {item.company_count} Perusahaan
-                        </span>
+                      <Building2 size={12} className="text-gray-400" />
+                      <Label className="text-[10px]  text-indigo-600 uppercase">
+                        {item.company_count} Perusahaan
+                      </Label>
                     </div>
-                  </td>
-                  <td className="px-10 py-6 text-center">
+                  </TableCell>
+                  <TableCell className="px-10 py-6 text-center">
                     <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => { setForm(item); setIsModalOpen(true); }} className="p-2 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-all"><Edit2 size={16} /></button>
-                      <button onClick={() => handleDeleteClick(item)} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-all"><Trash2 size={16} /></button>
+                      <Button onClick={() => { setForm(item); setIsModalOpen(true); }} className="p-2 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-all"><Edit2 size={16} /></Button>
+                      <Button onClick={() => handleDeleteClick(item)} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-all"><Trash2 size={16} /></Button>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
           {categoriesWithCounts.length === 0 && (
             <div className="py-20 text-center text-gray-300">
-               <Tags size={48} className="mx-auto mb-4 opacity-10" />
-               <p className="text-xs font-bold uppercase tracking-widest">Belum ada kategori yang ditambahkan</p>
+              <Tags size={48} className="mx-auto mb-4 opacity-10" />
+              <Subtext className="text-xs  uppercase tracking-tight">Belum ada kategori yang ditambahkan</Subtext>
             </div>
           )}
         </div>

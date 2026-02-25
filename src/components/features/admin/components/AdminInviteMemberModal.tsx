@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Input, Select, Button } from '@/components/ui';
+import { Input, Select, Button, Modal } from '@/components/ui';
 import { CompanyRole } from '@/lib/types';
 
 interface AdminInviteMemberModalProps {

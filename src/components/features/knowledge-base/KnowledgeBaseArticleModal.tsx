@@ -1,10 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+
+import { Input, Select, Textarea, Button, Modal } from '@/components/ui';
+
+
 import { supabase } from '@/lib/supabase';
 import { Company, KbCategory, KbArticle } from '@/lib/types';
 import { Loader2, Save } from 'lucide-react';
-import { Modal, Input, Select, Textarea, Button } from '@/components/ui';
 
 interface Props {
   isOpen: boolean;

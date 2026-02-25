@@ -1,20 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H3, Subtext, Label, Badge } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { Company } from '@/lib/types';
-import { 
-  Users, Target, ReceiptCent, Ticket, 
-  ArrowUpRight, ArrowDownRight, 
+import {
+  Users, Target, ReceiptCent, Ticket,
+  ArrowUpRight, ArrowDownRight,
   Layers, Globe, Loader2, Calendar, Headset,
   TrendingUp, Clock
 } from 'lucide-react';
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, AreaChart, Area, LineChart, Line
 } from 'recharts';
-import { 
-  Subtext, H3, Button, Badge,
-  Table, TableHeader, TableRow, TableCell, TableBody, TableEmpty
-} from '@/components/ui';
 
 interface DashboardProps {
   company: Company;
@@ -63,12 +60,12 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
 
       // 2. Process Monthly Revenue
       const monthly: Record<string, number> = {};
-      const last6Months = Array.from({length: 6}, (_, i) => {
+      const last6Months = Array.from({ length: 6 }, (_, i) => {
         const d = new Date();
         d.setMonth(d.getMonth() - i);
         return d.toLocaleString('id-ID', { month: 'short' });
       }).reverse();
-      
+
       last6Months.forEach(m => monthly[m] = 0);
       quotesRes.data?.forEach(q => {
         const m = new Date(q.date).toLocaleString('id-ID', { month: 'short' });
@@ -80,7 +77,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
       const funnel: Record<string, number> = {};
       const stageMap: Record<string, string> = {};
       stagesRes.data?.forEach(s => stageMap[s.id] = s.name);
-      
+
       dealsRes.data?.forEach(d => {
         const stageName = stageMap[d.stage_id] || 'Unknown';
         funnel[stageName] = (funnel[stageName] || 0) + Number(d.expected_value);
@@ -92,7 +89,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
       ticketsRes.data?.forEach(t => {
         const priorityKey = t.priority?.toLowerCase();
         if (priorityKey && priorities[priorityKey] !== undefined) {
-           priorities[priorityKey] += 1;
+          priorities[priorityKey] += 1;
         }
       });
       const ticketsPriority = Object.entries(priorities).map(([name, value]) => ({ name, value }));
@@ -130,7 +127,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
   if (loading) return (
     <div className="flex flex-col items-center justify-center h-96 gap-4">
       <Loader2 className="animate-spin text-blue-600" size={40} />
-      <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Menyusun Dashboard Perusahaan...</p>
+      <Subtext className="text-gray-400  uppercase tracking-tight text-[10px]">Menyusun Dashboard Perusahaan...</Subtext>
     </div>
   );
 
@@ -144,12 +141,12 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
             <div className="w-12 h-12 rounded-xl bg-white/20 text-white flex items-center justify-center backdrop-blur-sm shadow-inner">
               <Users size={22} />
             </div>
-            <div className="flex items-center gap-1 text-white text-[10px] font-bold bg-white/20 px-2.5 py-1 rounded-full uppercase backdrop-blur-md">
+            <div className="flex items-center gap-1 text-white text-[10px]  bg-white/20 px-2.5 py-1 rounded-full uppercase backdrop-blur-md">
               <ArrowUpRight size={12} /> 12.5%
             </div>
           </div>
-          <p className="text-blue-50 text-[10px] font-bold uppercase tracking-[0.15em] mb-1 relative z-10">Total Leads</p>
-          <h3 className="text-3xl font-bold text-white tracking-tighter relative z-10">{stats.totalLeads}</h3>
+          <Subtext className="text-blue-50 text-[10px]  uppercase tracking-[0.15em] mb-1 relative z-10">Total Leads</Subtext>
+          <H3 className="text-3xl  text-white tracking-tight relative z-10">{stats.totalLeads}</H3>
         </div>
 
         <div className="bg-gradient-to-br from-violet-700 via-violet-600 to-purple-600 p-6 rounded-2xl shadow-xl shadow-purple-100 hover:translate-y-[-4px] transition-all group overflow-hidden relative">
@@ -158,12 +155,12 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
             <div className="w-12 h-12 rounded-xl bg-white/20 text-white flex items-center justify-center backdrop-blur-sm shadow-inner">
               <Target size={22} />
             </div>
-            <div className="flex items-center gap-1 text-white text-[10px] font-bold bg-white/20 px-2.5 py-1 rounded-full uppercase backdrop-blur-md">
+            <div className="flex items-center gap-1 text-white text-[10px]  bg-white/20 px-2.5 py-1 rounded-full uppercase backdrop-blur-md">
               <ArrowUpRight size={12} /> 8.2%
             </div>
           </div>
-          <p className="text-purple-50 text-[10px] font-bold uppercase tracking-[0.15em] mb-1 relative z-10">Active Deals</p>
-          <h3 className="text-3xl font-bold text-white tracking-tighter relative z-10">{stats.totalDeals}</h3>
+          <Subtext className="text-purple-50 text-[10px]  uppercase tracking-[0.15em] mb-1 relative z-10">Active Deals</Subtext>
+          <H3 className="text-3xl  text-white tracking-tight relative z-10">{stats.totalDeals}</H3>
         </div>
 
         <div className="bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 p-6 rounded-2xl shadow-xl shadow-emerald-100 hover:translate-y-[-4px] transition-all group overflow-hidden relative">
@@ -172,12 +169,12 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
             <div className="w-12 h-12 rounded-xl bg-white/20 text-white flex items-center justify-center backdrop-blur-sm shadow-inner">
               <ReceiptCent size={22} />
             </div>
-            <div className="flex items-center gap-1 text-white text-[10px] font-bold bg-white/20 px-2.5 py-1 rounded-full uppercase backdrop-blur-md">
+            <div className="flex items-center gap-1 text-white text-[10px]  bg-white/20 px-2.5 py-1 rounded-full uppercase backdrop-blur-md">
               <ArrowDownRight size={12} /> 3.1%
             </div>
           </div>
-          <p className="text-emerald-50 text-[10px] font-bold uppercase tracking-[0.15em] mb-1 relative z-10">Total Revenue</p>
-          <h3 className="text-3xl font-bold text-white tracking-tighter relative z-10">{formatIDR(stats.totalRevenue)}</h3>
+          <Subtext className="text-emerald-50 text-[10px]  uppercase tracking-[0.15em] mb-1 relative z-10">Total Revenue</Subtext>
+          <H3 className="text-3xl  text-white tracking-tight relative z-10">{formatIDR(stats.totalRevenue)}</H3>
         </div>
 
         <div className="bg-gradient-to-br from-rose-600 via-rose-500 to-pink-500 p-6 rounded-2xl shadow-xl shadow-rose-100 hover:translate-y-[-4px] transition-all group overflow-hidden relative">
@@ -186,12 +183,12 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
             <div className="w-12 h-12 rounded-xl bg-white/20 text-white flex items-center justify-center backdrop-blur-sm shadow-inner">
               <Ticket size={22} />
             </div>
-            <div className="px-2.5 py-1 bg-white/20 rounded-full text-[9px] font-bold text-white uppercase tracking-widest backdrop-blur-md">
+            <div className="px-2.5 py-1 bg-white/20 rounded-full text-[9px]  text-white uppercase tracking-tight backdrop-blur-md">
               Live
             </div>
           </div>
-          <p className="text-rose-50 text-[10px] font-bold uppercase tracking-[0.15em] mb-1 relative z-10">Support Tickets</p>
-          <h3 className="text-3xl font-bold text-white tracking-tighter relative z-10">{stats.activeTickets}</h3>
+          <Subtext className="text-rose-50 text-[10px]  uppercase tracking-[0.15em] mb-1 relative z-10">Support Tickets</Subtext>
+          <H3 className="text-3xl  text-white tracking-tight relative z-10">{stats.activeTickets}</H3>
         </div>
       </div>
 
@@ -199,21 +196,21 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
           <div className="flex items-center justify-between mb-10">
-             <div>
-                <H3 className="normal-case text-lg font-bold text-gray-900 tracking-tight">Tren Pendapatan Bulanan</H3>
-                <Subtext>Berdasarkan penawaran yang disetujui (6 bulan terakhir).</Subtext>
-             </div>
-             <Calendar size={20} className="text-gray-300" />
+            <div>
+              <H3 className="normal-case text-lg  text-gray-900 tracking-tight">Tren Pendapatan Bulanan</H3>
+              <Subtext>Berdasarkan penawaran yang disetujui (6 bulan terakhir).</Subtext>
+            </div>
+            <Calendar size={20} className="text-gray-300" />
           </div>
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={stats.revenueMonthly}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 10, fontWeight: 'bold'}} dy={10} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10, fontWeight: 'bold' }} dy={10} />
                 <YAxis hide />
-                <Tooltip 
-                  cursor={{fill: '#f9fafb'}}
-                  contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontWeight: 'bold', fontSize: '12px'}}
+                <Tooltip
+                  cursor={{ fill: '#f9fafb' }}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontWeight: 'bold', fontSize: '12px' }}
                   formatter={(value: any) => [formatIDR(Number(value)), 'Revenue']}
                 />
                 <Bar dataKey="amount" fill="#4F46E5" radius={[6, 6, 0, 0]} barSize={40} />
@@ -224,26 +221,26 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
 
         <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
           <div className="flex items-center justify-between mb-10">
-             <div>
-                <H3 className="normal-case text-lg font-bold text-gray-900 tracking-tight">Distribusi Nilai Pipeline</H3>
-                <Subtext>Estimasi nilai akumulasi per tahapan transaksi.</Subtext>
-             </div>
-             <Layers size={20} className="text-gray-300" />
+            <div>
+              <H3 className="normal-case text-lg  text-gray-900 tracking-tight">Distribusi Nilai Pipeline</H3>
+              <Subtext>Estimasi nilai akumulasi per tahapan transaksi.</Subtext>
+            </div>
+            <Layers size={20} className="text-gray-300" />
           </div>
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={stats.dealsFunnel}>
                 <defs>
                   <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 9, fontWeight: 'bold'}} dy={10} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 9, fontWeight: 'bold' }} dy={10} />
                 <YAxis hide />
-                <Tooltip 
-                  contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontWeight: 'bold', fontSize: '12px'}}
+                <Tooltip
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontWeight: 'bold', fontSize: '12px' }}
                   formatter={(value: any) => [formatIDR(Number(value)), 'Value']}
                 />
                 <Area type="monotone" dataKey="value" stroke="#10B981" fillOpacity={1} fill="url(#colorValue)" strokeWidth={4} />
@@ -257,7 +254,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm lg:col-span-1">
           <div className="mb-8">
-            <H3 className="normal-case text-lg font-bold text-gray-900 tracking-tight">Sumber Prospek</H3>
+            <H3 className="normal-case text-lg  text-gray-900 tracking-tight">Sumber Prospek</H3>
             <Subtext>Analisis channel pemasaran terkuat.</Subtext>
           </div>
           <div className="h-64 w-full relative">
@@ -274,118 +271,118 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />
                   ))}
                 </Pie>
-                <Tooltip contentStyle={{borderRadius: '12px', border: 'none', fontSize: '11px', fontWeight: 'bold'}} />
+                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', fontSize: '11px', fontWeight: 'bold' }} />
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <Globe size={24} className="text-gray-100 mb-1" />
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Global</span>
+              <Globe size={24} className="text-gray-100 mb-1" />
+              <Label className="text-[10px]  text-gray-400 uppercase tracking-tight">Global</Label>
             </div>
           </div>
           <div className="mt-6 space-y-3">
-             {stats.leadsBySource.slice(0, 3).map((item, idx) => (
-               <div key={item.name} className="flex items-center justify-between text-[11px] font-bold">
-                 <div className="flex items-center gap-2.5">
-                   <div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor: COLORS[idx % COLORS.length]}}></div>
-                   <span className="text-gray-500 uppercase tracking-tight">{item.name}</span>
-                 </div>
-                 <span className="text-gray-900">{Math.round((item.value / (stats.totalLeads || 1)) * 100)}%</span>
-               </div>
-             ))}
+            {stats.leadsBySource.slice(0, 3).map((item, idx) => (
+              <div key={item.name} className="flex items-center justify-between text-[11px] ">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
+                  <Label className="text-gray-500 uppercase tracking-tight">{item.name}</Label>
+                </div>
+                <Label className="text-gray-900">{Math.round((item.value / (stats.totalLeads || 1)) * 100)}%</Label>
+              </div>
+            ))}
           </div>
         </div>
 
         <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm lg:col-span-2">
-           <div className="flex items-center justify-between mb-8">
-              <div>
-                <H3 className="normal-case text-lg font-bold text-gray-900 tracking-tight">Kesehatan Tim Support</H3>
-                <Subtext>Beban kerja berdasarkan urgensi ticket aktif.</Subtext>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center">
-                 <Headset size={20} />
-              </div>
-           </div>
-           <div className="h-64 w-full">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <H3 className="normal-case text-lg  text-gray-900 tracking-tight">Kesehatan Tim Support</H3>
+              <Subtext>Beban kerja berdasarkan urgensi ticket aktif.</Subtext>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center">
+              <Headset size={20} />
+            </div>
+          </div>
+          <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={stats.ticketsPriority}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 10, fontWeight: 'bold'}} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 10}} />
-                <Tooltip 
-                  contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px'}}
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10, fontWeight: 'bold' }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10 }} />
+                <Tooltip
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px' }}
                 />
-                <Line type="monotone" dataKey="value" stroke="#EF4444" strokeWidth={5} dot={{r: 5, fill: '#EF4444', strokeWidth: 3, stroke: '#fff'}} activeDot={{r: 8}} />
+                <Line type="monotone" dataKey="value" stroke="#EF4444" strokeWidth={5} dot={{ r: 5, fill: '#EF4444', strokeWidth: 3, stroke: '#fff' }} activeDot={{ r: 8 }} />
               </LineChart>
             </ResponsiveContainer>
-           </div>
-           <div className="mt-6 p-5 bg-gray-50 rounded-xl flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                 <div className="relative">
-                    <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full"></div>
-                    <div className="absolute inset-0 w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping opacity-75"></div>
-                 </div>
-                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">Live Health Check: Optimal</span>
+          </div>
+          <div className="mt-6 p-5 bg-gray-50 rounded-xl flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full"></div>
+                <div className="absolute inset-0 w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping opacity-75"></div>
               </div>
-              <Button 
-                onClick={fetchData} 
-                variant="ghost" 
-                size="sm" 
-                leftIcon={<TrendingUp size={12} className="group-hover:translate-y-[-1px] transition-transform" />}
-                className="text-[10px] font-bold text-blue-600 uppercase tracking-widest"
-              >
-                 Sinkronisasi Ulang
-              </Button>
-           </div>
+              <Label className="text-[10px]  uppercase tracking-[0.2em] text-gray-500">Live Health Check: Optimal</Label>
+            </div>
+            <Button
+              onClick={fetchData}
+              variant="ghost"
+              size="sm"
+              leftIcon={<TrendingUp size={12} className="group-hover:translate-y-[-1px] transition-transform" />}
+              className="text-[10px]  text-blue-600 uppercase tracking-tight"
+            >
+              Sinkronisasi Ulang
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Recent Activity Table */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-         <div className="p-8 border-b border-gray-50 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-               <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                  <Clock size={20} />
-               </div>
-               <H3 className="normal-case text-lg font-bold text-gray-900 tracking-tight">Prospek Terbaru</H3>
+        <div className="p-8 border-b border-gray-50 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <Clock size={20} />
             </div>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pembaruan Otomatis</p>
-         </div>
-         <Table>
-           <TableHeader>
-             <tr>
-               <TableCell isHeader>Nama Client</TableCell>
-               <TableCell isHeader>Sumber</TableCell>
-               <TableCell isHeader>Waktu Masuk</TableCell>
-               <TableCell isHeader className="text-center">Status</TableCell>
-             </tr>
-           </TableHeader>
-           <TableBody>
-             {stats.recentLeads.map((lead, idx) => (
-               <TableRow key={idx}>
-                 <TableCell>
-                    <div className="flex items-center gap-3">
-                       <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase">
-                          {lead.name.charAt(0)}
-                       </div>
-                       <span className="text-sm font-bold text-gray-900">{lead.name}</span>
+            <H3 className="normal-case text-lg  text-gray-900 tracking-tight">Prospek Terbaru</H3>
+          </div>
+          <Subtext className="text-[10px]  text-gray-400 uppercase tracking-tight">Pembaruan Otomatis</Subtext>
+        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableCell isHeader>Nama Client</TableCell>
+              <TableCell isHeader>Sumber</TableCell>
+              <TableCell isHeader>Waktu Masuk</TableCell>
+              <TableCell isHeader className="text-center">Status</TableCell>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {stats.recentLeads.map((lead, idx) => (
+              <TableRow key={idx}>
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-[10px]  text-gray-400 uppercase">
+                      {lead.name.charAt(0)}
                     </div>
-                 </TableCell>
-                 <TableCell>
-                    <Badge variant="ghost" className="text-indigo-600 bg-indigo-50 border-none">{lead.source}</Badge>
-                 </TableCell>
-                 <TableCell className="font-bold text-gray-400">
-                    {new Date(lead.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
-                 </TableCell>
-                 <TableCell className="text-center">
-                    <Badge variant="success" className="border-emerald-100 bg-emerald-50 text-emerald-600 rounded-full">{lead.status}</Badge>
-                 </TableCell>
-               </TableRow>
-             ))}
-             {stats.recentLeads.length === 0 && (
-               <TableEmpty colSpan={4} message="Belum ada data leads masuk" />
-             )}
-           </TableBody>
-         </Table>
+                    <Label className="text-sm  text-gray-900">{lead.name}</Label>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="ghost" className="text-indigo-600 bg-indigo-50 border-none">{lead.source}</Badge>
+                </TableCell>
+                <TableCell className=" text-gray-400">
+                  {new Date(lead.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                </TableCell>
+                <TableCell className="text-center">
+                  <Badge variant="success" className="border-emerald-100 bg-emerald-50 text-emerald-600 rounded-full">{lead.status}</Badge>
+                </TableCell>
+              </TableRow>
+            ))}
+            {stats.recentLeads.length === 0 && (
+              <TableEmpty colSpan={4} message="Belum ada data leads masuk" />
+            )}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

@@ -1,12 +1,12 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
+import { Input, Select, Textarea, Button, H3, Subtext, Label, SectionHeader, Modal, Avatar, Breadcrumb, Timeline, TimelineItem, TimelineIcon, TimelineContent } from '@/components/ui';
+
 import { supabase } from '@/lib/supabase';
 import { Deal, Company, CompanyMember, Pipeline, Client, ClientCompany, LeadActivity, Profile } from '@/lib/types';
-import { 
-  ArrowUp, MessageSquare, RefreshCw, Pencil, 
-  Clock, FileText, UserCircle, Target, Star, Trash2, ChevronLeft, ChevronRight, X, Loader2, Save
+import {
+  ArrowUp, MessageSquare, RefreshCw, Pencil,
+  Clock, FileText, FilePlus, UserCircle, Target, Star, Trash2, ChevronLeft, ChevronRight, X, Loader2, Save, Minus, Plus
 } from 'lucide-react';
-import { Modal, Button, Input, Select, Textarea, SectionHeader, Breadcrumb, Timeline, TimelineItem, TimelineIcon, TimelineContent, Avatar, H2, Label, Subtext } from '@/components/ui';
 
 interface Props {
   isOpen: boolean;
@@ -24,15 +24,26 @@ interface Props {
   onEditQuotation?: (quotationId: number) => void;
 }
 
-export const DealDetailModal: React.FC<Props> = ({ 
-  isOpen, onClose, deal, company, user, members, pipeline, 
-  clients, clientCompanies, onUpdate, onDelete, onCreateQuotation, onEditQuotation 
+export const DealDetailModal: React.FC<Props> = ({
+  isOpen, onClose, deal, company, user, members, pipeline,
+  clients, clientCompanies, onUpdate, onDelete, onCreateQuotation, onEditQuotation
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activities, setActivities] = useState<LeadActivity[]>([]);
   const [loadingActivities, setLoadingActivities] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [form, setForm] = useState<Partial<Deal>>(deal);
+  const [manualFollowUp, setManualFollowUp] = useState<string>('');
+  const [isFollowUpExpanded, setIsFollowUpExpanded] = useState(false);
+  const [followUpDate, setFollowUpDate] = useState<string>('');
+  const [followUpNotes, setFollowUpNotes] = useState<string>('');
+  const [followUpErrors, setFollowUpErrors] = useState<{ count?: string; date?: string }>({});
+
+  useEffect(() => {
+    setManualFollowUp((form.follow_up || 0).toString());
+    setFollowUpDate(form.follow_up_date || '');
+    setFollowUpNotes(form.follow_up_notes || '');
+  }, [form.follow_up, form.follow_up_date, form.follow_up_notes]);
 
   const fetchActivities = useCallback(async () => {
     if (!deal?.id) return;
@@ -40,7 +51,7 @@ export const DealDetailModal: React.FC<Props> = ({
     try {
       const { data, error } = await supabase
         .from('lead_activities').select('*, profile:profiles(*)').eq('deal_id', deal.id).order('created_at', { ascending: false });
-      
+
       if (error) {
         console.error("Fetch Activities Error:", error);
         return;
@@ -66,10 +77,10 @@ export const DealDetailModal: React.FC<Props> = ({
     try {
       const oldStageName = pipeline?.stages?.find(s => s.id === form.stage_id)?.name || 'Unknown';
       const newStageName = pipeline?.stages?.find(s => s.id === newStageId)?.name || 'Unknown';
-      
+
       const { error } = await supabase.from('deals').update({ stage_id: newStageId }).eq('id', deal.id);
       if (error) throw error;
-      
+
       await supabase.from('lead_activities').insert({
         deal_id: deal.id,
         user_id: user.id,
@@ -108,6 +119,68 @@ export const DealDetailModal: React.FC<Props> = ({
     }
   };
 
+  const handleSaveFollowUp = async () => {
+    if (isProcessing) return;
+    const newValue = parseInt(manualFollowUp) || 0;
+    const currentCount = form.follow_up || 0;
+    const currentNextDate = form.follow_up_date || '';
+
+    // Validation
+    const errors: { count?: string; date?: string } = {};
+    if (newValue <= currentCount) {
+      errors.count = `Minimal follow up ke-${currentCount + 1}`;
+    }
+    if (!followUpDate) {
+      errors.date = 'Tanggal follow up berikutnya wajib diisi';
+    } else if (currentNextDate && followUpDate <= currentNextDate) {
+      errors.date = 'Harus setelah jadwal follow up sebelumnya';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFollowUpErrors(errors);
+      return;
+    }
+
+    setFollowUpErrors({});
+    setIsProcessing(true);
+    try {
+      const updateData = {
+        follow_up: newValue,
+        follow_up_date: followUpDate || null,
+        follow_up_notes: followUpNotes || null
+      };
+
+      const { error } = await supabase.from('deals').update(updateData).eq('id', deal.id);
+      if (error) throw error;
+
+      let activityContent = `Follow up baru dicatat: Ke-${newValue}`;
+      if (followUpDate) activityContent += ` (Next Follow Up: ${new Date(followUpDate).toLocaleDateString('id-ID')})`;
+      if (followUpNotes) activityContent += ` - Catatan: ${followUpNotes}`;
+
+      await supabase.from('lead_activities').insert({
+        deal_id: deal.id,
+        user_id: user.id,
+        content: activityContent,
+        activity_type: 'system'
+      });
+
+      setForm(prev => ({ ...prev, ...updateData }));
+      setIsFollowUpExpanded(false);
+      onUpdate();
+      await fetchActivities();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleFollowUpChange = (action: 'increase' | 'decrease') => {
+    const oldValue = parseInt(manualFollowUp) || 0;
+    const newValue = action === 'increase' ? oldValue + 1 : Math.max(0, oldValue - 1);
+    setManualFollowUp(newValue.toString());
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !pipeline) return;
@@ -122,14 +195,16 @@ export const DealDetailModal: React.FC<Props> = ({
         whatsapp: form.whatsapp,
         expected_value: form.expected_value || 0,
         sales_id: form.sales_id,
-        notes: form.notes,
         stage_id: form.stage_id || deal.stage_id,
         company_id: company.id,
-        pipeline_id: pipeline.id
+        pipeline_id: pipeline.id,
+        input_date: form.input_date,
+        follow_up: form.follow_up || 0,
+        notes: form.notes
       };
       const { error } = await supabase.from('deals').update(dealData).eq('id', deal.id);
       if (error) throw error;
-      
+
       onUpdate();
       onClose();
     } catch (err: any) {
@@ -142,15 +217,15 @@ export const DealDetailModal: React.FC<Props> = ({
   const handleClientChange = (val: number) => {
     const client = clients.find(c => c.id === val);
     if (client) {
-        const co = clientCompanies.find(cc => cc.id === client.client_company_id);
-        setForm(prev => ({
-            ...prev,
-            client_id: val,
-            contact_name: client.name,
-            customer_company: co ? co.name : 'Perorangan',
-            email: client.email,
-            whatsapp: client.whatsapp
-        }));
+      const co = clientCompanies.find(cc => cc.id === client.client_company_id);
+      setForm(prev => ({
+        ...prev,
+        client_id: val,
+        contact_name: client.name,
+        customer_company: co ? co.name : 'Perorangan',
+        email: client.email,
+        whatsapp: client.whatsapp
+      }));
     }
   };
 
@@ -162,10 +237,10 @@ export const DealDetailModal: React.FC<Props> = ({
   const quotation: any = Array.isArray(deal.quotations) ? deal.quotations[0] : deal.quotations;
 
   return (
-    <Modal 
-      isOpen={isOpen} 
-      onClose={onClose} 
-      title="" 
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title=""
       size="xl"
       hideClose
       noPadding
@@ -174,265 +249,383 @@ export const DealDetailModal: React.FC<Props> = ({
       <div className="flex flex-col h-[88vh] bg-white text-[#111827] font-sans overflow-hidden rounded-md border border-gray-200">
         {/* HEADER SECTION */}
         <header className="px-6 h-16 flex items-center justify-between border-b border-gray-100 bg-white shrink-0">
-           <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" onClick={onClose} className="!p-1.5 text-gray-400">
-                <ChevronLeft size={20} />
-              </Button>
-              <div className="flex items-center gap-3">
-                 <Breadcrumb 
-                    items={[
-                      { label: 'Deals' },
-                      { label: form.name || 'Untitled Deal', active: true }
-                    ]}
-                 />
-                 <Star size={16} className="text-gray-300 ml-1" />
-              </div>
-           </div>
-           
-           <div className="flex items-center gap-3">
-              <Button variant="ghost" size="sm" onClick={() => onDelete(deal.id)} className="!p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50">
-                <Trash2 size={18} />
-              </Button>
-              {quotation ? (
-                <Button 
-                  variant="ghost"
-                  onClick={() => onEditQuotation?.(quotation.id)}
-                  className="bg-emerald-50 text-emerald-600 border border-emerald-100"
-                  leftIcon={<FileText size={14} />}
-                >
-                  EDIT PENAWARAN
-                </Button>
-              ) : (
-                onCreateQuotation && deal.client_id && (
-                  <Button 
-                    onClick={() => onCreateQuotation(deal.client_id!, deal.id)}
-                    variant="success"
-                    leftIcon={<FileText size={14} />}
-                  >
-                    BUAT PENAWARAN
-                  </Button>
-                )
-              )}
-              <Button 
-                onClick={handleSave} 
-                isLoading={isProcessing}
-                leftIcon={<Save size={14} />}
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={onClose} className="!p-1.5 text-gray-400">
+              <ChevronLeft size={20} />
+            </Button>
+            <div className="flex items-center gap-3">
+              <Breadcrumb
+                items={[
+                  { label: 'Deals' },
+                  { label: form.name || 'Untitled Deal', active: true }
+                ]}
+              />
+              <Star size={16} className="text-gray-300 ml-1" />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={() => onDelete(deal.id)} className="!p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50">
+              <Trash2 size={18} />
+            </Button>
+            {quotation ? (
+              <Button
+                variant="ghost"
+                size='sm'
+                onClick={() => onEditQuotation?.(quotation.id)}
+                className="bg-emerald-50 text-emerald-600 border border-emerald-100"
+                leftIcon={<FileText size={14} />}
               >
-                UPDATE DEAL
+                EDIT PENAWARAN
               </Button>
-              <div className="w-px h-6 bg-gray-100 mx-1"></div>
-              <Button variant="ghost" size="sm" onClick={onClose} className="!p-1.5 text-gray-400">
-                <X size={20} />
-              </Button>
-           </div>
+            ) : (
+              onCreateQuotation && deal.client_id && (
+                <Button
+                  onClick={() => onCreateQuotation(deal.client_id!, deal.id)}
+                  variant="success"
+                  size='sm'
+                  leftIcon={<FilePlus size={14} />}
+                >
+                  BUAT PENAWARAN
+                </Button>
+              )
+            )}
+            <Button
+              onClick={handleSave}
+              variant='primary'
+              size='sm'
+              isLoading={isProcessing}
+              leftIcon={<Save size={14} />}
+            >
+              UPDATE DEAL
+            </Button>
+            <div className="w-px h-6 bg-gray-100 mx-1"></div>
+            <Button variant="ghost" size="sm" onClick={onClose} className="!p-1.5 text-gray-400">
+              <X size={20} />
+            </Button>
+          </div>
         </header>
 
         {/* METADATA BAR */}
         <div className="px-8 py-4 flex items-center justify-between border-b border-gray-50 bg-gray-50/30 shrink-0">
-           <div className="flex items-center gap-6">
-              <div className="px-2 py-0.5 border border-gray-200 rounded-sm">
-                 <Label>DEAL ID: {deal.id}</Label>
+          <div className="flex items-center gap-6">
+            <div className="px-2 pb-1 border border-gray-200 rounded-sm">
+              <Label className="!capitalize !text-black !tracking-tight">DEAL ID: {deal.id}</Label>
+            </div>
+            <div className="flex items-center gap-1.5 text-[11px] font-medium text-black">
+              <Clock size={14} /> Input: {form.input_date ? new Date(form.input_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+            </div>
+            {quotation && (
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full">
+                <Label className="text-emerald-600 !capitalize !tracking-tight font-medium">{quotation.number}</Label>
               </div>
-              <div className="flex items-center gap-1.5">
-                 <Clock size={14} className="text-gray-400" />
-                 <Subtext>Dibuat {new Date(deal.created_at).toLocaleDateString('id-ID', { month: 'short', day: 'numeric' })}</Subtext>
-              </div>
-              {quotation && (
-                <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full">
-                  <Label className="text-emerald-600">{quotation.number}</Label>
-                </div>
-              )}
-           </div>
-           <div className="flex items-center gap-2">
-              <Label>Expected Value:</Label>
-              <span className="text-sm font-bold text-blue-600">{formatIDR(form.expected_value)}</span>
-           </div>
+            )}
+          </div>
+          <div className="flex items-center  gap-2">
+            <Label className="!capitalize !text-black !tracking-tight">Expected Value:</Label>
+            <Label className="text-sm !capitalize !text-black !tracking-tight font-semibold">{formatIDR(form.expected_value)}</Label>
+          </div>
+
         </div>
 
         {/* STEPPER STATUS */}
         <div className="px-8 pt-6 pb-2 shrink-0">
-           <div className="flex items-center h-10 w-full overflow-hidden rounded-sm border border-gray-200">
-              {pipeline?.stages?.map((stage, idx) => {
-                const isActive = form.stage_id === stage.id;
-                const isLast = idx === (pipeline.stages?.length || 0) - 1;
-                const isFirst = idx === 0;
-                
-                let bgColor = 'bg-white text-gray-400 hover:bg-gray-50';
-                let borderColor = 'border-gray-100';
-                
-                if (isActive) {
-                   bgColor = 'bg-blue-600 text-white shadow-inner';
-                   borderColor = 'border-transparent';
-                }
+          <div className="flex items-center h-10 w-full overflow-hidden rounded-sm border border-gray-200">
+            {pipeline?.stages?.map((stage, idx) => {
+              const isActive = form.stage_id === stage.id;
+              const isLast = idx === (pipeline.stages?.length || 0) - 1;
+              const isFirst = idx === 0;
 
-                return (
-                  <button 
-                    key={stage.id}
-                    onClick={() => handleStatusChange(stage.id)}
-                    disabled={isProcessing}
-                    className={`relative flex-1 h-full flex items-center justify-center transition-all group overflow-hidden text-[10px] font-bold uppercase tracking-widest ${bgColor} border-r last:border-r-0 ${borderColor}`}
-                    style={{
-                      clipPath: isLast 
-                        ? 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 3% 50%)' 
-                        : isFirst 
-                          ? 'polygon(0% 0%, 97% 0%, 100% 50%, 97% 100%, 0% 100%)' 
-                          : 'polygon(0% 0%, 97% 0%, 100% 50%, 97% 100%, 0% 100%, 3% 50%)'
-                    }}
-                  >
-                    {stage.name}
-                  </button>
-                );
-              })}
-           </div>
+              let bgColor = 'bg-white text-gray-400 hover:bg-gray-50';
+              let borderColor = 'border-gray-100';
+
+              if (isActive) {
+                const s = stage.name.toLowerCase();
+                if (s.includes('won') || s.includes('goal') || s.includes('qualified')) bgColor = 'bg-emerald-600 text-white';
+                else if (s.includes('lost') || s.includes('unqualified') || s.includes('failed')) bgColor = 'bg-rose-600 text-white';
+                else if (s.includes('prospect') || s.includes('new') || s.includes('pending')) bgColor = 'bg-sky-600 text-white';
+                else if (s.includes('negotiation') || s.includes('proposal') || s.includes('working')) bgColor = 'bg-amber-600 text-white';
+                else if (s.includes('contacted') || s.includes('presentation')) bgColor = 'bg-indigo-600 text-white';
+                else bgColor = 'bg-blue-600 text-white shadow-inner';
+
+                borderColor = 'border-transparent';
+              }
+
+              return (
+                <button
+                  key={stage.id}
+                  onClick={() => handleStatusChange(stage.id)}
+                  disabled={isProcessing}
+                  className={`relative flex-1 h-full flex items-center justify-center transition-all cursor-pointer font-medium text-[9px] uppercase tracking-wider ${bgColor} ${borderColor} ${isLast ? '' : 'border-r'}`}
+                  style={{
+                    clipPath: isLast
+                      ? 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 4% 50%)'
+                      : isFirst
+                        ? 'polygon(0% 0%, 96% 0%, 100% 50%, 96% 100%, 0% 100%)'
+                        : 'polygon(0% 0%, 96% 0%, 100% 50%, 96% 100%, 0% 100%, 4% 50%)'
+                  }}
+                >
+                  {stage.name}
+                </button>
+              );
+
+            })}
+          </div>
         </div>
 
         {/* MAIN CONTENT */}
         <div className="flex-1 flex overflow-hidden px-8 py-6 gap-10">
-          
+
           {/* COLUMN LEFT: LOG AKTIVITAS (TIMELINE) */}
           <div className="w-1/2 flex flex-col min-w-0 border-r border-gray-100 pr-10">
-             <SectionHeader 
-                title="Log Aktivitas Deal"
-                className="mb-6 shrink-0"
-             />
+            <div className="bg-gray-50 border border-gray-100 rounded-xl mb-6 shrink-0 overflow-hidden transition-all">
+              <div
+                className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-100/50 transition-colors"
+                onClick={() => setIsFollowUpExpanded(!isFollowUpExpanded)}
+              >
+                <div>
+                  <H3 className="text-xs text-gray-900 mb-1 !capitalize !tracking-tight font-semibold">Intensitas Follow Up</H3>
+                  <Subtext className="text-[10px] text-gray-500 font-medium !capitalize !tracking-tight">
+                    {form.follow_up || 0} Kali Follow Up • {form.follow_up_date ? `Next: ${new Date(form.follow_up_date).toLocaleDateString('id-ID')}` : 'Belum Atur Jadwal'}
+                  </Subtext>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" className="!p-1 text-gray-400">
+                    {isFollowUpExpanded ? <X size={16} /> : <Plus size={16} />}
+                  </Button>
+                </div>
+              </div>
 
-             <div className="flex-1 flex flex-col overflow-hidden">
-                <div className="flex items-start gap-4 mb-8 shrink-0">
-                   <Avatar 
-                      name={user.full_name}
-                      size="md"
-                      className="shrink-0"
-                   />
-                   <div className="flex-1 relative">
-                      <Textarea 
-                         value={newComment}
-                         onChange={e => setNewComment(e.target.value)}
-                         placeholder="Tulis catatan perkembangan deal..."
-                         className="!min-h-[80px]"
+              {isFollowUpExpanded && (
+                <div className="p-4 pt-0 border-t border-gray-100 bg-white/50 space-y-4">
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] text-gray-400 uppercase font-semibold">Jumlah Follow Up</Label>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg p-1 shadow-sm w-fit">
+                          <Button
+                            onClick={(e) => { e.stopPropagation(); handleFollowUpChange('decrease'); }}
+                            size='sm'
+                            className="p-1.5 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-md"
+                          >
+                            <Minus size={14} strokeWidth={3} />
+                          </Button>
+                          <input
+                            type="number"
+                            value={manualFollowUp}
+                            onChange={(e) => {
+                              setManualFollowUp(e.target.value);
+                              if (followUpErrors.count) setFollowUpErrors(prev => ({ ...prev, count: undefined }));
+                            }}
+                            className="w-12 text-center text-blue-600 text-sm bg-transparent border-none outline-none py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                          <Button
+                            onClick={(e) => { e.stopPropagation(); handleFollowUpChange('increase'); }}
+                            size='sm'
+                            className="p-1.5 text-gray-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-md"
+                          >
+                            <Plus size={14} strokeWidth={3} />
+                          </Button>
+                        </div>
+                        {followUpErrors.count && <p className="text-[9px] text-rose-500 font-medium ml-1">{followUpErrors.count}</p>}
+                      </div>
+                    </div>
+                    <div className="space-y-1.5 flex flex-col">
+                      <Label className="text-[10px] text-gray-400 uppercase font-semibold">Tgl Follow Up Berikutnya *</Label>
+                      <input
+                        type="date"
+                        value={followUpDate}
+                        onChange={(e) => {
+                          setFollowUpDate(e.target.value);
+                          if (followUpErrors.date) setFollowUpErrors(prev => ({ ...prev, date: undefined }));
+                        }}
+                        className={`text-xs h-9 px-3 bg-white border ${followUpErrors.date ? 'border-rose-300' : 'border-gray-200'} rounded-md outline-none focus:border-blue-500 transition-all`}
                       />
-                      <div className="absolute right-2 bottom-2">
-                         <Button 
-                           onClick={handleAddComment}
-                           disabled={!newComment.trim() || isProcessing}
-                           size="sm"
-                           className="!p-1.5"
-                         >
-                            <ArrowUp size={16} />
-                         </Button>
-                      </div>
-                   </div>
+                      {followUpErrors.date && <p className="text-[9px] text-rose-500 font-medium ml-1">{followUpErrors.date}</p>}
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] text-gray-400 uppercase font-semibold">Catatan Follow Up</Label>
+                    <Textarea
+                      placeholder="Apa hasil follow up kali ini?"
+                      value={followUpNotes}
+                      onChange={(e) => setFollowUpNotes(e.target.value)}
+                      className="text-xs min-h-[60px]"
+                    />
+                  </div>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="w-full h-9 text-xs font-semibold"
+                    onClick={(e) => { e.stopPropagation(); handleSaveFollowUp(); }}
+                    isLoading={isProcessing}
+                  >
+                    SIMPAN PROGRES FOLLOW UP
+                  </Button>
                 </div>
+              )}
+            </div>
 
-                <div className="flex-1 overflow-y-auto custom-scrollbar pr-4">
-                   {loadingActivities ? (
-                      <div className="py-20 text-center text-gray-300 animate-pulse">Memuat Aktivitas...</div>
-                   ) : activities.length === 0 ? (
-                      <div className="py-20 text-center text-gray-300">
-                         <MessageSquare size={32} className="mx-auto mb-2 opacity-10" />
-                         <p className="text-[10px] font-bold uppercase tracking-widest">Belum ada aktivitas tercatat</p>
-                      </div>
-                   ) : (
-                     <Timeline>
-                       {activities.map((act, i) => (
-                          <TimelineItem key={act.id} isLast={i === activities.length - 1}>
-                             <TimelineIcon className={act.activity_type === 'status_change' ? 'text-blue-500' : ''}>
-                                {act.activity_type === 'status_change' ? <RefreshCw size={14} /> : <MessageSquare size={14} />}
-                             </TimelineIcon>
-                             <TimelineContent>
-                                <div className="flex items-center gap-2 mb-1">
-                                   <span className="text-xs font-bold text-gray-900">{act.profile?.full_name}</span>
-                                   <Label className="text-[9px] text-gray-300">
-                                      {new Date(act.created_at).toLocaleDateString('id-ID', { month: 'short', day: 'numeric' })}
-                                   </Label>
-                                </div>
-                                <p className={`text-[12px] font-medium ${act.activity_type === 'status_change' ? 'text-gray-400 italic' : 'text-gray-600'}`}>
-                                   {act.content}
-                                </p>
-                             </TimelineContent>
-                          </TimelineItem>
-                       ))}
-                     </Timeline>
-                   )}
+            <SectionHeader
+              title="Log Aktivitas Deal"
+              className="mb-6 shrink-0"
+            />
+
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex items-start gap-4 mb-8 shrink-0">
+                <Avatar
+                  name={user.full_name}
+                  size="md"
+                  className="shrink-0"
+                />
+                <div className="flex-1 relative">
+                  <Textarea
+                    value={newComment}
+                    onChange={e => setNewComment(e.target.value)}
+                    placeholder="Tulis catatan perkembangan deal..."
+                    className="!min-h-[85px] !pb-14 resize-none"
+                  />
+                  <div className="absolute right-3 bottom-3">
+                    <Button
+                      onClick={handleAddComment}
+                      disabled={!newComment.trim() || isProcessing}
+                      variant="primary"
+                      className="!w-9 !h-9 !p-0 flex items-center justify-center rounded-[10px] shadow-md transition-all hover:-translate-y-0.5"
+                    >
+                      <ArrowUp size={18} strokeWidth={2.5} />
+                    </Button>
+                  </div>
                 </div>
-             </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto custom-scrollbar pr-4">
+                {loadingActivities ? (
+                  <div className="py-20 text-center text-gray-300 animate-pulse">Memuat Aktivitas...</div>
+                ) : activities.length === 0 ? (
+                  <div className="py-20 text-center text-gray-300">
+                    <MessageSquare size={32} className="mx-auto mb-2 opacity-10" />
+                    <Subtext className="text-[10px]  uppercase tracking-tight">Belum ada aktivitas tercatat</Subtext>
+                  </div>
+                ) : (
+                  <Timeline>
+                    {activities.map((act, i) => (
+                      <TimelineItem key={act.id} isLast={i === activities.length - 1}>
+                        <TimelineIcon className={act.activity_type === 'status_change' ? 'text-blue-500' : ''}>
+                          {act.activity_type === 'status_change' ? <RefreshCw size={14} /> : <MessageSquare size={14} />}
+                        </TimelineIcon>
+                        <TimelineContent>
+                          <div className="flex items-center gap-2 mb-1">
+                            <Label className="text-xs  text-gray-900">{act.profile?.full_name}</Label>
+                            <Label className="text-[9px] text-gray-300">
+                              {new Date(act.created_at).toLocaleDateString('id-ID', { month: 'short', day: 'numeric' })}
+                            </Label>
+                          </div>
+                          <Subtext className={`text-[12px] font-medium ${act.activity_type === 'status_change' ? 'text-gray-400 italic' : 'text-gray-600'}`}>
+                            {act.content}
+                          </Subtext>
+                        </TimelineContent>
+                      </TimelineItem>
+                    ))}
+                  </Timeline>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* COLUMN RIGHT: DETAIL INFORMASI */}
           <div className="w-1/2 flex flex-col min-w-0">
-             <SectionHeader 
-                title="Informasi Transaksi"
-                className="mb-6 shrink-0"
-             />
+            <SectionHeader
+              title="Informasi Transaksi"
+              className="mb-1 shrink-0"
+            />
 
-             <div className="flex-1 overflow-y-auto custom-scrollbar pr-4 space-y-6">
-                
-                {quotation && (
-                  <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-sm space-y-3">
-                     <div className="flex items-center justify-between">
-                        <Label className="text-emerald-600">Penawaran Terhubung</Label>
-                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[8px] font-bold uppercase rounded">AKTIF</span>
-                     </div>
-                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                           <div className="w-8 h-8 bg-white rounded flex items-center justify-center text-emerald-600 shadow-sm">
-                              <FileText size={16} />
-                           </div>
-                           <span className="text-sm font-bold text-gray-900">{quotation.number}</span>
-                        </div>
-                        <Button 
-                           variant="ghost"
-                           size="sm"
-                           onClick={() => onEditQuotation?.(quotation.id)}
-                           className="!p-0 text-emerald-600 h-auto font-bold"
-                        >
-                           LIHAT DETAIL
-                        </Button>
-                     </div>
+            <div className="flex items-center gap-4 mb-6 px-1">
+              <div className="px-2 py-0.5 bg-amber-50 text-amber-600 border border-amber-100 rounded text-[10px] font-bold">
+                Follow Up: {form.follow_up || 0}
+              </div>
+              {form.follow_up_date && (
+                <div className="px-2 py-0.5 bg-blue-50 text-blue-600 border border-blue-100 rounded text-[10px] font-bold">
+                  Next Follow Up: {new Date(form.follow_up_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 overflow-y-auto custom-scrollbar pr-4 space-y-6">
+
+              {quotation && (
+                <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-emerald-600">Penawaran Terhubung</Label>
+                    <Label className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[8px]  uppercase rounded">AKTIF</Label>
                   </div>
-                )}
-
-                <div className="space-y-4">
-                  <Input 
-                    label="Nama Deal / Project"
-                    value={form.name}
-                    onChange={e => setForm({...form, name: e.target.value})}
-                  />
-                  <Select 
-                    label="Hubungkan Client"
-                    value={form.client_id || ''}
-                    onChange={e => handleClientChange(Number(e.target.value))}
-                  >
-                    <option value="">-- Pilih Client --</option>
-                    {clients.map(c => <option key={c.id} value={c.id}>{c.salutation ? `${c.salutation} ` : ''}{c.name}</option>)}
-                  </Select>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-white rounded flex items-center justify-center text-emerald-600 shadow-sm">
+                        <FileText size={16} />
+                      </div>
+                      <Label className="text-sm  text-gray-900">{quotation.number}</Label>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onEditQuotation?.(quotation.id)}
+                      className="!p-0 text-emerald-600 h-auto "
+                    >
+                      LIHAT DETAIL
+                    </Button>
+                  </div>
                 </div>
+              )}
 
-                <div className="grid grid-cols-2 gap-4">
-                  <Input 
-                    label="Nilai Transaksi"
-                    type="number"
-                    value={form.expected_value}
-                    onChange={e => setForm({...form, expected_value: Number(e.target.value)})}
-                    leftIcon={<Label>RP</Label>}
-                    placeholder="0"
-                  />
-                  <Select 
-                    label="PIC Sales"
-                    value={form.sales_id}
-                    onChange={e => setForm({...form, sales_id: e.target.value})}
-                  >
-                    {members.map(m => <option key={m.user_id} value={m.user_id}>{m.profile?.full_name || 'Tanpa Nama'}</option>)}
-                  </Select>
-                </div>
-
-                <Textarea 
-                  label="Catatan Deal"
-                  value={form.notes || ''}
-                  onChange={e => setForm({...form, notes: e.target.value})}
-                  className="!min-h-[140px]"
-                  placeholder="Tambahkan instruksi khusus atau detail teknis mengenai transaksi ini..."
+              <div className="space-y-4">
+                <Input
+                  label="Nama Deal / Project"
+                  value={form.name}
+                  onChange={e => setForm({ ...form, name: e.target.value })}
                 />
-             </div>
+                <Select
+                  label="Hubungkan Client"
+                  value={form.client_id || ''}
+                  onChange={e => handleClientChange(Number(e.target.value))}
+                >
+                  <option value="">-- Pilih Client --</option>
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.salutation ? `${c.salutation} ` : ''}{c.name}</option>)}
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="Tanggal Input"
+                  type="date"
+                  value={form.input_date || ''}
+                  onChange={e => setForm({ ...form, input_date: e.target.value })}
+                />
+                <Input
+                  label="Nilai Transaksi"
+                  type="number"
+                  value={form.expected_value}
+                  onChange={e => setForm({ ...form, expected_value: Number(e.target.value) })}
+                  leftIcon={<Label>RP</Label>}
+                  placeholder="0"
+                />
+              </div>
+
+              <Select
+                label="PIC Sales"
+                value={form.sales_id}
+                onChange={e => setForm({ ...form, sales_id: e.target.value })}
+              >
+                {members.map(m => <option key={m.user_id} value={m.user_id}>{m.profile?.full_name || 'Tanpa Nama'}</option>)}
+              </Select>
+
+              <Textarea
+                label="Catatan Deal"
+                value={form.notes || ''}
+                onChange={e => setForm({ ...form, notes: e.target.value })}
+                className="!min-h-[140px]"
+                placeholder="Tambahkan instruksi khusus atau detail teknis mengenai transaksi ini..."
+              />
+            </div>
           </div>
         </div>
       </div>

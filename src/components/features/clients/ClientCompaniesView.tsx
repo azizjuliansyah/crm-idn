@@ -1,14 +1,17 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Label, SearchInput, Checkbox } from '@/components/ui';
+
+
 import { supabase } from '@/lib/supabase';
 import { Company, ClientCompany, ClientCompanyCategory } from '@/lib/types';
-import { 
-  Plus, Search, Edit2, Trash2, Loader2, Factory, 
-  MapPin, Mail, Phone, ChevronRight, X, Save, Check, Tags,
+import {
+  Plus, Search, Edit2, Trash2, Loader2, Factory,
+  MapPin, Mail, Phone, ChevronRight, X, Save, Tags,
   ArrowUpDown, ChevronUp, ChevronDown, AlertTriangle, CheckCircle2
 } from 'lucide-react';
-import { SearchInput } from '@/components/ui';
 
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { ConfirmBulkDeleteModal } from '@/components/shared/modals/ConfirmBulkDeleteModal';
@@ -31,12 +34,12 @@ export const ClientCompaniesView: React.FC<Props> = ({ company }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'id', direction: 'desc' });
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  
+
   // Custom Modal States
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; name: string }>({ isOpen: false, id: null, name: '' });
   const [isConfirmBulkOpen, setIsConfirmBulkOpen] = useState(false);
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({ 
-    isOpen: false, title: '', message: '', type: 'success' 
+  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
+    isOpen: false, title: '', message: '', type: 'success'
   });
 
   const [form, setForm] = useState<Partial<ClientCompany>>({
@@ -79,8 +82,8 @@ export const ClientCompaniesView: React.FC<Props> = ({ company }) => {
     }));
 
     if (searchTerm) {
-      result = result.filter(i => 
-        i.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      result = result.filter(i =>
+        i.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (i.client_company_categories?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -88,7 +91,7 @@ export const ClientCompaniesView: React.FC<Props> = ({ company }) => {
     if (sortConfig) {
       result.sort((a, b) => {
         let valA: any, valB: any;
-        switch(sortConfig.key) {
+        switch (sortConfig.key) {
           case 'name': valA = a.name; valB = b.name; break;
           case 'category': valA = a.client_company_categories?.name || ''; valB = b.client_company_categories?.name || ''; break;
           case 'email': valA = a.email || ''; valB = b.email || ''; break;
@@ -150,13 +153,13 @@ export const ClientCompaniesView: React.FC<Props> = ({ company }) => {
         .select()
         .single();
       if (error) throw error;
-      
+
       const { data: freshCats } = await supabase
         .from('client_company_categories')
         .select('*')
         .eq('company_id', company.id)
         .order('name');
-      
+
       if (freshCats) setCategories(freshCats);
       return data;
     } catch (err: any) {
@@ -167,18 +170,18 @@ export const ClientCompaniesView: React.FC<Props> = ({ company }) => {
 
   const handleSave = async (formData: Partial<ClientCompany>) => {
     if (!formData.name || !formData.category_id || !formData.address) {
-        showNotification('Data Tidak Lengkap', "Harap isi field wajib (Nama, Kategori, Alamat).", 'error');
-        return;
+      showNotification('Data Tidak Lengkap', "Harap isi field wajib (Nama, Kategori, Alamat).", 'error');
+      return;
     }
     setIsProcessing(true);
     try {
-      const payload = { 
-          name: formData.name,
-          category_id: formData.category_id,
-          address: formData.address,
-          email: formData.email,
-          whatsapp: formData.whatsapp,
-          company_id: company.id
+      const payload = {
+        name: formData.name,
+        category_id: formData.category_id,
+        address: formData.address,
+        email: formData.email,
+        whatsapp: formData.whatsapp,
+        company_id: company.id
       };
       if (formData.id) await supabase.from('client_companies').update(payload).eq('id', formData.id);
       else await supabase.from('client_companies').insert(payload);
@@ -213,98 +216,102 @@ export const ClientCompaniesView: React.FC<Props> = ({ company }) => {
     return sortConfig.direction === 'asc' ? <ChevronUp size={12} className="ml-1 text-indigo-600" /> : <ChevronDown size={12} className="ml-1 text-indigo-600" />;
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-indigo-600 mb-4" /><p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Mensinkronisasi Data Perusahaan...</p></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-indigo-600 mb-4" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Mensinkronisasi Data Perusahaan...</Subtext></div>;
 
   return (
     <div className="flex flex-col gap-6 h-full text-gray-900">
       <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0 overflow-x-auto custom-scrollbar">
         <div className="flex items-center gap-4 shrink-0">
           <div className="w-[400px]">
-            <SearchInput 
-              placeholder="Cari perusahaan..." 
+            <SearchInput
+              placeholder="Cari perusahaan..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="rounded-xl border-gray-100 shadow-none bg-gray-50/30"
             />
           </div>
           {selectedIds.length > 0 && (
-            <button 
+            <Button
               onClick={() => setIsConfirmBulkOpen(true)}
-              className="px-4 py-3 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl font-bold text-[10px] uppercase tracking-widest flex items-center gap-2 hover:bg-rose-600 hover:text-white transition-all shadow-sm"
+              className="px-4 py-3 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl  text-[10px] uppercase tracking-tight flex items-center gap-2 hover:bg-rose-600 hover:text-white transition-all shadow-sm"
             >
               <Trash2 size={14} /> Hapus {selectedIds.length} Item
-            </button>
+            </Button>
           )}
         </div>
-        <button 
+        <Button
           onClick={() => { setForm({ name: '', category_id: null, address: '', email: '', whatsapp: '' }); setIsModalOpen(true); }}
-          className="px-6 py-3.5 bg-indigo-600 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 shrink-0 ml-auto"
+          className="px-6 py-3.5 bg-indigo-600 text-white rounded-xl  text-[10px] uppercase tracking-tight flex items-center justify-center gap-2 shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 shrink-0 ml-auto"
         >
           <Plus size={14} strokeWidth={3} /> Perusahaan Baru
-        </button>
+        </Button>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm flex-1 min-h-[400px]">
         <div className="overflow-x-auto h-full custom-scrollbar">
-          <table className="w-full text-left border-collapse">
-            <thead className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur-sm">
-              <tr>
-                <th className="px-6 py-5 border-b border-gray-100 w-12 text-center">
-                  <button onClick={toggleSelectAll} className={`w-5 h-5 rounded-md flex items-center justify-center border transition-all mx-auto ${selectedIds.length > 0 && selectedIds.length === items.length ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-200 text-transparent'}`}>
-                    <Check size={12} strokeWidth={4} />
-                  </button>
-                </th>
-                <th onClick={() => handleSort('name')} className="px-6 py-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 cursor-pointer group">
+          <Table className="w-full text-left border-collapse">
+            <TableHeader className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur-sm">
+              <TableRow>
+                <TableCell isHeader className="px-6 py-5 border-b border-gray-100 w-12 text-center">
+                  <Checkbox
+                    checked={selectedIds.length > 0 && selectedIds.length === items.length}
+                    onChange={toggleSelectAll}
+                    variant="indigo"
+                  />
+                </TableCell>
+                <TableCell isHeader onClick={() => handleSort('name')} className="cursor-pointer group">
                   <div className="flex items-center">Nama Perusahaan <SortIcon col="name" /></div>
-                </th>
-                <th onClick={() => handleSort('category')} className="px-6 py-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 cursor-pointer group">
+                </TableCell>
+                <TableCell isHeader onClick={() => handleSort('category')} className="cursor-pointer group">
                   <div className="flex items-center">Kategori <SortIcon col="category" /></div>
-                </th>
-                <th className="px-6 py-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100">Kontak</th>
-                <th className="px-6 py-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 text-center">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
+                </TableCell>
+                <TableCell isHeader>Kontak</TableCell>
+                <TableCell isHeader className="text-center">Aksi</TableCell>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-gray-50">
               {items.map(item => (
-                <tr key={item.id} className={`hover:bg-gray-50/30 group transition-colors ${selectedIds.includes(item.id) ? 'bg-indigo-50/30' : ''}`}>
-                  <td className="px-6 py-6 text-center">
-                    <button onClick={() => toggleSelect(item.id)} className={`w-5 h-5 rounded-md flex items-center justify-center border transition-all mx-auto ${selectedIds.includes(item.id) ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-gray-200 text-transparent'}`}>
-                      <Check size={12} strokeWidth={4} />
-                    </button>
-                  </td>
-                  <td className="px-6 py-6">
+                <TableRow key={item.id} className={`hover:bg-gray-50/30 group transition-colors ${selectedIds.includes(item.id) ? 'bg-indigo-50/30' : ''}`}>
+                  <TableCell className="px-6 py-6 text-center">
+                    <Checkbox
+                      checked={selectedIds.includes(item.id)}
+                      onChange={() => toggleSelect(item.id)}
+                      variant="indigo"
+                    />
+                  </TableCell>
+                  <TableCell className="px-6 py-6">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center"><Factory size={20} /></div>
                       <div>
-                        <p className="text-sm font-bold text-gray-900 tracking-tight">{item.name}</p>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase mt-1 flex items-center gap-1"><MapPin size={10} /> {item.address || '-'}</p>
+                        <Subtext className="text-sm text-gray-900 tracking-tight">{item.name}</Subtext>
+                        <Subtext className="text-[10px] text-gray-400 uppercase mt-1 flex items-center gap-1 tracking-tight"><MapPin size={10} /> {item.address || '-'}</Subtext>
                       </div>
                     </div>
-                  </td>
-                  <td className="px-6 py-6">
-                    <span className="px-3 py-1 bg-white border border-gray-100 rounded-full text-[9px] font-bold uppercase tracking-tighter text-gray-500 shadow-sm">
-                        {item.client_company_categories?.name || 'N/A'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-6">
+                  </TableCell>
+                  <TableCell className="px-6 py-6">
+                    <Label className="px-3 py-1 bg-white border border-gray-100 rounded-full text-[9px]  uppercase tracking-tight text-gray-500 shadow-sm">
+                      {item.client_company_categories?.name || 'N/A'}
+                    </Label>
+                  </TableCell>
+                  <TableCell className="px-6 py-6">
                     <div className="space-y-1">
-                      <p className="text-[10px] font-bold text-gray-600 flex items-center gap-2"><Mail size={12} className="text-gray-300" /> {item.email || '-'}</p>
-                      <p className="text-[10px] font-bold text-gray-600 flex items-center gap-2"><Phone size={12} className="text-gray-300" /> {item.whatsapp || '-'}</p>
+                      <Subtext className="text-[10px] text-gray-600 flex items-center gap-2 tracking-tight"><Mail size={12} className="text-gray-300" /> {item.email || '-'}</Subtext>
+                      <Subtext className="text-[10px] text-gray-600 flex items-center gap-2 tracking-tight"><Phone size={12} className="text-gray-300" /> {item.whatsapp || '-'}</Subtext>
                     </div>
-                  </td>
-                  <td className="px-6 py-6 text-center">
-                    <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => { setForm(item); setIsModalOpen(true); }} className="p-2 text-indigo-500 hover:bg-indigo-50 rounded-lg"><Edit2 size={16} /></button>
-                      <button onClick={() => setConfirmDelete({ isOpen: true, id: item.id, name: item.name })} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg"><Trash2 size={16} /></button>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center justify-center gap-2">
+                      <Button onClick={() => { setForm(item); setIsModalOpen(true); }} variant="ghost" size='sm' className="!p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" title="Edit"><Edit2 size={14} /></Button>
+                      <Button onClick={() => setConfirmDelete({ isOpen: true, id: item.id, name: item.name })} variant="ghost" size='sm' className="!p-2 text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg" title="Hapus"><Trash2 size={14} /></Button>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
               {items.length === 0 && (
-                <tr><td colSpan={5} className="py-24 text-center text-gray-300 font-bold uppercase text-[10px] tracking-widest italic opacity-30">Tidak ada data perusahaan</td></tr>
+                <TableRow><TableCell colSpan={5} className="py-24 text-center text-gray-300  uppercase text-[10px] tracking-tight italic opacity-30">Tidak ada data perusahaan</TableCell></TableRow>
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
 

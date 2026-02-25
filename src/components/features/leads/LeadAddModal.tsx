@@ -1,14 +1,10 @@
-
-import React, { useState } from 'react';
+import { Plus, Save, X, Mail, Building, Contact2, Wallet, FileText, Check as CheckIcon, CheckCircle as CheckCircle2 } from 'lucide-react';
+import { Company, Client, ClientCompany, ClientCompanyCategory, Lead, LeadStage, LeadSource, CompanyMember } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
-import { Lead, Company, CompanyMember, LeadStage, LeadSource, ClientCompany, ClientCompanyCategory } from '@/lib/types';
-import { 
-  Mail, Building, Plus, X, Contact2, CheckCircle2, 
-  Wallet, Globe, Trello, UserCircle, FileText, Loader2, Save, Check as CheckIcon
-} from 'lucide-react';
-import { Modal } from '@/components/ui/Modal';
+import React, { useState } from 'react';
+import { Input, Select, Textarea, Button, Subtext, Label, Modal, H4 } from '@/components/ui';
 
-import { Button, Input, Select, Textarea } from '@/components/ui';
+
 
 interface LeadAddModalProps {
   isOpen: boolean;
@@ -24,8 +20,8 @@ interface LeadAddModalProps {
   setCategories: React.Dispatch<React.SetStateAction<ClientCompanyCategory[]>>;
 }
 
-export const LeadAddModal: React.FC<LeadAddModalProps> = ({ 
-  isOpen, onClose, company, members, stages, sources, clientCompanies, categories, onSuccess, setClientCompanies, setCategories 
+export const LeadAddModal: React.FC<LeadAddModalProps> = ({
+  isOpen, onClose, company, members, stages, sources, clientCompanies, categories, onSuccess, setClientCompanies, setCategories
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAddingCo, setIsAddingCo] = useState(false);
@@ -36,12 +32,13 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
   const [catInCoProcessing, setCatInCoProcessing] = useState(false);
 
   const [form, setForm] = useState<Partial<Lead>>({
-    salutation: '', name: '', whatsapp: '', email: '', 
+    salutation: '', name: '', whatsapp: '', email: '',
     client_company_id: clientCompanies.find(c => c.name.toLowerCase() === 'perorangan')?.id || null,
-    address: '', notes: '', sales_id: members[0]?.user_id || '',  
-    source: sources[0]?.name || '', 
+    address: '', notes: '', sales_id: members[0]?.user_id || '',
+    source: sources[0]?.name || '',
     status: stages[0]?.name.toLowerCase() || 'new',
-    expected_value: 0
+    expected_value: 0,
+    input_date: new Date().toISOString().split('T')[0]
   });
 
   const [waNumber, setWaNumber] = useState('');
@@ -76,18 +73,18 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
   const handleQuickAddCo = async (e: React.MouseEvent) => {
     e.preventDefault();
     if (!newCo.name.trim() || !newCo.category_id || !newCo.address.trim()) {
-        alert("Nama, Kategori, dan Alamat Perusahaan wajib diisi.");
-        return;
+      alert("Nama, Kategori, dan Alamat Perusahaan wajib diisi.");
+      return;
     }
     setCoProcessing(true);
     try {
       const { data, error } = await supabase
         .from('client_companies')
-        .insert({ 
-            name: newCo.name.trim(), 
-            category_id: parseInt(newCo.category_id), 
-            address: newCo.address.trim(),
-            company_id: company.id 
+        .insert({
+          name: newCo.name.trim(),
+          category_id: parseInt(newCo.category_id),
+          address: newCo.address.trim(),
+          company_id: company.id
         })
         .select('*')
         .single();
@@ -108,12 +105,12 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
     if (e) e.preventDefault();
     setIsProcessing(true);
     const fullWa = waNumber ? `+62${waNumber}` : '';
-    const leadData = { 
+    const leadData = {
       ...form,
       sales_id: form.sales_id || null,
       client_company_id: form.client_company_id || null,
       whatsapp: fullWa,
-      company_id: company.id 
+      company_id: company.id
     };
 
     try {
@@ -129,21 +126,22 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
   };
 
   return (
-    <Modal 
-      isOpen={isOpen} 
-      onClose={onClose} 
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
       title="Registrasi Prospek Baru"
       size="lg"
       footer={
         <div className="flex items-center gap-3">
-           <Button variant="ghost" onClick={onClose} className="text-gray-400">Batal</Button>
-           <Button 
-             onClick={handleSave} 
-             isLoading={isProcessing} 
-             leftIcon={<CheckCircle2 size={14} />}
-           >
-             Simpan Data Lead
-           </Button>
+          <Button variant="secondary" onClick={onClose} className="text-gray-400">Batal</Button>
+          <Button
+            onClick={handleSave}
+            isLoading={isProcessing}
+            leftIcon={<CheckCircle2 size={14} />}
+            variant='primary'
+          >
+            Simpan Data Lead
+          </Button>
         </div>
       }
     >
@@ -153,53 +151,63 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
             <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
               <Contact2 size={16} />
             </div>
-            <h4 className="text-[11px] font-bold uppercase tracking-widest text-gray-900">Identitas Personal Client</h4>
+            <H4>Identitas Personal Client</H4>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2 md:col-span-2">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Sapaan & Nama Lengkap*</label>
+              <Label className="text-[10px]  text-gray-400 uppercase tracking-tight ml-1">Tanggal Input</Label>
+              <Input
+                type="date"
+                value={form.input_date || ''}
+                onChange={e => setForm({ ...form, input_date: e.target.value })}
+                className="!py-2.5"
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label className="text-[10px]  text-gray-400 uppercase tracking-tight ml-1">Sapaan & Nama Lengkap*</Label>
               <div className="flex gap-3">
-                <Select 
-                  value={form.salutation} 
-                  onChange={e => setForm({...form, salutation: e.target.value})} 
+                <Select
+                  value={form.salutation}
+                  onChange={e => setForm({ ...form, salutation: e.target.value })}
                   className="!w-32 !py-2.5"
                 >
                   <option value="">Sapaan</option>
                   <option value="Bapak">Bapak</option>
                   <option value="Ibu">Ibu</option>
                 </Select>
-                <Input 
-                  value={form.name} 
-                  onChange={e => setForm({...form, name: e.target.value})} 
+                <Input
+                  value={form.name}
+                  onChange={e => setForm({ ...form, name: e.target.value })}
                   className="!py-2.5"
-                  placeholder="Ketik nama lengkap client..." 
+                  placeholder="Ketik nama lengkap client..."
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Input 
+              <Input
                 label="Email Aktif"
-                type="email" 
-                value={form.email} 
-                onChange={e => setForm({...form, email: e.target.value})} 
+                type="email"
+                value={form.email}
+                onChange={e => setForm({ ...form, email: e.target.value })}
                 leftIcon={<Mail size={16} />}
                 className="!py-2.5"
-                placeholder="nama@perusahaan.com" 
+                placeholder="nama@perusahaan.com"
               />
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">WhatsApp</label>
-              <div className="flex bg-gray-50 border border-gray-100 rounded-xl overflow-hidden focus-within:border-blue-500 focus-within:bg-white transition-all shadow-sm">
-                <div className="px-4 py-2.5 bg-gray-100/50 text-[11px] font-bold text-gray-400 border-r border-gray-100 flex items-center">+62</div>
-                <Input 
-                  type="tel" 
-                  value={waNumber} 
-                  onChange={e => handleWaNumberChange(e.target.value)} 
-                  className="flex-1 !border-none !bg-transparent !shadow-none !rounded-none" 
-                  placeholder="812345678..." 
+              <Label className="text-[10px]  text-gray-400 uppercase tracking-tight ml-1">WhatsApp</Label>
+              <div className="flex border border-gray-100 rounded-md overflow-hidden focus-within:border-blue-500 focus-within:bg-white transition-all">
+                <div className="px-4 py-2.5 bg-gray-100/50 text-[11px]  text-gray-400 border-r border-gray-100 flex items-center">+62</div>
+                <Input
+                  type="tel"
+                  value={waNumber}
+                  onChange={e => handleWaNumberChange(e.target.value)}
+                  className="flex-1 !border-none !bg-transparent !shadow-none !rounded-none"
+                  placeholder="812345678..."
                 />
               </div>
             </div>
@@ -211,77 +219,77 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
             <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <Building size={16} />
             </div>
-            <h4 className="text-[11px] font-bold uppercase tracking-widest text-gray-900">Perusahaan / Instansi Client</h4>
+            <H4>Perusahaan / Instansi Client</H4>
           </div>
 
           <div className="space-y-3">
             <div className="flex items-center justify-between px-1">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pilih Data Perusahaan</label>
-              <Button 
-                variant="ghost" 
+              <Label className="text-[10px]  text-gray-400 uppercase tracking-tight">Pilih Data Perusahaan</Label>
+              <Button
+                variant="ghost"
                 size="sm"
-                onClick={() => setIsAddingCo(!isAddingCo)} 
-                className="!text-[9px] !p-0 hover:!bg-transparent text-blue-600 lowercase"
+                onClick={() => setIsAddingCo(!isAddingCo)}
+                className="!text-[10px] !p-1 !text-blue-600"
               >
-                {isAddingCo ? <><X size={10} className="mr-1"/> Batal</> : <><Plus size={10} className="mr-1"/> Tambah Baru</>}
+                {isAddingCo ? <><X size={10} className="mr-1" /> Batal</> : <><Plus size={10} className="mr-1" /> Tambah Baru</>}
               </Button>
             </div>
 
             {isAddingCo ? (
               <div className="p-6 bg-blue-50/30 border border-blue-100 rounded-2xl space-y-5">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Input 
-                        label="Nama Instansi*"
-                        value={newCo.name} 
-                        onChange={e => setNewCo({...newCo, name: e.target.value})} 
-                        className="!py-2.5 !text-xs !bg-white border-blue-100 focus:border-blue-400"
-                        placeholder="Misal: PT Teknologi Maju" 
-                      />
-                      <div className="space-y-1">
-                         <div className="flex items-center justify-between mb-1">
-                            <p className="text-[9px] font-bold text-gray-400 uppercase ml-1">Kategori*</p>
-                            <Button variant="ghost" size="sm" onClick={() => setIsAddingCatInCo(!isAddingCatInCo)} className="!text-[8px] !font-bold text-blue-600 uppercase hover:underline !p-0 !h-auto">
-                              {isAddingCatInCo ? 'Batal' : '+ Kategori'}
-                            </Button>
-                         </div>
-                         {isAddingCatInCo ? (
-                            <div className="flex gap-2">
-                               <Input autoFocus value={newCatInCoName} onChange={e => setNewCatInCoName(e.target.value)} className="!py-2 !px-3 !text-[10px] !bg-white border-blue-200" placeholder="Ketik kategori..." />
-                               <Button onClick={handleQuickAddCatInCo} size="sm" className="!px-3"><CheckIcon size={14}/></Button>
-                            </div>
-                         ) : (
-                            <Select value={newCo.category_id} onChange={e => setNewCo({...newCo, category_id: e.target.value})} className="!py-2.5 !text-xs !bg-white border-blue-100">
-                                <option value="">-- Pilih Kategori --</option>
-                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </Select>
-                         )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    label="Nama Instansi*"
+                    value={newCo.name}
+                    onChange={e => setNewCo({ ...newCo, name: e.target.value })}
+                    className="!py-2.5 !text-xs !bg-white border-blue-100 focus:border-blue-400"
+                    placeholder="Misal: PT Teknologi Maju"
+                  />
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <Subtext className="text-[10px]  text-gray-400 uppercase ml-1">Kategori*</Subtext>
+                      <Button variant="ghost" size="sm" onClick={() => setIsAddingCatInCo(!isAddingCatInCo)} className="!text-[8px] ! text-blue-600 uppercase hover:underline !p-0 !h-auto">
+                        {isAddingCatInCo ? 'Batal' : '+ Kategori'}
+                      </Button>
+                    </div>
+                    {isAddingCatInCo ? (
+                      <div className="flex gap-2">
+                        <Input autoFocus value={newCatInCoName} onChange={e => setNewCatInCoName(e.target.value)} className="!py-2 !px-3 !text-[10px] !bg-white border-blue-200" placeholder="Ketik kategori..." />
+                        <Button onClick={handleQuickAddCatInCo} size="sm" className="!px-3"><CheckIcon size={14} /></Button>
                       </div>
-                      <div className="md:col-span-2">
-                        <Input 
-                          label="Alamat Kantor*"
-                          value={newCo.address} 
-                          onChange={e => setNewCo({...newCo, address: e.target.value})} 
-                          className="!py-2.5 !text-xs !bg-white border-blue-100 focus:border-blue-400"
-                          placeholder="Jalan raya no 123..." 
-                        />
-                      </div>
+                    ) : (
+                      <Select value={newCo.category_id} onChange={e => setNewCo({ ...newCo, category_id: e.target.value })} className="!py-2.5 !text-xs !bg-white border-blue-100">
+                        <option value="">-- Pilih Kategori --</option>
+                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </Select>
+                    )}
                   </div>
-                  <Button 
-                    onClick={handleQuickAddCo} 
-                    isLoading={coProcessing} 
-                    className="w-full !py-3.5 shadow-blue-200"
-                    leftIcon={<Save size={14} />}
-                  >
-                      SIMPAN & PILIH PERUSAHAAN
-                  </Button>
+                  <div className="md:col-span-2">
+                    <Input
+                      label="Alamat Kantor*"
+                      value={newCo.address}
+                      onChange={e => setNewCo({ ...newCo, address: e.target.value })}
+                      className="!py-2.5 !text-xs !bg-white border-blue-100 focus:border-blue-400"
+                      placeholder="Jalan raya no 123..."
+                    />
+                  </div>
+                </div>
+                <Button
+                  onClick={handleQuickAddCo}
+                  isLoading={coProcessing}
+                  className="w-full !py-3.5 shadow-blue-200"
+                  leftIcon={<Save size={14} />}
+                >
+                  SIMPAN & PILIH PERUSAHAAN
+                </Button>
               </div>
             ) : (
-              <Select 
-                value={form.client_company_id || ''} 
-                onChange={e => setForm({...form, client_company_id: e.target.value ? Number(e.target.value) : null})} 
+              <Select
+                value={form.client_company_id || ''}
+                onChange={e => setForm({ ...form, client_company_id: e.target.value ? Number(e.target.value) : null })}
                 className="!py-3"
               >
-                  {clientCompanies.map(co => <option key={co.id} value={co.id}>{co.name}</option>)}
+                {clientCompanies.map(co => <option key={co.id} value={co.id}>{co.name}</option>)}
               </Select>
             )}
           </div>
@@ -292,42 +300,42 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
             <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
               <Wallet size={16} />
             </div>
-            <h4 className="text-[11px] font-bold uppercase tracking-widest text-gray-900">Detail Peluang Bisnis</h4>
+            <H4>Detail Peluang Bisnis</H4>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Input 
+            <Input
               label="Estimasi Nilai (IDR)"
-              type="number" 
-              value={form.expected_value} 
-              onChange={e => setForm({...form, expected_value: Number(e.target.value)})} 
-              leftIcon={<span className="text-[11px] font-bold text-blue-600">Rp</span>}
+              type="number"
+              value={form.expected_value}
+              onChange={e => setForm({ ...form, expected_value: Number(e.target.value) })}
+              leftIcon={<Label className="text-[11px]  text-blue-600">Rp</Label>}
               className="!py-2.5"
-              placeholder="0" 
+              placeholder="0"
             />
 
-            <Select 
+            <Select
               label="Sumber Datang Lead"
-              value={form.source} 
-              onChange={e => setForm({...form, source: e.target.value})} 
+              value={form.source}
+              onChange={e => setForm({ ...form, source: e.target.value })}
               className="!py-2.5 !text-xs uppercase tracking-tight"
             >
               {sources.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
             </Select>
 
-            <Select 
+            <Select
               label="Status / Tahapan"
-              value={form.status} 
-              onChange={e => setForm({...form, status: e.target.value})} 
+              value={form.status}
+              onChange={e => setForm({ ...form, status: e.target.value })}
               className="!py-2.5 !text-xs uppercase tracking-tight"
             >
               {stages.map(s => <option key={s.id} value={s.name.toLowerCase()}>{s.name}</option>)}
             </Select>
 
-            <Select 
+            <Select
               label="PIC Sales Penanggung Jawab"
-              value={form.sales_id} 
-              onChange={e => setForm({...form, sales_id: e.target.value})} 
+              value={form.sales_id}
+              onChange={e => setForm({ ...form, sales_id: e.target.value })}
               className="!py-2.5 !text-xs uppercase tracking-tight"
             >
               {members.map(m => <option key={m.user_id} value={m.user_id}>{m.profile?.full_name || 'Tanpa Nama'}</option>)}
@@ -337,16 +345,16 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
 
         <div className="space-y-4">
           <div className="flex items-center gap-2 pb-2 border-b border-gray-50">
-             <div className="w-8 h-8 rounded-lg bg-gray-50 text-gray-400 flex items-center justify-center">
-               <FileText size={16} />
-             </div>
-             <h4 className="text-[11px] font-bold uppercase tracking-widest text-gray-900">Catatan & Kebutuhan Khusus</h4>
+            <div className="w-8 h-8 rounded-lg bg-gray-50 text-gray-400 flex items-center justify-center">
+              <FileText size={16} />
+            </div>
+            <H4>Catatan & Kebutuhan Khusus</H4>
           </div>
-          <Textarea 
-            value={form.notes} 
-            onChange={e => setForm({...form, notes: e.target.value})} 
-            className="h-32 resize-none" 
-            placeholder="Tuliskan detail kebutuhan, preferensi, atau info tambahan mengenai lead ini..." 
+          <Textarea
+            value={form.notes}
+            onChange={e => setForm({ ...form, notes: e.target.value })}
+            className="h-32 resize-none"
+            placeholder="Tuliskan detail kebutuhan, preferensi, atau info tambahan mengenai lead ini..."
           />
         </div>
       </div>

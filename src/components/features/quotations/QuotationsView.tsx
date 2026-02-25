@@ -1,15 +1,18 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+
+import { Select, Button, Table, TableHeader, TableBody, TableRow, TableCell, H3, Subtext, Label, Modal, EmptyState, SearchInput } from '@/components/ui';
+
+
 import { supabase } from '@/lib/supabase';
 import { Company, Quotation } from '@/lib/types';
-import { 
-  Plus, Search, Edit2, Trash2, Loader2, FileText, 
-  ChevronRight, ArrowUpDown, ChevronUp, ChevronDown, 
+import {
+  Plus, Search, Edit2, Trash2, Loader2, FileText,
+  ChevronRight, ArrowUpDown, ChevronUp, ChevronDown,
   AlertTriangle, CheckCircle2, MoreVertical, X, Filter,
   FileDown
 } from 'lucide-react';
-import { Modal, SearchInput, Card, Select, EmptyState, Button, Table, TableHeader, TableBody, TableRow, TableCell } from '@/components/ui';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useRouter } from 'next/navigation';
@@ -40,11 +43,11 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
   const [filterClientId, setFilterClientId] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'id' as any, direction: 'desc' });
-  
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; number: string }>({ isOpen: false, id: null, number: '' });
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({ 
-    isOpen: false, title: '', message: '', type: 'success' 
+  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
+    isOpen: false, title: '', message: '', type: 'success'
   });
 
   const fetchData = useCallback(async () => {
@@ -56,7 +59,7 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
         .select('*, client:clients(*, client_company:client_companies(*)), quotation_items(*, products(*))')
         .eq('company_id', company.id)
         .order('id', { ascending: false });
-      
+
       if (error) throw error;
       if (data) setQuotations(data);
     } catch (err) {
@@ -85,7 +88,7 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
       const matchesSearch = q.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (q.client?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (q.client?.client_company?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       const matchesClient = filterClientId === 'all' || q.client_id === parseInt(filterClientId);
       const matchesStatus = filterStatus === 'all' || q.status === filterStatus;
 
@@ -95,7 +98,7 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
     if (sortConfig) {
       result.sort((a, b) => {
         let valA: any, valB: any;
-        switch(sortConfig.key) {
+        switch (sortConfig.key) {
           case 'number': valA = a.number; valB = b.number; break;
           case 'client': valA = a.client?.name || ''; valB = b.client?.name || ''; break;
           case 'date': valA = a.date; valB = b.date; break;
@@ -140,10 +143,10 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
   };
 
   const formatIDR = (num: number = 0) => {
-    return new Intl.NumberFormat('id-ID', { 
-      style: 'currency', 
-      currency: 'IDR', 
-      maximumFractionDigits: 0 
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      maximumFractionDigits: 0
     }).format(num).replace('Rp', 'Rp');
   };
 
@@ -163,14 +166,14 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
       .eq('company_id', company.id)
       .eq('document_type', 'quotation')
       .maybeSingle();
-    
+
     const templateId = templateSetting?.template_id || 'template1';
     const config = templateSetting?.config || {};
-    
+
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    
+
     const tealColor = '#55C7C7';
     const gray2Color = '#9B9B9B';
     const rowTealColor = '#2596BE'; // Ganjil
@@ -201,20 +204,20 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
 
       const logoUrl = config.logo_url || company.logo_url;
       if (logoUrl) {
-         try {
-           const { width, height, element } = await getImgDimensions(logoUrl);
-           const maxWidth = 60;
-           const maxHeight = bannerHeight;
-           const ratio = Math.min(maxWidth / width, maxHeight / height);
-           const finalWidth = width * ratio;
-           const finalHeight = height * ratio;
-           
-           doc.addImage(element, 'PNG', safeNum(padX), safeNum(startY + (maxHeight - finalHeight) / 2), finalWidth, finalHeight, undefined, 'FAST');
-         } catch (e) {
-           doc.setFontSize(14);
-           doc.setFont('helvetica', 'bold');
-           safeText(company.name, padX, startY + 12);
-         }
+        try {
+          const { width, height, element } = await getImgDimensions(logoUrl);
+          const maxWidth = 60;
+          const maxHeight = bannerHeight;
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          const finalWidth = width * ratio;
+          const finalHeight = height * ratio;
+
+          doc.addImage(element, 'PNG', safeNum(padX), safeNum(startY + (maxHeight - finalHeight) / 2), finalWidth, finalHeight, undefined, 'FAST');
+        } catch (e) {
+          doc.setFontSize(14);
+          doc.setFont('helvetica', 'bold');
+          safeText(company.name, padX, startY + 12);
+        }
       } else {
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
@@ -232,11 +235,11 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       safeText('INVOICE TO:', padX, 55);
-      
+
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
       safeText(q.client?.client_company?.name || 'PERORANGAN', padX, 62);
-      
+
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       const upName = `${q.client?.salutation || ''} ${q.client?.name || ''}`.trim();
@@ -270,20 +273,20 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
           formatIDR(it.total)
         ]) || [],
         theme: 'plain',
-        headStyles: { 
-          fillColor: tealColor, 
-          textColor: '#FFFFFF', 
-          fontSize: 11, 
-          fontStyle: 'bold', 
-          minCellHeight: 12, 
+        headStyles: {
+          fillColor: tealColor,
+          textColor: '#FFFFFF',
+          fontSize: 11,
+          fontStyle: 'bold',
+          minCellHeight: 12,
           valign: 'middle',
           halign: 'left'
         },
-        bodyStyles: { 
+        bodyStyles: {
           fillColor: rowLightColor, // Warna default genap
-          fontSize: 10, 
-          textColor: '#111111', 
-          minCellHeight: 14, 
+          fontSize: 10,
+          textColor: '#111111',
+          minCellHeight: 14,
           valign: 'middle',
           halign: 'left'
         },
@@ -305,10 +308,10 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
             if (lines && Array.isArray(lines) && lines.length > 0) {
               const productName = String(lines[0] || '');
               const descriptionLines = lines.slice(1);
-              
+
               doc.setFillColor(data.cell.styles.fillColor as string);
               safeRect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
-              
+
               let padLeft = 0;
               let padTop = 0;
               if (data.cell.styles.cellPadding) {
@@ -320,7 +323,7 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
                   padTop = safeNum(data.cell.styles.cellPadding, 0);
                 }
               }
-              
+
               const startX = data.cell.x + padLeft;
               let currentY = data.cell.y + padTop + 4;
 
@@ -349,7 +352,7 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
       });
 
       const finalY = safeNum((doc as any).lastAutoTable?.finalY, 150);
-      
+
       doc.setFillColor(gray2Color);
       safeRect(0, finalY + 5, 84, 8, 'F');
       doc.setTextColor(255, 255, 255);
@@ -402,16 +405,16 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
 
       const sigX = pageWidth - 55;
       if (config.signature_url) {
-         try {
-           const { width, height, element } = await getImgDimensions(config.signature_url);
-           const maxWidth = 50;
-           const maxHeight = 25;
-           const ratio = Math.min(maxWidth / width, maxHeight / height);
-           const finalWidth = width * ratio;
-           const finalHeight = height * ratio;
-           
-           doc.addImage(element, 'PNG', safeNum(sigX - finalWidth / 2), safeNum(bottomY - 5 + (maxHeight - finalHeight) / 2), finalWidth, finalHeight, undefined, 'FAST');
-         } catch(e) {}
+        try {
+          const { width, height, element } = await getImgDimensions(config.signature_url);
+          const maxWidth = 50;
+          const maxHeight = 25;
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          const finalWidth = width * ratio;
+          const finalHeight = height * ratio;
+
+          doc.addImage(element, 'PNG', safeNum(sigX - finalWidth / 2), safeNum(bottomY - 5 + (maxHeight - finalHeight) / 2), finalWidth, finalHeight, undefined, 'FAST');
+        } catch (e) { }
       } else {
         doc.setFont('helvetica', 'italic');
         doc.setTextColor(150, 150, 150);
@@ -438,13 +441,13 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
       doc.setFont('helvetica', 'normal');
       safeText(config.footer_text || '', pageWidth / 2, pageHeight - 5, { align: 'center' });
     } else {
-      doc.setFillColor('#4F46E5'); 
+      doc.setFillColor('#4F46E5');
       safeRect(0, 0, pageWidth, 40, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(24);
       doc.setFont('helvetica', 'bold');
       safeText('PENAWARAN HARGA', 20, 25);
-      
+
       autoTable(doc, {
         startY: 50,
         head: [['Produk', 'Deskripsi', 'Qty', 'Harga', 'Total']],
@@ -464,15 +467,15 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
     doc.save(`${q.number}.pdf`);
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4"><Loader2 className="animate-spin text-blue-600" /><p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Sinkronisasi Penawaran...</p></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4"><Loader2 className="animate-spin text-blue-600" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Sinkronisasi Penawaran...</Subtext></div>;
 
   return (
     <div className="flex flex-col gap-6 h-full text-gray-900">
       <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0 overflow-x-auto custom-scrollbar">
         <div className="flex items-center gap-3 shrink-0">
           <div className="w-[400px] shrink-0">
-            <SearchInput 
-              placeholder="Cari nomor, client..." 
+            <SearchInput
+              placeholder="Cari nomor, client..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="rounded-xl border-gray-100 shadow-none bg-gray-50/30"
@@ -480,10 +483,10 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
           </div>
 
           <div className="w-[200px] shrink-0">
-            <Select 
+            <Select
               value={filterStatus}
               onChange={e => setFilterStatus(e.target.value)}
-              className="!text-[10px] !font-black uppercase tracking-widest text-gray-400 w-full"
+              className="!text-[10px] !uppercase tracking-tight text-gray-400 w-full"
             >
               <option value="all">SEMUA STATUS</option>
               {['Draft', 'Sent', 'Accepted', 'Declined'].map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}
@@ -491,14 +494,13 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
           </div>
         </div>
 
-        <Button 
+        <Button
           onClick={() => router.push('/dashboard/sales/quotations/create')}
           variant="primary"
-          className="!px-6 py-2.5 font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100 shrink-0 ml-auto"
         >
           <div className="flex items-center gap-2">
             <Plus size={14} strokeWidth={3} />
-            <span>Buat Penawaran</span>
+            Buat Penawaran
           </div>
         </Button>
       </div>
@@ -508,145 +510,147 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
           <Table>
             <TableHeader className="sticky top-0 z-10 bg-gray-50/80 backdrop-blur-md border-b border-gray-100">
               <TableRow className="hover:bg-transparent">
-                <TableCell onClick={() => handleSort('date')} className="font-black text-gray-400 uppercase tracking-widest cursor-pointer text-[10px] py-4 px-6">Tanggal</TableCell>
-                <TableCell onClick={() => handleSort('number')} className="font-black text-gray-400 uppercase tracking-widest cursor-pointer text-[10px] py-4 px-6">Nomor</TableCell>
-                <TableCell onClick={() => handleSort('client')} className="font-black text-gray-400 uppercase tracking-widest cursor-pointer text-[10px] py-4 px-6">Pelanggan</TableCell>
-                <TableCell onClick={() => handleSort('total')} className="font-black text-gray-400 uppercase tracking-widest cursor-pointer text-right text-[10px] py-4 px-6">Total</TableCell>
-                <TableCell onClick={() => handleSort('status')} className="font-black text-gray-400 uppercase tracking-widest cursor-pointer text-center text-[10px] py-4 px-6">Status</TableCell>
-                <TableCell className="font-black text-gray-400 uppercase tracking-widest text-center text-[10px] py-4 px-6">Aksi</TableCell>
+                <TableCell onClick={() => handleSort('date')} isHeader className="cursor-pointer">Tanggal</TableCell>
+                <TableCell onClick={() => handleSort('number')} isHeader className="cursor-pointer">Nomor</TableCell>
+                <TableCell onClick={() => handleSort('client')} isHeader className="cursor-pointer">Pelanggan</TableCell>
+                <TableCell onClick={() => handleSort('total')} isHeader className="cursor-pointer text-center">Total</TableCell>
+                <TableCell onClick={() => handleSort('status')} isHeader className="cursor-pointer text-center">Status</TableCell>
+                <TableCell isHeader className="text-center">Aksi</TableCell>
               </TableRow>
             </TableHeader>
             <TableBody>
-            {filteredQuotations.map(q => (
-              <TableRow key={q.id} className="group hover:bg-indigo-50/30 transition-colors border-b border-gray-50/50 last:border-0">
-                <TableCell className="text-[11px] font-bold text-gray-400 py-5 px-6">{formatDateString(q.date)}</TableCell>
-                <TableCell className="py-5 px-6">
-                    <button 
+              {filteredQuotations.map(q => (
+                <TableRow key={q.id} className="group hover:bg-indigo-50/30 transition-colors border-b border-gray-50/50 last:border-0">
+                  <TableCell className="text-[11px] text-gray-500 py-5 px-6">{formatDateString(q.date)}</TableCell>
+                  <TableCell className="py-5 px-6">
+                    <Button
                       onClick={() => router.push(`/dashboard/sales/quotations/${q.id}`)}
-                      className="font-black text-indigo-600 text-xs tracking-tight hover:underline text-left flex items-center gap-1.5"
+                      className="text-indigo-600 text-xs tracking-tight hover:underline text-left flex items-center gap-1.5"
                     >
                       <FileText size={12} className="text-indigo-400" />
                       {q.number}
-                    </button>
-                </TableCell>
-                <TableCell className="py-5 px-6">
-                  <div className="flex flex-col">
-                    <span className="text-xs font-black text-gray-900 tracking-tight">{q.client?.name || 'Umum'}</span>
-                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5 italic">
-                      {q.client?.client_company?.name || 'Personal'}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-right font-black text-indigo-600 text-xs py-5 px-6 bg-indigo-50/5 group-hover:bg-indigo-50/20">{formatIDR(q.total)}</TableCell>
-                <TableCell className="text-center py-5 px-6">
-                  <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all duration-300 ${
-                    q.status === 'Draft' ? 'bg-gray-50 text-gray-400 border-gray-200' :
-                    q.status === 'Sent' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                    q.status === 'Accepted' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                    'bg-rose-50 text-rose-600 border-rose-100'
-                  }`}>
-                    {q.status}
-                  </span>
-                </TableCell>
-                <TableCell className="text-center py-5 px-6">
-                  <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-x-2 group-hover:translate-x-0">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => handleDownloadPDF(q)} 
-                      className="!p-2 text-emerald-500 hover:bg-emerald-50 rounded-xl transition-colors"
-                    >
-                      <FileDown size={14} />
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => router.push(`/dashboard/sales/quotations/${q.id}`)} 
-                      className="!p-2 text-indigo-500 hover:bg-indigo-50 rounded-xl transition-colors"
-                    >
-                      <Edit2 size={14} />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => setConfirmDelete({ isOpen: true, id: q.id, number: q.number })} 
-                      className="!p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors"
-                    >
-                      <Trash2 size={14} />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-            {filteredQuotations.length === 0 && (
-              <TableRow>
+                  </TableCell>
+                  <TableCell className="py-5 px-6">
+                    <div className="flex flex-col">
+                      <Label className="text-xs text-gray-900 tracking-tight">{q.client?.name || 'Umum'}</Label>
+                      <Label className="text-[10px] !text-gray-400 mt-1 uppercase tracking-tight italic">
+                        {q.client?.client_company?.name || 'Personal'}
+                      </Label>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right text-indigo-600 text-xs py-5 px-6 bg-indigo-50/5 group-hover:bg-indigo-50/20">{formatIDR(q.total)}</TableCell>
+                  <TableCell className="text-center py-5 px-6">
+                    <Label className={`px-3 py-1 rounded-full text-[9px] uppercase tracking-tight border transition-all duration-300 ${q.status === 'Draft' ? 'bg-gray-50 text-gray-400 border-gray-200' :
+                      q.status === 'Sent' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                        q.status === 'Accepted' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                          'bg-rose-50 text-rose-600 border-rose-100'
+                      }`}>
+                      {q.status}
+                    </Label>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center justify-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDownloadPDF(q)}
+                        className="!p-2 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors"
+                        title="Unduh PDF"
+                      >
+                        <FileDown size={14} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => router.push(`/dashboard/sales/quotations/${q.id}`)}
+                        className="!p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Edit"
+                      >
+                        <Edit2 size={14} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setConfirmDelete({ isOpen: true, id: q.id, number: q.number })}
+                        className="!p-2 text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg"
+                        title="Hapus"
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {filteredQuotations.length === 0 && (
+                <TableRow>
                   <TableCell colSpan={6} className="p-0">
                     <EmptyState icon={<FileText size={48} />} title="Belum ada penawaran tercatat" />
                   </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
+                </TableRow>
+              )}
+            </TableBody>
           </Table>
         </div>
       </div>
 
-      <Modal 
-        isOpen={confirmDelete.isOpen} 
-        onClose={() => setConfirmDelete({ isOpen: false, id: null, number: '' })} 
+      <Modal
+        isOpen={confirmDelete.isOpen}
+        onClose={() => setConfirmDelete({ isOpen: false, id: null, number: '' })}
         title="Hapus Penawaran"
         size="sm"
       >
         <div className="flex flex-col items-center py-6 text-center">
           <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mb-6">
-             <AlertTriangle size={32} />
+            <AlertTriangle size={32} />
           </div>
-          <p className="text-lg font-bold text-gray-900 tracking-tight">Hapus {confirmDelete.number}?</p>
-          <p className="text-sm text-gray-500 font-medium leading-relaxed mt-2 mb-8">
-             Tindakan ini permanen. Seluruh data item rincian pajak pada penawaran ini akan hilang selamanya.
-          </p>
+          <Subtext className="text-lg  text-gray-900 tracking-tight">Hapus {confirmDelete.number}?</Subtext>
+          <Subtext className="text-sm text-gray-500 font-medium leading-relaxed mt-2 mb-8">
+            Tindakan ini permanen. Seluruh data item rincian pajak pada penawaran ini akan hilang selamanya.
+          </Subtext>
           <div className="flex w-full gap-3">
-             <Button 
-               variant="secondary"
-               onClick={() => setConfirmDelete({ isOpen: false, id: null, number: '' })}
-               className="flex-1 !py-4"
-             >
-               Batal
-             </Button>
-             <Button 
-               variant="danger"
-               onClick={executeDelete}
-               isLoading={isProcessing}
-               leftIcon={<Trash2 size={14} />}
-               className="flex-1 !py-4"
-             >
-               Ya, Hapus
-             </Button>
+            <Button
+              variant="secondary"
+              onClick={() => setConfirmDelete({ isOpen: false, id: null, number: '' })}
+              className="flex-1 !py-4"
+            >
+              Batal
+            </Button>
+            <Button
+              variant="danger"
+              onClick={executeDelete}
+              isLoading={isProcessing}
+              leftIcon={<Trash2 size={14} />}
+              className="flex-1 !py-4"
+            >
+              Ya, Hapus
+            </Button>
           </div>
         </div>
       </Modal>
 
 
 
-      <Modal 
-        isOpen={notification.isOpen} 
-        onClose={() => setNotification({ ...notification, isOpen: false })} 
+      <Modal
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
         title=""
         size="sm"
       >
         <div className="flex flex-col items-center py-6 text-center">
-           <div className={`w-16 h-16 rounded-xl flex items-center justify-center mb-6 ${notification.type === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-              {notification.type === 'success' ? <CheckCircle2 size={32} /> : <X size={32} />}
-           </div>
-           <h3 className="text-lg font-bold text-gray-900 mb-2">{notification.title}</h3>
-           <p className="text-sm text-gray-500 font-medium leading-relaxed mb-8">
-             {notification.message}
-           </p>
-           <Button 
-             onClick={() => setNotification({ ...notification, isOpen: false })}
-             className="w-full !py-4 bg-gray-900 hover:bg-black text-white"
-           >
-             Tutup
-           </Button>
+          <div className={`w-16 h-16 rounded-xl flex items-center justify-center mb-6 ${notification.type === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+            {notification.type === 'success' ? <CheckCircle2 size={32} /> : <X size={32} />}
+          </div>
+          <H3 className="text-lg  text-gray-900 mb-2">{notification.title}</H3>
+          <Subtext className="text-sm text-gray-500 font-medium leading-relaxed mb-8">
+            {notification.message}
+          </Subtext>
+          <Button
+            onClick={() => setNotification({ ...notification, isOpen: false })}
+            className="w-full !py-4 bg-gray-900 hover:bg-black text-white"
+          >
+            Tutup
+          </Button>
         </div>
       </Modal>
     </div>

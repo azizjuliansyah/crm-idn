@@ -1,14 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+
+import { Input, Select, Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, Modal, Card } from '@/components/ui';
+
+
 import { supabase } from '@/lib/supabase';
 import { ProjectPipeline, Company, ProjectCustomField } from '@/lib/types';
-import { 
-  Plus, Edit2, Trash2, GripVertical, Save, X, 
+import {
+  Plus, Edit2, Trash2, GripVertical, Save, X,
   Loader2, Workflow, AlertTriangle,
   ArrowUp, ArrowDown, Type, Hash, Calendar as CalendarIcon
 } from 'lucide-react';
-import { Modal, Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Card, Input, Select, Label } from '@/components/ui';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 
 interface Props {
@@ -24,7 +27,7 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
   const [pipelines, setPipelines] = useState<ProjectPipeline[]>([]);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalForm, setModalForm] = useState<{ id: number | null, name: string, stages: StageForm[], custom_fields: ProjectCustomField[] }>({
     id: null,
@@ -51,7 +54,7 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
         .select('*, stages:project_pipeline_stages(*)')
         .eq('company_id', company.id)
         .order('id');
-      
+
       if (pipelinesData) {
         const sorted = pipelinesData.map(p => ({
           ...p,
@@ -141,16 +144,16 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
   const handleSave = async () => {
     if (!modalForm.name.trim() || modalForm.stages.length === 0) return;
     setIsProcessing(true);
-    
+
     try {
       let pipelineId = modalForm.id;
 
       if (pipelineId) {
-        await supabase.from('project_pipelines').update({ 
+        await supabase.from('project_pipelines').update({
           name: modalForm.name,
-          custom_fields: modalForm.custom_fields 
+          custom_fields: modalForm.custom_fields
         }).eq('id', pipelineId);
-        
+
         const currentStages = pipelines.find(p => p.id === pipelineId)?.stages || [];
         const stageIdsToKeep = modalForm.stages.filter(s => s.id).map(s => s.id);
         const stageIdsToRemove = currentStages.filter(s => !stageIdsToKeep.includes(s.id)).map(s => s.id);
@@ -206,24 +209,24 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
     }
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-blue-600 mb-4" /><p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Memuat Konfigurasi...</p></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-blue-600 mb-4" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Memuat Konfigurasi...</Subtext></div>;
 
   return (
     <div className="max-w-5xl space-y-8">
-      <Card className="p-10 border-b border-gray-50 flex items-center justify-between !rounded-b-none">
+      <Card className="">
+        <div className="p-10 border-b border-gray-50 flex items-center justify-between">
           <div>
-            <H2 className="text-2xl font-bold tracking-tighter">Project Pipeline Management</H2>
+            <H2 className="text-2xl  tracking-tight">Project Pipeline Management</H2>
             <Subtext className="mt-1">Kelola tahapan pengerjaan proyek di workspace Anda.</Subtext>
           </div>
-          <Button 
+          <Button
             onClick={handleOpenAdd}
             leftIcon={<Plus size={16} />}
+            variant='primary'
           >
             Tambah Pipeline
           </Button>
-      </Card>
-
-      <Card className="!rounded-t-none !border-t-0 p-0 overflow-hidden">
+        </div>
 
         <Table>
           <TableHeader>
@@ -242,9 +245,9 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
                       <Workflow size={20} />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-gray-900 tracking-tight">{p.name}</p>
+                      <Subtext className="text-sm  text-gray-900 tracking-tight">{p.name}</Subtext>
                       {p.custom_fields && p.custom_fields.length > 0 && (
-                        <p className="text-[10px] text-emerald-600 font-bold uppercase mt-1">{p.custom_fields.length} Custom Fields</p>
+                        <Subtext className="text-[10px] text-emerald-600  uppercase mt-1">{p.custom_fields.length} Custom Fields</Subtext>
                       )}
                     </div>
                   </div>
@@ -252,9 +255,9 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
                 <TableCell className="px-10 py-8">
                   <div className="flex flex-wrap gap-2">
                     {p.stages?.map(s => (
-                      <span key={s.id} className="px-3 py-1 bg-white border border-gray-100 rounded-full text-[10px] font-bold text-gray-500 shadow-sm uppercase tracking-tighter">
+                      <Label key={s.id} className="px-3 py-1 bg-white border border-gray-100 rounded-full text-[10px]  text-gray-500 shadow-sm uppercase tracking-tight">
                         {s.name}
-                      </span>
+                      </Label>
                     ))}
                   </div>
                 </TableCell>
@@ -273,16 +276,16 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
         </Table>
       </Card>
 
-      <Modal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         title={modalForm.id ? "Edit Project Pipeline" : "Daftarkan Pipeline Baru"}
         size="lg"
         footer={
           <div className="flex gap-3 w-full">
             <Button variant="ghost" onClick={() => setIsModalOpen(false)} className="px-8 flex-1">Batal</Button>
-            <Button 
-              onClick={handleSave} 
+            <Button
+              onClick={handleSave}
               disabled={isProcessing}
               isLoading={isProcessing}
               leftIcon={<Save size={14} />}
@@ -301,8 +304,8 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
               </div>
               <Label>Nama Pipeline Proyek</Label>
             </div>
-            <Input 
-              type="text" 
+            <Input
+              type="text"
               value={modalForm.name}
               onChange={e => setModalForm(prev => ({ ...prev, name: e.target.value }))}
               placeholder="Misal: Pengembangan Software..."
@@ -325,34 +328,34 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
               <div className="space-y-3">
                 {modalForm.stages.map((s, idx) => (
                   <div key={idx} className="flex items-center gap-4 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-blue-100 transition-all group">
-                    <div className="w-7 h-7 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-[9px] font-bold text-gray-400">
+                    <div className="w-7 h-7 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-[9px]  text-gray-400">
                       {idx + 1}
                     </div>
-                    <input 
+                    <Input
                       type="text"
                       value={s.name}
                       onChange={(e) => handleUpdateStageName(idx, e.target.value)}
-                      className="flex-1 bg-transparent border-none outline-none font-bold text-xs text-gray-700"
+                      className="flex-1 bg-transparent border-none outline-none  text-xs text-gray-700"
                     />
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => handleMoveStage(idx, 'up')} disabled={idx === 0} className="p-1.5 text-gray-400 hover:text-blue-600 disabled:opacity-20"><ArrowUp size={14} /></button>
-                      <button onClick={() => handleMoveStage(idx, 'down')} disabled={idx === modalForm.stages.length - 1} className="p-1.5 text-gray-400 hover:text-blue-600 disabled:opacity-20"><ArrowDown size={14} /></button>
-                      <button onClick={() => removeStageFromForm(idx)} className="p-1.5 text-gray-400 hover:text-rose-600"><Trash2 size={14} /></button>
+                      <Button onClick={() => handleMoveStage(idx, 'up')} disabled={idx === 0} className="p-1.5 text-gray-400 hover:text-blue-600 disabled:opacity-20"><ArrowUp size={14} /></Button>
+                      <Button onClick={() => handleMoveStage(idx, 'down')} disabled={idx === modalForm.stages.length - 1} className="p-1.5 text-gray-400 hover:text-blue-600 disabled:opacity-20"><ArrowDown size={14} /></Button>
+                      <Button onClick={() => removeStageFromForm(idx)} className="p-1.5 text-gray-400 hover:text-rose-600"><Trash2 size={14} /></Button>
                     </div>
                   </div>
                 ))}
               </div>
-              
+
               <div className="flex gap-2">
-                <Input 
-                  type="text" 
+                <Input
+                  type="text"
                   value={newStageInput}
                   onChange={e => setNewStageInput(e.target.value)}
                   onKeyDown={(e: any) => e.key === 'Enter' && addStageToForm()}
                   placeholder="Nama stage..."
                   className="flex-1 !py-3"
                 />
-                <button onClick={addStageToForm} className="px-4 py-3 bg-gray-900 text-white rounded-xl font-bold text-[10px] uppercase">Tambah</button>
+                <Button onClick={addStageToForm} className="px-4 py-3 bg-gray-900 text-white rounded-xl  text-[10px] uppercase">Tambah</Button>
               </div>
             </div>
 
@@ -374,31 +377,31 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
                       {f.type === 'text' ? <Type size={14} /> : f.type === 'number' ? <Hash size={14} /> : <CalendarIcon size={14} />}
                     </div>
                     <div className="flex-1">
-                      <p className="text-xs font-bold text-gray-700">{f.label}</p>
-                      <p className="text-[8px] font-bold uppercase text-emerald-600 tracking-tighter">{f.type}</p>
+                      <Subtext className="text-xs  text-gray-700">{f.label}</Subtext>
+                      <Subtext className="text-[8px]  uppercase text-emerald-600 tracking-tight">{f.type}</Subtext>
                     </div>
-                    <button onClick={() => removeCustomField(idx)} className="p-1.5 text-gray-400 hover:text-rose-600 transition-colors">
+                    <Button onClick={() => removeCustomField(idx)} className="p-1.5 text-gray-400 hover:text-rose-600 transition-colors">
                       <X size={14} />
-                    </button>
+                    </Button>
                   </div>
                 ))}
                 {modalForm.custom_fields.length === 0 && (
                   <div className="p-10 text-center border-2 border-dashed border-gray-100 rounded-2xl">
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-gray-300">Belum ada field kustom</p>
+                    <Subtext className="text-[9px]  uppercase tracking-tight text-gray-300">Belum ada field kustom</Subtext>
                   </div>
                 )}
               </div>
 
               <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-3">
-                <Input 
-                  type="text" 
+                <Input
+                  type="text"
                   value={newFieldLabel}
                   onChange={e => setNewFieldLabel(e.target.value)}
                   placeholder="Label field (misal: Lokasi)..."
                   className="!py-3"
                 />
                 <div className="flex gap-2">
-                  <Select 
+                  <Select
                     value={newFieldType}
                     onChange={(e: any) => setNewFieldType(e.target.value)}
                     className="flex-1 !py-3 w-32"
@@ -407,7 +410,7 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
                     <option value="number">Number</option>
                     <option value="date">Date</option>
                   </Select>
-                  <button onClick={addCustomField} className="px-5 py-3 bg-emerald-600 text-white rounded-xl font-bold text-[10px] uppercase shadow-lg shadow-emerald-100">+ Add</button>
+                  <Button onClick={addCustomField} className="px-5 py-3 bg-emerald-600 text-white rounded-xl  text-[10px] uppercase shadow-lg shadow-emerald-100">+ Add</Button>
                 </div>
               </div>
             </div>
@@ -415,9 +418,9 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
         </div>
       </Modal>
 
-      <ConfirmDeleteModal 
-        isOpen={confirmModal.isOpen} 
-        onClose={() => setConfirmModal({ isOpen: false, id: null })} 
+      <ConfirmDeleteModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, id: null })}
         onConfirm={handleDelete}
         title="Hapus Pipeline Permanen"
         itemName="Pipeline ini"

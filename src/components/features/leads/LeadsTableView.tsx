@@ -1,7 +1,6 @@
-import React from 'react';
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, Subtext, Label, Badge, Checkbox } from '@/components/ui';
 import { Lead } from '@/lib/types';
-import { Table as TableIcon, Trash2, ChevronUp, ChevronDown, Check as CheckIcon } from 'lucide-react';
-import { Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, Badge, Button } from '@/components/ui';
+import { Table as TableIcon, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface Props {
   leads: Lead[];
@@ -16,13 +15,23 @@ interface Props {
   formatIDR: (num?: number) => string;
 }
 
-export const LeadsTableView: React.FC<Props> = ({ 
-  leads, sortConfig, onSort, selectedIds, onToggleSelect, 
-  onToggleSelectAll, onEdit, onDelete, formatIDR 
+export const LeadsTableView: React.FC<Props> = ({
+  leads, sortConfig, onSort, selectedIds, onToggleSelect,
+  onToggleSelectAll, onEdit, onDelete, formatIDR
 }) => {
   const SortIndicator = ({ column }: { column: string }) => {
     if (sortConfig?.key !== column) return <ChevronUp size={12} className="text-gray-200 opacity-0 group-hover:opacity-100 transition-opacity ml-1" />;
     return sortConfig.direction === 'asc' ? <ChevronUp size={12} className="text-blue-500 ml-1" /> : <ChevronDown size={12} className="text-blue-500 ml-1" />;
+  };
+
+  const getStatusVariant = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'pending': return 'info';
+      case 'qualified': return 'success';
+      case 'unqualified': return 'danger';
+      case 'working': return 'warning';
+      default: return 'primary';
+    }
   };
 
   return (
@@ -31,9 +40,14 @@ export const LeadsTableView: React.FC<Props> = ({
         <TableHeader>
           <TableRow>
             <TableCell isHeader className="w-10 text-center">
-              <button onClick={onToggleSelectAll} className={`w-5 h-5 rounded-md flex items-center justify-center border transition-all mx-auto cursor-pointer ${leads.length > 0 && selectedIds.length === leads.length ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-transparent'}`}><CheckIcon size={12} strokeWidth={4} /></button>
+              <Checkbox
+                checked={leads.length > 0 && selectedIds.length === leads.length}
+                onChange={onToggleSelectAll}
+                variant="blue"
+              />
             </TableCell>
             <TableCell isHeader className="cursor-pointer" onClick={() => onSort('id')}>ID <SortIndicator column="id" /></TableCell>
+            <TableCell isHeader className="cursor-pointer" onClick={() => onSort('input_date')}>Tanggal Input <SortIndicator column="input_date" /></TableCell>
             <TableCell isHeader className="cursor-pointer" onClick={() => onSort('name')}>Lead <SortIndicator column="name" /></TableCell>
             <TableCell isHeader>Nilai (Est)</TableCell>
             <TableCell isHeader className="cursor-pointer" onClick={() => onSort('sales_name')}>PIC <SortIndicator column="sales_name" /></TableCell>
@@ -48,35 +62,40 @@ export const LeadsTableView: React.FC<Props> = ({
             leads.map(lead => (
               <TableRow key={lead.id}>
                 <TableCell className="text-center">
-                  <button onClick={() => onToggleSelect(lead.id)} className={`w-5 h-5 rounded-md flex items-center justify-center border transition-all mx-auto cursor-pointer ${selectedIds.includes(lead.id) ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-gray-200 text-transparent'}`}><CheckIcon size={12} strokeWidth={4} /></button>
+                  <Checkbox
+                    checked={selectedIds.includes(lead.id)}
+                    onChange={() => onToggleSelect(lead.id)}
+                    variant="blue"
+                  />
                 </TableCell>
-                <TableCell className="text-gray-400 font-mono">#{String(lead.id).padStart(4, '0')}</TableCell>
+                <TableCell className="text-gray-500 font-mono">#{String(lead.id).padStart(4, '0')}</TableCell>
+                <TableCell className="text-gray-500">
+                  {lead.input_date ? new Date(lead.input_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                </TableCell>
                 <TableCell>
-                  <button onClick={() => onEdit(lead)} className="font-bold text-gray-900 hover:text-blue-600 transition-all text-left block cursor-pointer">
-                    {lead.salutation && <span className="text-blue-400 font-bold mr-1">{lead.salutation}</span>}
-                    {lead.name}
-                  </button>
-                  <p className="text-[9px] text-gray-400 font-medium mt-1 uppercase tracking-tighter">{lead.client_company?.name || 'Perorangan'}</p>
+                  {lead.salutation && <span className="!text-blue-400 mr-1">{lead.salutation}</span>}
+                  {lead.name}
+                  <Subtext className="text-[10px] !text-gray-400 mt-1 uppercase tracking-tight">{lead.client_company?.name || 'Perorangan'}</Subtext>
                 </TableCell>
-                <TableCell className="font-bold text-gray-600">{formatIDR(lead.expected_value)}</TableCell>
-                <TableCell className="text-gray-600 font-bold">{lead.sales_profile?.full_name || '-'}</TableCell>
+                <TableCell className=" text-gray-600">{formatIDR(lead.expected_value)}</TableCell>
+                <TableCell className="text-gray-600 ">{lead.sales_profile?.full_name || '-'}</TableCell>
                 <TableCell className="text-center">
-                  <Badge variant="primary">{lead.status}</Badge>
+                  <Badge variant={getStatusVariant(lead.status)}>{lead.status}</Badge>
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => onEdit(lead)} 
+                  <div className="flex items-center justify-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onEdit(lead)}
                       className="!p-2 text-blue-500 hover:bg-blue-50"
                     >
                       <TableIcon size={14} />
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={(e) => { e.stopPropagation(); onDelete(lead.id); }} 
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => { e.stopPropagation(); onDelete(lead.id); }}
                       className="!p-2 text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg"
                     >
                       <Trash2 size={14} />

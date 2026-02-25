@@ -1,13 +1,16 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+
+import { Input, Select, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Label, Modal, Card, EmptyState, SearchInput } from '@/components/ui';
+
+
 import { supabase } from '@/lib/supabase';
 import { Company, Product, ProductCategory, ProductUnit } from '@/lib/types';
-import { 
-  Plus, Search, Edit2, Trash2, Loader2, Package, 
+import {
+  Plus, Search, Edit2, Trash2, Loader2, Package,
   Tags, Weight, FileText, Check, X, CheckCircle2
 } from 'lucide-react';
-import { Modal, SearchInput, Button, Input, Select, Textarea, Table, TableHeader, TableBody, TableRow, TableCell, Card, EmptyState, Label } from '@/components/ui';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 
 interface Props {
@@ -36,8 +39,8 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
 
   const fetchData = useCallback(async () => {
     if (!company?.id) {
-        setLoading(false);
-        return;
+      setLoading(false);
+      return;
     }
     setLoading(true);
     try {
@@ -60,7 +63,7 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
   }, [fetchData]);
 
   const filteredProducts = useMemo(() => {
-    return products.filter(p => 
+    return products.filter(p =>
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.product_categories?.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -112,7 +115,7 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
 
       if (form.id) await supabase.from('products').update(payload).eq('id', form.id);
       else await supabase.from('products').insert(payload);
-      
+
       setIsModalOpen(false);
       fetchData();
     } finally {
@@ -138,28 +141,28 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num).replace('Rp', 'Rp ');
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-emerald-600 mb-4" /><p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Sinkronisasi Katalog Produk...</p></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-emerald-600 mb-4" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Sinkronisasi Katalog Produk...</Subtext></div>;
   if (!company) return <div className="text-center p-8 text-gray-500">Pilih workspace terlebih dahulu</div>;
 
   return (
     <div className="space-y-6 h-full flex flex-col text-gray-900">
       <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0 overflow-x-auto custom-scrollbar">
         <div className="w-[400px] shrink-0">
-          <SearchInput 
-            placeholder="Cari nama produk atau kategori..." 
+          <SearchInput
+            placeholder="Cari nama produk atau kategori..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             className="rounded-xl border-gray-100 shadow-none bg-gray-50/30"
           />
         </div>
-        <Button 
+        <Button
           onClick={() => { setForm({ name: '', category_id: categories[0]?.id || null, unit_id: units[0]?.id || null, price: 0, description: '' }); setIsModalOpen(true); }}
           variant="success"
-          className="!px-6 py-2.5 font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-100 shrink-0"
+          className="!px-6 py-2.5  text-[10px] uppercase tracking-tight shadow-lg shadow-emerald-100 shrink-0"
         >
           <div className="flex items-center gap-2">
             <Plus size={14} strokeWidth={3} />
-            <span>Produk Baru</span>
+            <Label>Produk Baru</Label>
           </div>
         </Button>
       </div>
@@ -169,11 +172,11 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
           <Table>
             <TableHeader className="sticky top-0 z-10 bg-gray-50/80 backdrop-blur-md border-b border-gray-100">
               <TableRow className="hover:bg-transparent">
-                <TableCell className="font-black text-gray-400 uppercase tracking-widest text-[10px] py-4 px-6">Informasi Produk</TableCell>
-                <TableCell className="font-black text-gray-400 uppercase tracking-widest text-[10px] py-4 px-6">Kategori</TableCell>
-                <TableCell className="font-black text-gray-400 uppercase tracking-widest text-[10px] py-4 px-6">Satuan</TableCell>
-                <TableCell className="font-black text-gray-400 uppercase tracking-widest text-[10px] text-right py-4 px-6">Harga Jual</TableCell>
-                <TableCell className="font-black text-gray-400 uppercase tracking-widest text-center text-[10px] py-4 px-6">Aksi</TableCell>
+                <TableCell isHeader>Informasi Produk</TableCell>
+                <TableCell isHeader>Kategori</TableCell>
+                <TableCell isHeader>Satuan</TableCell>
+                <TableCell isHeader className="text-right">Harga Jual</TableCell>
+                <TableCell isHeader className="text-center">Aksi</TableCell>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -183,27 +186,27 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shadow-sm border border-emerald-100"><Package size={20} strokeWidth={2.5} /></div>
                       <div>
-                        <p className="text-sm font-black text-gray-900 tracking-tight">{item.name}</p>
-                        {item.description && <p className="text-[10px] text-gray-400 font-bold mt-0.5 line-clamp-1 italic">{item.description}</p>}
+                        <Subtext className="text-sm text-gray-900 tracking-tight">{item.name}</Subtext>
+                        {item.description && <Subtext className="text-[10px] text-gray-400 mt-1 uppercase tracking-tight italic">{item.description}</Subtext>}
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className="py-5 px-6">
-                    <span className="px-3 py-1 bg-white border border-gray-100 rounded-full text-[9px] font-black uppercase tracking-widest text-gray-500 shadow-sm">
+                    <Label className="px-3 py-1 bg-white border border-gray-100 rounded-full text-[9px] uppercase tracking-tight text-gray-500 shadow-sm">
                       {item.product_categories?.name || 'Umum'}
-                    </span>
+                    </Label>
                   </TableCell>
                   <TableCell className="py-5 px-6">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{item.product_units?.name || '-'}</span>
+                    <Label className="text-[10px] text-gray-500 uppercase tracking-tight">{item.product_units?.name || '-'}</Label>
                   </TableCell>
-                  <TableCell className="text-right font-black text-emerald-600 text-sm py-5 px-6 bg-emerald-50/5 group-hover:bg-emerald-50/20">{formatIDR(item.price)}</TableCell>
-                  <TableCell className="text-center py-5 px-6">
-                    <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-x-2 group-hover:translate-x-0">
-                      <Button variant="ghost" size="sm" onClick={() => { setForm(item); setIsModalOpen(true); }} className="!p-2 text-indigo-500 hover:bg-indigo-50 rounded-xl transition-all" title="Edit">
-                        <Edit2 size={16} strokeWidth={2.5} />
+                  <TableCell className="text-right  text-emerald-600 text-sm py-5 px-6 bg-emerald-50/5 group-hover:bg-emerald-50/20">{formatIDR(item.price)}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center justify-center gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => { setForm(item); setIsModalOpen(true); }} className="!p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
+                        <Edit2 size={14} />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(item.id)} className="!p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-all" title="Hapus">
-                        <Trash2 size={16} strokeWidth={2.5} />
+                      <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(item.id)} className="!p-2 text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg" title="Hapus">
+                        <Trash2 size={14} />
                       </Button>
                     </div>
                   </TableCell>
@@ -212,7 +215,7 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
               {filteredProducts.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5}>
-                    <EmptyState 
+                    <EmptyState
                       icon={<Package size={48} className="mx-auto mb-4" />}
                       title="Katalog produk masih kosong"
                       description="Belum ada data produk yang terdaftar"
@@ -225,16 +228,16 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
         </div>
       </Card>
 
-      <Modal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         title={form.id ? "Edit Data Produk" : "Daftarkan Produk Baru"}
         size="lg"
         footer={
-          <Button 
-            onClick={handleSave} 
-            isLoading={isProcessing} 
-            disabled={isProcessing} 
+          <Button
+            onClick={handleSave}
+            isLoading={isProcessing}
+            disabled={isProcessing}
             variant="success"
             className="px-10 py-4 shadow-xl flex items-center gap-2"
           >
@@ -243,97 +246,97 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
         }
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 pb-4">
-           <div className="md:col-span-2 space-y-2 text-left">
-              <Input 
-                label="Nama Produk / Jasa*"
-                value={form.name} 
-                onChange={e => setForm({...form, name: e.target.value})} 
-                placeholder="Misal: Laptop ASUS..." 
-                className="!py-3"
-              />
-           </div>
+          <div className="md:col-span-2 space-y-2 text-left">
+            <Input
+              label="Nama Produk / Jasa*"
+              value={form.name}
+              onChange={e => setForm({ ...form, name: e.target.value })}
+              placeholder="Misal: Laptop ASUS..."
+              className="!py-3"
+            />
+          </div>
 
-           <div className="space-y-2 text-left">
-              <div className="flex items-center justify-between">
-                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Kategori Produk</label>
-                 <Button variant="ghost" size="sm" onClick={() => setIsAddingCat(!isAddingCat)} className="!text-[9px] !font-bold text-emerald-600 uppercase hover:underline !p-0 !h-auto">
-                    {isAddingCat ? 'Batal' : '+ Baru'}
-                 </Button>
+          <div className="space-y-2 text-left">
+            <div className="flex items-center justify-between">
+              <Label className="text-[10px]  text-gray-400 uppercase tracking-tight ml-1">Kategori Produk</Label>
+              <Button variant="ghost" size="sm" onClick={() => setIsAddingCat(!isAddingCat)} className="!text-[9px] ! text-emerald-600 uppercase hover:underline !p-0 !h-auto">
+                {isAddingCat ? 'Batal' : '+ Baru'}
+              </Button>
+            </div>
+            {isAddingCat ? (
+              <div className="flex gap-2">
+                <Input autoFocus value={newCatName} onChange={e => setNewCatName(e.target.value)} className="flex-1 !py-2.5 !text-[11px]" />
+                <Button onClick={handleQuickAddCategory} className="px-3" variant="success"><Check size={14} /></Button>
               </div>
-              {isAddingCat ? (
-                <div className="flex gap-2">
-                   <Input autoFocus value={newCatName} onChange={e => setNewCatName(e.target.value)} className="flex-1 !py-2.5 !text-[11px]" />
-                   <Button onClick={handleQuickAddCategory} className="px-3" variant="success"><Check size={14} /></Button>
-                </div>
-              ) : (
-                <div className="relative">
-                   <Select 
-                     value={form.category_id || ''} 
-                     onChange={e => setForm({...form, category_id: Number(e.target.value)})} 
-                     className="!py-3"
-                   >
-                      <option value="">Pilih Kategori</option>
-                      {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                   </Select>
-                </div>
-              )}
-           </div>
-
-           <div className="space-y-2 text-left">
-              <div className="flex items-center justify-between">
-                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Satuan Produk</label>
-                 <Button variant="ghost" size="sm" onClick={() => setIsAddingUnit(!isAddingUnit)} className="!text-[9px] !font-bold text-emerald-600 uppercase hover:underline !p-0 !h-auto">
-                    {isAddingUnit ? 'Batal' : '+ Baru'}
-                 </Button>
+            ) : (
+              <div className="relative">
+                <Select
+                  value={form.category_id || ''}
+                  onChange={e => setForm({ ...form, category_id: Number(e.target.value) })}
+                  className="!py-3"
+                >
+                  <option value="">Pilih Kategori</option>
+                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </Select>
               </div>
-              {isAddingUnit ? (
-                <div className="flex gap-2">
-                   <Input autoFocus value={newUnitName} onChange={e => setNewUnitName(e.target.value)} className="flex-1 !py-2.5 !text-[11px]" />
-                   <Button onClick={handleQuickAddUnit} className="px-3" variant="success"><Check size={14} /></Button>
-                </div>
-              ) : (
-                <div className="relative">
-                   <Select 
-                     value={form.unit_id || ''} 
-                     onChange={e => setForm({...form, unit_id: Number(e.target.value)})} 
-                     className="!py-3"
-                   >
-                      <option value="">Pilih Satuan</option>
-                      {units.map(u => <option key={u.id} value={u.id}>{u.name.toUpperCase()}</option>)}
-                   </Select>
-                </div>
-              )}
-           </div>
+            )}
+          </div>
 
-           <div className="space-y-2 text-left">
-              <Input 
-                label="Harga Jual (IDR)"
-                type="number" 
-                value={form.price} 
-                onChange={e => setForm({...form, price: Number(e.target.value)})} 
-                leftIcon={<span className="text-[11px] font-bold text-emerald-600">Rp</span>}
-                placeholder="0" 
-                className="!py-3"
-              />
-           </div>
+          <div className="space-y-2 text-left">
+            <div className="flex items-center justify-between">
+              <Label className="text-[10px]  text-gray-400 uppercase tracking-tight ml-1">Satuan Produk</Label>
+              <Button variant="ghost" size="sm" onClick={() => setIsAddingUnit(!isAddingUnit)} className="!text-[9px] ! text-emerald-600 uppercase hover:underline !p-0 !h-auto">
+                {isAddingUnit ? 'Batal' : '+ Baru'}
+              </Button>
+            </div>
+            {isAddingUnit ? (
+              <div className="flex gap-2">
+                <Input autoFocus value={newUnitName} onChange={e => setNewUnitName(e.target.value)} className="flex-1 !py-2.5 !text-[11px]" />
+                <Button onClick={handleQuickAddUnit} className="px-3" variant="success"><Check size={14} /></Button>
+              </div>
+            ) : (
+              <div className="relative">
+                <Select
+                  value={form.unit_id || ''}
+                  onChange={e => setForm({ ...form, unit_id: Number(e.target.value) })}
+                  className="!py-3"
+                >
+                  <option value="">Pilih Satuan</option>
+                  {units.map(u => <option key={u.id} value={u.id}>{u.name.toUpperCase()}</option>)}
+                </Select>
+              </div>
+            )}
+          </div>
 
-           <div className="md:col-span-2 space-y-2 text-left">
-              <Textarea 
-                label="Deskripsi & Catatan"
-                value={form.description} 
-                onChange={e => setForm({...form, description: e.target.value})} 
-                className="h-24 resize-none" 
-                placeholder="Tambahkan spesifikasi atau detail produk di sini..." 
-              />
-           </div>
+          <div className="space-y-2 text-left">
+            <Input
+              label="Harga Jual (IDR)"
+              type="number"
+              value={form.price}
+              onChange={e => setForm({ ...form, price: Number(e.target.value) })}
+              leftIcon={<Label className="text-[11px]  text-emerald-600">Rp</Label>}
+              placeholder="0"
+              className="!py-3"
+            />
+          </div>
+
+          <div className="md:col-span-2 space-y-2 text-left">
+            <Textarea
+              label="Deskripsi & Catatan"
+              value={form.description}
+              onChange={e => setForm({ ...form, description: e.target.value })}
+              className="h-24 resize-none"
+              placeholder="Tambahkan spesifikasi atau detail produk di sini..."
+            />
+          </div>
         </div>
       </Modal>
 
-      <ConfirmDeleteModal 
-        isOpen={confirmDelete.isOpen} 
-        onClose={() => setConfirmDelete({ isOpen: false, id: null })} 
+      <ConfirmDeleteModal
+        isOpen={confirmDelete.isOpen}
+        onClose={() => setConfirmDelete({ isOpen: false, id: null })}
         onConfirm={executeDelete}
-        title="Hapus Produk" 
+        title="Hapus Produk"
         itemName="Produk ini"
         description="Apakah Anda yakin ingin menghapus produk ini dari katalog?"
       />

@@ -1,11 +1,14 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+
+import { Input, Button, Subtext, Label } from '@/components/ui';
+
 import { GoogleGenAI } from '@google/genai';
 import { AiSetting, KbArticle } from '@/lib/types';
-import { 
-  Sparkles, Bot, X, Send, SearchCode, ShieldCheck, 
-  ArrowRight, Link as LinkIcon, BookOpen, User 
+import {
+  Sparkles, Bot, X, Send, SearchCode, ShieldCheck,
+  ArrowRight, Link as LinkIcon, BookOpen, User
 } from 'lucide-react';
 
 interface Props {
@@ -33,9 +36,9 @@ const FormattedAiResponse: React.FC<{ text: string }> = ({ text }) => {
     return parts.map((part, i) => {
       if (part.startsWith('**') && part.endsWith('**')) {
         return (
-          <span key={i} className="font-bold text-indigo-700 bg-indigo-50/50 px-1 rounded-sm">
+          <Label key={i} className=" text-indigo-700 bg-indigo-50/50 px-1 rounded-sm">
             {part.slice(2, -2)}
-          </span>
+          </Label>
         );
       }
       return part;
@@ -46,15 +49,15 @@ const FormattedAiResponse: React.FC<{ text: string }> = ({ text }) => {
     <div className="space-y-3 leading-relaxed">
       {lines.map((line, idx) => {
         const trimmed = line.trim();
-        
+
         // Handle Bullet Lists
         if (trimmed.startsWith('* ') || trimmed.startsWith('- ')) {
           return (
             <div key={idx} className="flex gap-3 pl-2 py-0.5">
-               <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0 shadow-sm shadow-indigo-200" />
-               <p className="text-[13px] font-medium text-gray-700 flex-1">
-                 {formatLine(trimmed.slice(2))}
-               </p>
+              <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0 shadow-sm shadow-indigo-200" />
+              <Subtext className="text-[13px] font-medium text-gray-700 flex-1">
+                {formatLine(trimmed.slice(2))}
+              </Subtext>
             </div>
           );
         }
@@ -64,17 +67,17 @@ const FormattedAiResponse: React.FC<{ text: string }> = ({ text }) => {
 
         // Standard Text line
         return (
-          <p key={idx} className="text-[13px] font-medium text-gray-700">
+          <Subtext key={idx} className="text-[13px] font-medium text-gray-700">
             {formatLine(line)}
-          </p>
+          </Subtext>
         );
       })}
     </div>
   );
 };
 
-export const KnowledgeBaseChat: React.FC<Props> = ({ 
-  isOpen, onClose, articles, aiSetting, onNavigate, onOpenArticle 
+export const KnowledgeBaseChat: React.FC<Props> = ({
+  isOpen, onClose, articles, aiSetting, onNavigate, onOpenArticle
 }) => {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     { role: 'bot', text: 'Halo! Saya asisten cerdas pusat bantuan Anda. Saya akan mencari jawaban hanya dari artikel yang tersedia untuk membantu Anda.' }
@@ -95,17 +98,17 @@ export const KnowledgeBaseChat: React.FC<Props> = ({
   // RAG Logic: Keyword-based Retrieval
   const retrieveRelevantArticles = (query: string, allArticles: KbArticle[], limit = 3) => {
     const keywords = query.toLowerCase().split(/\s+/).filter(k => k.length > 2);
-    
+
     const scored = allArticles.map(art => {
       let score = 0;
       const title = art.title.toLowerCase();
       const content = art.content.toLowerCase();
-      
+
       keywords.forEach(word => {
-        if (title.includes(word)) score += 10; 
+        if (title.includes(word)) score += 10;
         if (content.includes(word)) score += 2;
       });
-      
+
       return { article: art, score };
     });
 
@@ -137,19 +140,19 @@ export const KnowledgeBaseChat: React.FC<Props> = ({
       }
 
       setRetrievalStatus(`Menganalisis ${relevantArticles.length} artikel relevan...`);
-      
+
       // Note: Using standard fetch or GoogleGenAI SDK depending on environment
       // Here we assume GoogleGenAI is available as imported
       const ai = new GoogleGenAI({ apiKey: effectiveApiKey });
       const context = relevantArticles.map(a => `JUDUL: ${a.title}\nKONTEN: ${a.content.substring(0, 1500)}`).join('\n\n---\n\n');
-      
+
       const prompt = `BERIKUT ADALAH KONTEKS DARI BASIS PENGETAHUAN KAMI:\n${context}\n\nTUGAS ANDA:\n1. Jawab pertanyaan pengguna HANYA berdasarkan konteks di atas.\n2. Jika jawaban tidak ada di konteks, katakan dengan jujur bahwa info tersebut tidak tersedia.\n3. Jawab dengan format markdown sederhana (gunakan ** untuk menebalkan poin penting dan gunakan list * untuk rincian).\n4. Jawab dengan singkat dan padat.\n5. Gunakan bahasa Indonesia yang profesional.\n\nPERTANYAAN PENGGUNA: "${userMsg}"`;
 
       const response = await ai.models.generateContent({
         model: 'gemini-1.5-flash', // Updated to a more standard model name if available, or keep gemini-1.5-flash
         contents: [{
-            role: 'user',
-            parts: [{ text: prompt }]
+          role: 'user',
+          parts: [{ text: prompt }]
         }],
         config: {
           systemInstruction: aiSetting?.system_instruction || 'Anda adalah AI Customer Support yang cerdas dan efisien.',
@@ -172,12 +175,12 @@ export const KnowledgeBaseChat: React.FC<Props> = ({
 
   if (!isOpen) {
     return (
-      <button 
+      <Button
         onClick={onClose} // acts as open when closed
         className="fixed bottom-8 right-8 z-[60] w-16 h-16 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-2xl hover:scale-105 active:scale-95 transition-all group"
       >
         <Sparkles size={28} className="group-hover:rotate-12 transition-transform" />
-      </button>
+      </Button>
     );
   }
 
@@ -186,52 +189,51 @@ export const KnowledgeBaseChat: React.FC<Props> = ({
       <div className="bg-indigo-600 p-7 text-white flex items-center justify-between shadow-lg relative overflow-hidden shrink-0">
         <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12"><Sparkles size={120} /></div>
         <div className="flex items-center gap-4 relative z-10">
-            <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30 shadow-xl">
-              <Bot size={28} />
+          <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30 shadow-xl">
+            <Bot size={28} />
+          </div>
+          <div>
+            <h5 className=" text-sm uppercase tracking-tight leading-none mb-1.5">Knowledge Assistant</h5>
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full animate-pulse shadow-sm ${isApiKeyActive ? 'bg-emerald-400 shadow-emerald-400' : 'bg-rose-400 shadow-rose-400'}`}></div>
+              <Subtext className="text-[10px] opacity-80  uppercase tracking-tight">
+                {isApiKeyActive ? 'Active (Private Key)' : 'AI Not Configured'}
+              </Subtext>
             </div>
-            <div>
-              <h5 className="font-bold text-sm uppercase tracking-widest leading-none mb-1.5">Knowledge Assistant</h5>
-              <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full animate-pulse shadow-sm ${isApiKeyActive ? 'bg-emerald-400 shadow-emerald-400' : 'bg-rose-400 shadow-rose-400'}`}></div>
-                  <p className="text-[10px] opacity-80 font-bold uppercase tracking-tighter">
-                      {isApiKeyActive ? 'Active (Private Key)' : 'AI Not Configured'}
-                  </p>
-              </div>
-            </div>
+          </div>
         </div>
-        <button onClick={onClose} className="p-2.5 hover:bg-white/10 rounded-2xl transition-colors relative z-10"><X size={22} /></button>
+        <Button onClick={onClose} className="p-2.5 hover:bg-white/10 rounded-2xl transition-colors relative z-10"><X size={22} /></Button>
       </div>
-      
+
       <div className="flex-1 overflow-y-auto p-7 space-y-7 custom-scrollbar bg-white">
         {chatMessages.map((msg, idx) => (
           <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[92%] p-5 rounded-[1.8rem] shadow-sm border ${
-              msg.role === 'user' 
-                ? 'bg-indigo-600 text-white border-transparent rounded-tr-none' 
-                : 'bg-gray-50/50 border-gray-100 rounded-tl-none'
-            }`}>
+            <div className={`max-w-[92%] p-5 rounded-[1.8rem] shadow-sm border ${msg.role === 'user'
+              ? 'bg-indigo-600 text-white border-transparent rounded-tr-none'
+              : 'bg-gray-50/50 border-gray-100 rounded-tl-none'
+              }`}>
               {msg.role === 'user' ? (
-                <div className="text-[13px] leading-relaxed font-bold whitespace-pre-wrap">{msg.text}</div>
+                <div className="text-[13px] leading-relaxed  whitespace-pre-wrap">{msg.text}</div>
               ) : (
                 <FormattedAiResponse text={msg.text} />
               )}
-              
+
               {msg.references && msg.references.length > 0 && (
                 <div className="mt-5 pt-4 border-t border-gray-200/50">
                   <div className="flex items-center gap-2 mb-3 text-indigo-600">
                     <div className="w-5 h-5 rounded-md bg-indigo-50 flex items-center justify-center"><LinkIcon size={10} /></div>
-                    <span className="text-[9px] font-bold uppercase tracking-[0.15em]">Sumber Knowledge Base:</span>
+                    <Label className="text-[9px]  uppercase tracking-[0.15em]">Sumber Knowledge Base:</Label>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {msg.references.map(ref => (
-                      <button 
+                      <Button
                         key={ref.id}
                         onClick={() => onOpenArticle(ref)}
-                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-[10px] font-bold text-gray-600 hover:border-indigo-500 hover:text-indigo-600 hover:shadow-md transition-all"
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-[10px]  text-gray-600 hover:border-indigo-500 hover:text-indigo-600 hover:shadow-md transition-all"
                       >
                         <BookOpen size={10} className="opacity-50" />
-                        <span className="truncate max-w-[150px]">{ref.title}</span>
-                      </button>
+                        <Label className="truncate max-w-[150px]">{ref.title}</Label>
+                      </Button>
                     ))}
                   </div>
                 </div>
@@ -241,61 +243,61 @@ export const KnowledgeBaseChat: React.FC<Props> = ({
         ))}
         {isThinking && (
           <div className="flex justify-start">
-              <div className="bg-gray-50 border border-gray-100 p-5 rounded-[1.5rem] rounded-tl-none flex flex-col gap-3 shadow-sm min-w-[140px]">
-                <div className="flex gap-1.5">
-                  <div className="w-2 h-2 bg-indigo-300 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
-                  <div className="w-2 h-2 bg-indigo-700 rounded-full animate-bounce [animation-delay:0.4s]"></div>
-                </div>
-                {retrievalStatus && (
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest animate-pulse flex items-center gap-2">
-                      <SearchCode size={12} className="text-indigo-400" /> {retrievalStatus}
-                  </p>
-                )}
+            <div className="bg-gray-50 border border-gray-100 p-5 rounded-[1.5rem] rounded-tl-none flex flex-col gap-3 shadow-sm min-w-[140px]">
+              <div className="flex gap-1.5">
+                <div className="w-2 h-2 bg-indigo-300 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                <div className="w-2 h-2 bg-indigo-700 rounded-full animate-bounce [animation-delay:0.4s]"></div>
               </div>
+              {retrievalStatus && (
+                <Subtext className="text-[10px]  text-gray-400 uppercase tracking-tight animate-pulse flex items-center gap-2">
+                  <SearchCode size={12} className="text-indigo-400" /> {retrievalStatus}
+                </Subtext>
+              )}
+            </div>
           </div>
         )}
         <div ref={chatEndRef} />
       </div>
 
       <div className="p-6 bg-white border-t border-gray-50 shrink-0">
-          {!isApiKeyActive ? (
-              <div className="bg-amber-50 p-5 rounded-3xl border border-amber-100 space-y-4">
-                <div className="flex items-center gap-3">
-                    <ShieldCheck size={20} className="text-amber-600" />
-                    <p className="text-[11px] font-bold text-amber-900 uppercase tracking-widest leading-none">Aktivasi AI Diperlukan</p>
-                </div>
-                <p className="text-[10px] text-amber-700 leading-relaxed font-medium">
-                    Chatbot belum aktif karena **Gemini API Key** khusus workspace ini belum diatur.
-                </p>
-                {onNavigate && (
-                  <button 
-                    onClick={() => onNavigate('pengaturan_ai')}
-                    className="w-full py-4 bg-amber-600 text-white rounded-2xl font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-amber-200 flex items-center justify-center gap-2 hover:bg-amber-700 active:scale-95 transition-all"
-                  >
-                      Konfigurasi AI Sekarang <ArrowRight size={12} />
-                  </button>
-                )}
-              </div>
-          ) : (
-            <form onSubmit={handleChatSubmit} className="flex gap-3">
-              <input 
-                type="text" 
-                value={currentInput}
-                onChange={e => setCurrentInput(e.target.value)}
-                placeholder="Ketik pertanyaan Anda..."
-                disabled={isThinking}
-                className="flex-1 bg-gray-50 px-6 py-4 rounded-2xl text-sm font-bold outline-none focus:bg-white focus:border-indigo-300 transition-all border border-transparent shadow-inner" 
-              />
-              <button 
-                type="submit" 
-                disabled={isThinking || !currentInput.trim()}
-                className="w-14 h-14 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 disabled:opacity-30 active:scale-90 transition-all shadow-xl shadow-indigo-100 shrink-0 flex items-center justify-center"
+        {!isApiKeyActive ? (
+          <div className="bg-amber-50 p-5 rounded-3xl border border-amber-100 space-y-4">
+            <div className="flex items-center gap-3">
+              <ShieldCheck size={20} className="text-amber-600" />
+              <Subtext className="text-[11px]  text-amber-900 uppercase tracking-tight leading-none">Aktivasi AI Diperlukan</Subtext>
+            </div>
+            <Subtext className="text-[10px] text-amber-700 leading-relaxed font-medium">
+              Chatbot belum aktif karena **Gemini API Key** khusus workspace ini belum diatur.
+            </Subtext>
+            {onNavigate && (
+              <Button
+                onClick={() => onNavigate('pengaturan_ai')}
+                className="w-full py-4 bg-amber-600 text-white rounded-2xl  text-[10px] uppercase tracking-tight shadow-lg shadow-amber-200 flex items-center justify-center gap-2 hover:bg-amber-700 active:scale-95 transition-all"
               >
-                <Send size={22} />
-              </button>
-            </form>
-          )}
+                Konfigurasi AI Sekarang <ArrowRight size={12} />
+              </Button>
+            )}
+          </div>
+        ) : (
+          <form onSubmit={handleChatSubmit} className="flex gap-3">
+            <Input
+              type="text"
+              value={currentInput}
+              onChange={e => setCurrentInput(e.target.value)}
+              placeholder="Ketik pertanyaan Anda..."
+              disabled={isThinking}
+              className="flex-1 bg-gray-50 px-6 py-4 rounded-2xl text-sm  outline-none focus:bg-white focus:border-indigo-300 transition-all border border-transparent shadow-inner"
+            />
+            <Button
+              type="submit"
+              disabled={isThinking || !currentInput.trim()}
+              className="w-14 h-14 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 disabled:opacity-30 active:scale-90 transition-all shadow-xl shadow-indigo-100 shrink-0 flex items-center justify-center"
+            >
+              <Send size={22} />
+            </Button>
+          </form>
+        )}
       </div>
 
       <style>{`

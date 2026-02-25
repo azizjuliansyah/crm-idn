@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { Input, Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, Modal } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { Pipeline, Company } from '@/lib/types';
-import { 
-  Plus, Edit2, Trash2, GripVertical, Save, X, 
+import {
+  Plus, Edit2, Trash2, GripVertical, Save, X,
   Loader2, GitMerge, AlertTriangle,
   ArrowUp, ArrowDown
 } from 'lucide-react';
-import { 
-  Modal, Table, TableHeader, TableBody, 
-  TableRow, TableCell, TableEmpty, H2, Subtext, Button, Input
-} from '@/components/ui';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 
 interface Props {
@@ -25,7 +22,7 @@ export const DealsPipelineSettingsView: React.FC<Props> = ({ company }) => {
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalForm, setModalForm] = useState<{ id: number | null, name: string, stages: StageForm[] }>({
     id: null,
@@ -49,7 +46,7 @@ export const DealsPipelineSettingsView: React.FC<Props> = ({ company }) => {
         .select('*, stages:pipeline_stages(*)')
         .eq('company_id', company.id)
         .order('id');
-      
+
       if (pipelinesData) {
         const sorted = pipelinesData.map(p => ({
           ...p,
@@ -121,15 +118,15 @@ export const DealsPipelineSettingsView: React.FC<Props> = ({ company }) => {
   const handleSave = async () => {
     if (!modalForm.name.trim() || modalForm.stages.length === 0) return;
     setIsProcessing(true);
-    
+
     try {
       let pipelineId = modalForm.id;
 
       if (pipelineId) {
-        await supabase.from('pipelines').update({ 
+        await supabase.from('pipelines').update({
           name: modalForm.name
         }).eq('id', pipelineId);
-        
+
         const currentStages = pipelines.find(p => p.id === pipelineId)?.stages || [];
         const stageIdsToKeep = modalForm.stages.filter(s => s.id).map(s => s.id);
         const stageIdsToRemove = currentStages.filter(s => !stageIdsToKeep.includes(s.id)).map(s => s.id);
@@ -182,19 +179,20 @@ export const DealsPipelineSettingsView: React.FC<Props> = ({ company }) => {
     }
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-blue-600 mb-4" /><p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Memuat Pipeline Penjualan...</p></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-blue-600 mb-4" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Memuat Pipeline Penjualan...</Subtext></div>;
 
   return (
     <div className="max-w-5xl space-y-8">
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="p-10 border-b border-gray-50 flex items-center justify-between">
           <div>
-            <H2 className="text-2xl font-bold tracking-tighter">Deals Pipeline Management</H2>
+            <H2 className="text-2xl  tracking-tight">Deals Pipeline Management</H2>
             <Subtext className="mt-1">Kelola tahapan penjualan (sales funnel) di workspace Anda.</Subtext>
           </div>
-          <Button 
+          <Button
             onClick={handleOpenAdd}
             leftIcon={<Plus size={16} />}
+            variant='primary'
           >
             Tambah Pipeline
           </Button>
@@ -202,11 +200,11 @@ export const DealsPipelineSettingsView: React.FC<Props> = ({ company }) => {
 
         <Table>
           <TableHeader>
-            <tr>
+            <TableRow>
               <TableCell isHeader>Nama Pipeline</TableCell>
               <TableCell isHeader>Tahapan</TableCell>
               <TableCell isHeader className="text-center">Aksi</TableCell>
-            </tr>
+            </TableRow>
           </TableHeader>
           <TableBody>
             {pipelines.map(p => (
@@ -217,24 +215,24 @@ export const DealsPipelineSettingsView: React.FC<Props> = ({ company }) => {
                       <GitMerge size={20} />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-gray-900 tracking-tight">{p.name}</p>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">{(p.stages || []).length} Stages</p>
+                      <Subtext className="text-sm  text-gray-900 tracking-tight">{p.name}</Subtext>
+                      <Subtext className="text-[10px] text-gray-400  uppercase mt-1">{(p.stages || []).length} Stages</Subtext>
                     </div>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-2">
                     {p.stages?.map(s => (
-                      <span key={s.id} className="px-3 py-1 bg-white border border-gray-100 rounded-full text-[10px] font-bold text-gray-500 shadow-sm uppercase tracking-tighter">
+                      <Label key={s.id} className="px-3 py-1 bg-white border border-gray-100 rounded-full text-[10px]  text-gray-500 shadow-sm uppercase tracking-tight">
                         {s.name}
-                      </span>
+                      </Label>
                     ))}
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => handleOpenEdit(p)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-all"><Edit2 size={18} /></button>
-                    <button onClick={() => setConfirmModal({ isOpen: true, id: p.id })} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-all"><Trash2 size={18} /></button>
+                    <Button onClick={() => handleOpenEdit(p)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-all"><Edit2 size={18} /></Button>
+                    <Button onClick={() => setConfirmModal({ isOpen: true, id: p.id })} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-all"><Trash2 size={18} /></Button>
                   </div>
                 </TableCell>
               </TableRow>
@@ -246,17 +244,17 @@ export const DealsPipelineSettingsView: React.FC<Props> = ({ company }) => {
         </Table>
       </div>
 
-      <Modal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         title={modalForm.id ? "Edit Deals Pipeline" : "Buat Pipeline Baru"}
         size="lg"
         footer={
           <div className="flex gap-3">
             <Button variant="ghost" onClick={() => setIsModalOpen(false)} className="text-gray-400">Batal</Button>
-            <Button 
-              onClick={handleSave} 
-              isLoading={isProcessing} 
+            <Button
+              onClick={handleSave}
+              isLoading={isProcessing}
               leftIcon={<Save size={14} />}
             >
               Simpan Perubahan
@@ -270,9 +268,9 @@ export const DealsPipelineSettingsView: React.FC<Props> = ({ company }) => {
               <div className="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
                 <GitMerge size={12} />
               </div>
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Nama Pipeline</label>
+              <Label className="text-[10px]  text-gray-400 uppercase tracking-tight">Nama Pipeline</Label>
             </div>
-            <Input 
+            <Input
               value={modalForm.name}
               onChange={e => setModalForm(prev => ({ ...prev, name: e.target.value }))}
               placeholder="Misal: Sales Pipeline Standard..."
@@ -286,49 +284,49 @@ export const DealsPipelineSettingsView: React.FC<Props> = ({ company }) => {
                 <div className="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
                   <GripVertical size={12} />
                 </div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tahapan Penjualan</label>
+                <Label className="text-[10px]  text-gray-400 uppercase tracking-tight">Tahapan Penjualan</Label>
               </div>
             </div>
 
             <div className="space-y-3">
               {modalForm.stages.map((s, idx) => (
                 <div key={idx} className="flex items-center gap-4 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-blue-100 transition-all group">
-                  <div className="w-7 h-7 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-[9px] font-bold text-gray-400">
+                  <div className="w-7 h-7 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-[9px]  text-gray-400">
                     {idx + 1}
                   </div>
-                  <input 
+                  <Input
                     type="text"
                     value={s.name}
                     onChange={(e) => handleUpdateStageName(idx, e.target.value)}
-                    className="flex-1 bg-transparent border-none outline-none font-bold text-xs text-gray-700"
+                    className="flex-1 bg-transparent border-none outline-none  text-xs text-gray-700"
                   />
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => handleMoveStage(idx, 'up')} disabled={idx === 0} className="p-1.5 text-gray-400 hover:text-blue-600 disabled:opacity-20"><ArrowUp size={14} /></button>
-                    <button onClick={() => handleMoveStage(idx, 'down')} disabled={idx === modalForm.stages.length - 1} className="p-1.5 text-gray-400 hover:text-blue-600 disabled:opacity-20"><ArrowDown size={14} /></button>
-                    <button onClick={() => removeStageFromForm(idx)} className="p-1.5 text-gray-400 hover:text-rose-600"><Trash2 size={14} /></button>
+                    <Button onClick={() => handleMoveStage(idx, 'up')} disabled={idx === 0} className="p-1.5 text-gray-400 hover:text-blue-600 disabled:opacity-20"><ArrowUp size={14} /></Button>
+                    <Button onClick={() => handleMoveStage(idx, 'down')} disabled={idx === modalForm.stages.length - 1} className="p-1.5 text-gray-400 hover:text-blue-600 disabled:opacity-20"><ArrowDown size={14} /></Button>
+                    <Button onClick={() => removeStageFromForm(idx)} className="p-1.5 text-gray-400 hover:text-rose-600"><Trash2 size={14} /></Button>
                   </div>
                 </div>
               ))}
             </div>
-            
+
             <div className="flex gap-2">
-              <input 
-                type="text" 
+              <Input
+                type="text"
                 value={newStageInput}
                 onChange={e => setNewStageInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && addStageToForm()}
                 placeholder="Nama stage..."
-                className="flex-1 px-4 py-3 bg-gray-50 border border-transparent rounded-xl outline-none text-xs font-bold focus:bg-white focus:border-blue-200 transition-all"
+                className="flex-1 px-4 py-3 bg-gray-50 border border-transparent rounded-xl outline-none text-xs  focus:bg-white focus:border-blue-200 transition-all"
               />
-              <button onClick={addStageToForm} className="px-4 py-3 bg-gray-900 text-white rounded-xl font-bold text-[10px] uppercase">Tambah</button>
+              <Button onClick={addStageToForm} className="px-4 py-3 bg-gray-900 text-white rounded-xl  text-[10px] uppercase">Tambah</Button>
             </div>
           </div>
         </div>
       </Modal>
 
-      <ConfirmDeleteModal 
-        isOpen={confirmModal.isOpen} 
-        onClose={() => setConfirmModal({ isOpen: false, id: null })} 
+      <ConfirmDeleteModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, id: null })}
         onConfirm={handleDelete}
         itemName="Pipeline Permanen"
         title="Hapus Pipeline"

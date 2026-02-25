@@ -112,6 +112,7 @@ export interface Lead {
   status: string;
   sales_id?: string;
   notes?: string;
+  input_date?: string;
   created_at: string;
   sales_profile?: Profile;
   client_company?: ClientCompany;
@@ -143,9 +144,13 @@ export interface Deal {
   email?: string;
   whatsapp?: string;
   expected_value?: number;
+  follow_up?: number;
+  follow_up_date?: string | null;
+  follow_up_notes?: string | null;
   sales_id?: string;
   source?: string;
   notes?: string;
+  input_date?: string;
   created_at: string;
   sales_profile?: Profile;
   client?: Client;
@@ -439,6 +444,7 @@ export interface SupportTicket {
   company_id: number;
   client_id: number | null;
   assigned_id?: string | null;
+  topic_id?: number | null;
   title: string;
   description?: string;
   status: string;
@@ -447,6 +453,7 @@ export interface SupportTicket {
   created_at: string;
   client?: Client;
   assigned_profile?: Profile;
+  ticket_topics?: TicketTopic;
 }
 
 export interface KbCategory {
@@ -488,4 +495,12 @@ export interface SopCategory {
   name: string;
   parent_id: number | null;
   sort_order: number;
+}
+
+export interface TicketTopic {
+  id: number;
+  company_id: number;
+  name: string;
+  description?: string;
+  created_at: string;
 }

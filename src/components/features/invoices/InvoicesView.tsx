@@ -1,15 +1,18 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+
+import { Select, Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, Subtext, Label, SearchInput } from '@/components/ui';
+
+
 import { supabase } from '@/lib/supabase';
 import { Company, Invoice } from '@/lib/types';
-import { 
-  Plus, Search, Edit2, Trash2, Loader2, FileBadge, 
-  ChevronRight, ArrowUpDown, ChevronUp, ChevronDown, 
+import {
+  Plus, Search, Edit2, Trash2, Loader2, FileBadge,
+  ChevronRight, ArrowUpDown, ChevronUp, ChevronDown,
   AlertTriangle, CheckCircle2, X, Filter,
   FileDown, Download
 } from 'lucide-react';
-import { Button, Input, Select, Badge, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, Label, Subtext, SearchInput } from '@/components/ui';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { NotificationModal } from '@/components/shared/modals/NotificationModal';
 import { jsPDF } from 'jspdf';
@@ -41,11 +44,11 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
   const [filterClientId, setFilterClientId] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'id' as any, direction: 'desc' });
-  
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; number: string }>({ isOpen: false, id: null, number: '' });
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({ 
-    isOpen: false, title: '', message: '', type: 'success' 
+  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
+    isOpen: false, title: '', message: '', type: 'success'
   });
 
   const fetchData = useCallback(async () => {
@@ -57,7 +60,7 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
         .select('*, client:clients(*, client_company:client_companies(*)), invoice_items(*, products(*))')
         .eq('company_id', company.id)
         .order('id', { ascending: false });
-      
+
       if (error) throw error;
       if (data) setInvoices(data as any);
     } catch (err) {
@@ -86,7 +89,7 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
       const matchesSearch = inv.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (inv.client?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (inv.client?.client_company?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       const matchesClient = filterClientId === 'all' || inv.client_id === parseInt(filterClientId);
       const matchesStatus = filterStatus === 'all' || inv.status === filterStatus;
 
@@ -96,7 +99,7 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
     if (sortConfig) {
       result.sort((a, b) => {
         let valA: any, valB: any;
-        switch(sortConfig.key) {
+        switch (sortConfig.key) {
           case 'number': valA = a.number; valB = b.number; break;
           case 'client': valA = a.client?.name || ''; valB = b.client?.name || ''; break;
           case 'date': valA = a.date; valB = b.date; break;
@@ -141,10 +144,10 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
   };
 
   const formatIDR = (num: number = 0) => {
-    return new Intl.NumberFormat('id-ID', { 
-      style: 'currency', 
-      currency: 'IDR', 
-      maximumFractionDigits: 0 
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      maximumFractionDigits: 0
     }).format(num).replace('Rp', 'Rp');
   };
 
@@ -164,10 +167,10 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
       .eq('company_id', company.id)
       .eq('document_type', 'invoice')
       .maybeSingle();
-    
+
     const templateId = templateSetting?.template_id || 'template1';
     const config = templateSetting?.config || {};
-    
+
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -200,17 +203,17 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
 
       const logoUrl = config.logo_url || company.logo_url;
       if (logoUrl) {
-         try {
-           const { width, height, element } = await getImgDimensions(logoUrl);
-           const maxWidth = 60;
-           const maxHeight = bannerHeight;
-           const ratio = Math.min(maxWidth / width, maxHeight / height);
-           const finalWidth = width * ratio;
-           const finalHeight = height * ratio;
-           doc.addImage(element, 'PNG', safeNum(padX), safeNum(startY + (maxHeight - finalHeight) / 2), finalWidth, finalHeight, undefined, 'FAST');
-         } catch (e) {
-           doc.setFontSize(14); doc.setFont('helvetica', 'bold'); safeText(company.name, padX, startY + 12);
-         }
+        try {
+          const { width, height, element } = await getImgDimensions(logoUrl);
+          const maxWidth = 60;
+          const maxHeight = bannerHeight;
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          const finalWidth = width * ratio;
+          const finalHeight = height * ratio;
+          doc.addImage(element, 'PNG', safeNum(padX), safeNum(startY + (maxHeight - finalHeight) / 2), finalWidth, finalHeight, undefined, 'FAST');
+        } catch (e) {
+          doc.setFontSize(14); doc.setFont('helvetica', 'bold'); safeText(company.name, padX, startY + 12);
+        }
       } else {
         doc.setFontSize(14); doc.setFont('helvetica', 'bold'); safeText(company.name, padX, startY + 12);
       }
@@ -232,7 +235,7 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       safeText(`${inv.client?.salutation || ''} ${inv.client?.name || ''}`.trim(), padX, 68);
-      
+
       const metaX = 130;
       safeText('INVOICE NO', metaX, 55);
       safeText(':', metaX + 30, 55);
@@ -265,7 +268,7 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
       const finalY = safeNum((doc as any).lastAutoTable?.finalY, 150);
       safeText('Sub Total', 130, finalY + 10.5);
       safeText(formatIDR(inv.subtotal), pageWidth - padX, finalY + 10.5, { align: 'right' });
-      
+
       const grandTotalY = finalY + 18.5;
       doc.setFillColor(mainColor);
       safeRect(120, grandTotalY, 90, 10, 'F');
@@ -275,7 +278,7 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
       safeText('Grand Total', 130, grandTotalY + 6.5);
       safeText(formatIDR(inv.total), pageWidth - padX, grandTotalY + 6.5, { align: 'right' });
     } else {
-      doc.setFillColor('#4F46E5'); 
+      doc.setFillColor('#4F46E5');
       safeRect(0, 0, pageWidth, 40, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(24);
@@ -293,15 +296,15 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
     doc.save(`${inv.number}.pdf`);
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4"><Loader2 className="animate-spin text-blue-600" /><p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Sinkronisasi Invoice...</p></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4"><Loader2 className="animate-spin text-blue-600" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Sinkronisasi Invoice...</Subtext></div>;
 
   return (
     <div className="flex flex-col gap-6 h-full text-gray-900">
       <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0 overflow-x-auto custom-scrollbar">
         <div className="flex items-center gap-3 shrink-0">
           <div className="w-[400px]">
-            <SearchInput 
-              placeholder="Cari nomor, client..." 
+            <SearchInput
+              placeholder="Cari nomor, client..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="rounded-xl border-gray-100 shadow-none bg-gray-50/30"
@@ -309,10 +312,10 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
           </div>
 
           <div className="w-[200px]">
-            <Select 
+            <Select
               value={filterClientId}
               onChange={e => setFilterClientId(e.target.value)}
-              className="!text-[10px] !font-black uppercase tracking-widest text-gray-400 w-full"
+              className="!text-[10px] ! uppercase tracking-tight text-gray-400 w-full"
             >
               <option value="all">SEMUA PELANGGAN</option>
               {uniqueClients.map(([id, name]) => (<option key={id} value={id}>{name.toUpperCase()}</option>))}
@@ -320,84 +323,83 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
           </div>
 
           <div className="w-[150px]">
-            <Select 
+            <Select
               value={filterStatus}
               onChange={e => setFilterStatus(e.target.value)}
-              className="!text-[10px] !font-black uppercase tracking-widest text-gray-400 w-full"
+              className="!text-[10px] ! uppercase tracking-tight text-gray-400 w-full"
             >
-               <option value="all">SEMUA STATUS</option>
-               <option value="Unpaid">UNPAID</option>
-               <option value="Partial">PARTIAL</option>
-               <option value="Paid">PAID</option>
+              <option value="all">SEMUA STATUS</option>
+              <option value="Unpaid">UNPAID</option>
+              <option value="Partial">PARTIAL</option>
+              <option value="Paid">PAID</option>
             </Select>
           </div>
         </div>
 
-        <Button 
+        <Button
           onClick={() => router.push('/dashboard/sales/invoices/create')}
           variant="primary"
-          className="!px-6 py-2.5 font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100 shrink-0"
+          className="!px-6 py-2.5  text-[10px] uppercase tracking-tight shadow-lg shadow-indigo-100 shrink-0"
         >
           <div className="flex items-center gap-2">
             <Plus size={14} strokeWidth={3} />
-            <span>Buat Invoice</span>
+            <Label>Buat Invoice</Label>
           </div>
         </Button>
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm flex-1">
         <Table>
-            <TableHeader className="sticky top-0 z-10 bg-gray-50/80 backdrop-blur-md border-b border-gray-100">
-              <TableRow className="hover:bg-transparent">
-                <TableCell onClick={() => handleSort('date')} className="font-black text-gray-400 uppercase tracking-widest cursor-pointer text-[10px] py-4 px-6">Tanggal</TableCell>
-                <TableCell onClick={() => handleSort('number')} className="font-black text-gray-400 uppercase tracking-widest cursor-pointer text-[10px] py-4 px-6">Nomor</TableCell>
-                <TableCell onClick={() => handleSort('client')} className="font-black text-gray-400 uppercase tracking-widest cursor-pointer text-[10px] py-4 px-6">Pelanggan</TableCell>
-                <TableCell onClick={() => handleSort('total')} className="font-black text-gray-400 uppercase tracking-widest cursor-pointer text-right text-[10px] py-4 px-6">Total</TableCell>
-                <TableCell onClick={() => handleSort('status')} className="font-black text-gray-400 uppercase tracking-widest cursor-pointer text-center text-[10px] py-4 px-6">Status</TableCell>
-                <TableCell className="font-black text-gray-400 uppercase tracking-widest text-center text-[10px] py-4 px-6">Aksi</TableCell>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <TableHeader className="sticky top-0 z-10 bg-gray-50/80 backdrop-blur-md border-b border-gray-100">
+            <TableRow className="hover:bg-transparent">
+              <TableCell onClick={() => handleSort('date')} isHeader className="cursor-pointer">Tanggal</TableCell>
+              <TableCell onClick={() => handleSort('number')} isHeader className="cursor-pointer">Nomor</TableCell>
+              <TableCell onClick={() => handleSort('client')} isHeader className="cursor-pointer">Pelanggan</TableCell>
+              <TableCell onClick={() => handleSort('total')} isHeader className="cursor-pointer text-center">Total</TableCell>
+              <TableCell onClick={() => handleSort('status')} isHeader className="cursor-pointer text-center">Status</TableCell>
+              <TableCell isHeader className="text-center">Aksi</TableCell>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {filteredInvoices.map(inv => (
               <TableRow key={inv.id} className="group hover:bg-indigo-50/30 transition-colors border-b border-gray-50/50 last:border-0">
                 <TableCell className="py-5 px-6">
-                  <span className="text-[11px] font-bold text-gray-400">{formatDateString(inv.date)}</span>
+                  <Label className="text-[11px] text-gray-500">{formatDateString(inv.date)}</Label>
                 </TableCell>
                 <TableCell className="py-5 px-6">
-                   <button 
-                    onClick={() => router.push(`/dashboard/sales/invoices/${inv.id}`)} 
-                    className="font-black text-indigo-600 text-xs tracking-tight hover:underline flex items-center gap-1.5"
-                   >
+                  <Button
+                    onClick={() => router.push(`/dashboard/sales/invoices/${inv.id}`)}
+                    className=" text-indigo-600 text-xs tracking-tight hover:underline flex items-center gap-1.5"
+                  >
                     <FileBadge size={12} className="text-indigo-400" />
                     {inv.number}
-                   </button>
+                  </Button>
                 </TableCell>
                 <TableCell className="py-5 px-6">
                   <div className="flex flex-col">
-                    <span className="text-xs font-black text-gray-900 tracking-tight">{inv.client?.name || 'Umum'}</span>
-                    <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">{inv.client?.client_company?.name || 'Personal'}</span>
+                    <Label className="text-xs text-gray-900 tracking-tight">{inv.client?.name || 'Umum'}</Label>
+                    <Label className="text-[10px] !text-gray-400 mt-1 uppercase tracking-tight italic">{inv.client?.client_company?.name || 'Personal'}</Label>
                   </div>
                 </TableCell>
-                <TableCell className="text-right font-black text-indigo-600 text-xs py-5 px-6 bg-indigo-50/5 group-hover:bg-indigo-50/20">{formatIDR(inv.total)}</TableCell>
+                <TableCell className="text-right  text-indigo-600 text-xs py-5 px-6 bg-indigo-50/5 group-hover:bg-indigo-50/20">{formatIDR(inv.total)}</TableCell>
                 <TableCell className="text-center py-5 px-6">
-                  <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all duration-300 ${
-                    inv.status === 'Paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                  <Label className={`px-3 py-1 rounded-full text-[9px]  uppercase tracking-tight border transition-all duration-300 ${inv.status === 'Paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                     inv.status === 'Partial' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                    inv.status === 'Unpaid' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-                    'bg-gray-50 text-gray-400 border-gray-200'
-                  }`}>
+                      inv.status === 'Unpaid' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                        'bg-gray-50 text-gray-400 border-gray-200'
+                    }`}>
                     {inv.status}
-                  </span>
+                  </Label>
                 </TableCell>
-                <TableCell className="text-center py-5 px-6">
-                  <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-x-2 group-hover:translate-x-0">
-                    <Button variant="ghost" size="sm" onClick={() => handleDownloadPDF(inv)} className="!p-2 text-emerald-500 hover:bg-emerald-50 rounded-xl transition-colors" title="Unduh PDF">
+                <TableCell>
+                  <div className="flex items-center justify-center gap-2">
+                    <Button variant="ghost" size="sm" onClick={() => handleDownloadPDF(inv)} className="!p-2 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors" title="Unduh PDF">
                       <FileDown size={14} />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => router.push(`/dashboard/sales/invoices/${inv.id}`)} className="!p-2 text-indigo-500 hover:bg-indigo-50 rounded-xl transition-colors">
+                    <Button variant="ghost" size="sm" onClick={() => router.push(`/dashboard/sales/invoices/${inv.id}`)} className="!p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
                       <Edit2 size={14} />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setConfirmDelete({ isOpen: true, id: inv.id, number: inv.number })} className="!p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors">
+                    <Button variant="ghost" size="sm" onClick={() => setConfirmDelete({ isOpen: true, id: inv.id, number: inv.number })} className="!p-2 text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg" title="Hapus">
                       <Trash2 size={14} />
                     </Button>
                   </div>
@@ -411,7 +413,7 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
         </Table>
       </div>
 
-      
+
       <ConfirmDeleteModal
         isOpen={confirmDelete.isOpen}
         onClose={() => setConfirmDelete({ isOpen: false, id: null, number: '' })}
@@ -420,7 +422,7 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
         itemName={confirmDelete.number}
         isProcessing={isProcessing}
       />
- 
+
       <NotificationModal
         isOpen={notification.isOpen}
         onClose={() => setNotification({ ...notification, isOpen: false })}

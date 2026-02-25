@@ -1,13 +1,16 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+
+import { Select, Textarea, Button, H1, Subtext, Label } from '@/components/ui';
+
+
 import { supabase } from '@/lib/supabase';
 import { Company, Profile, Client, Quotation, ProformaInvoice } from '@/lib/types';
-import { 
-  ArrowLeft, Save, Loader2, User, FileText, FileCheck, 
+import {
+  ArrowLeft, Save, Loader2, User, FileText, FileCheck,
   FileQuestion, AlertCircle, Info, ChevronRight, CheckCircle2
 } from 'lucide-react';
-import { Button, Input, Select, Textarea, H1, Subtext, Label } from '@/components/ui';
 import { useRouter } from 'next/navigation';
 
 interface Props {
@@ -22,7 +25,7 @@ export const InvoiceRequestFormView: React.FC<Props> = ({ company, user, onNavig
   const [clients, setClients] = useState<Client[]>([]);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [proformas, setProformas] = useState<ProformaInvoice[]>([]);
-  
+
   const [clientId, setClientId] = useState('');
   const [refType, setRefType] = useState<'quotation' | 'proforma'>('quotation');
   const [docId, setDocId] = useState('');
@@ -37,7 +40,7 @@ export const InvoiceRequestFormView: React.FC<Props> = ({ company, user, onNavig
         supabase.from('quotations').select('*').eq('company_id', company.id).eq('status', 'Accepted').order('id', { ascending: false }),
         supabase.from('proformas').select('*').eq('company_id', company.id).order('id', { ascending: false })
       ]);
-      
+
       if (cRes.data) setClients(cRes.data);
       if (qRes.data) setQuotations(qRes.data);
       if (pRes.data) setProformas(pRes.data as any);
@@ -77,7 +80,7 @@ export const InvoiceRequestFormView: React.FC<Props> = ({ company, user, onNavig
 
       if (error) throw error;
       if (onNavigate) {
-          onNavigate('request_invoice');
+        onNavigate('request_invoice');
       } else {
         router.push('/dashboard/sales/invoice-requests');
       }
@@ -88,14 +91,14 @@ export const InvoiceRequestFormView: React.FC<Props> = ({ company, user, onNavig
     }
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4 bg-white rounded-2xl border border-gray-100 min-h-[400px]"><Loader2 className="animate-spin text-indigo-600" size={32} /><p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Menyiapkan Form Request...</p></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4 bg-white rounded-2xl border border-gray-100 min-h-[400px]"><Loader2 className="animate-spin text-indigo-600" size={32} /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Menyiapkan Form Request...</Subtext></div>;
 
   return (
     <div className="max-w-3xl space-y-8">
       <div className="flex items-center gap-4">
-        <Button 
-          variant="ghost" 
-          onClick={() => router.push('/dashboard/sales/invoice-requests')} 
+        <Button
+          variant="ghost"
+          onClick={() => router.push('/dashboard/sales/invoice-requests')}
           className="!p-2.5 text-gray-400 border border-gray-100 h-11 w-11"
         >
           <ArrowLeft size={20} />
@@ -108,90 +111,90 @@ export const InvoiceRequestFormView: React.FC<Props> = ({ company, user, onNavig
 
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
         <form onSubmit={handleSave} className="p-10 space-y-8">
-           <div className="space-y-6">
-              <Select 
-                label="Pilih Client Utama"
-                value={clientId}
-                onChange={e => { setClientId(e.target.value); setDocId(''); }}
-                className="!h-14 font-bold"
-                required
-              >
-                 <option value="">-- Pilih Client --</option>
-                 {clients.map(c => (
-                   <option key={c.id} value={c.id}>{c.name} ({c.client_company?.name || 'Personal'})</option>
-                 ))}
-              </Select>
+          <div className="space-y-6">
+            <Select
+              label="Pilih Client Utama"
+              value={clientId}
+              onChange={e => { setClientId(e.target.value); setDocId(''); }}
+              className="!h-14 "
+              required
+            >
+              <option value="">-- Pilih Client --</option>
+              {clients.map(c => (
+                <option key={c.id} value={c.id}>{c.name} ({c.client_company?.name || 'Personal'})</option>
+              ))}
+            </Select>
 
-              <div className="space-y-3">
-                 <Label className="uppercase tracking-widest ml-1">Referensi Dokumen Asal</Label>
-                 <div className="flex gap-4">
-                    <Button 
-                      type="button" 
-                      variant={refType === 'quotation' ? 'success' : 'ghost'}
-                      onClick={() => { setRefType('quotation'); setDocId(''); }}
-                      className={`flex-1 p-6 h-auto !justify-start !items-center gap-3 border ${refType === 'quotation' ? 'border-emerald-200' : 'bg-white border-gray-100 !text-gray-400'}`}
-                    >
-                       <FileText size={20} />
-                       <div className="text-left">
-                          <p className="text-[10px] font-bold uppercase">Dari Penawaran</p>
-                          <p className="text-[9px] font-medium opacity-60">Quotation</p>
-                       </div>
-                    </Button>
-                    <Button 
-                      type="button" 
-                      variant={refType === 'proforma' ? 'primary' : 'ghost'}
-                      onClick={() => { setRefType('proforma'); setDocId(''); }}
-                      className={`flex-1 p-6 h-auto !justify-start !items-center gap-3 border ${refType === 'proforma' ? 'border-indigo-200' : 'bg-white border-gray-100 !text-gray-400'}`}
-                    >
-                       <FileCheck size={20} />
-                       <div className="text-left">
-                          <p className="text-[10px] font-bold uppercase">Dari Proforma</p>
-                          <p className="text-[9px] font-medium opacity-60">Proforma Invoice</p>
-                       </div>
-                    </Button>
-                 </div>
-
-                 <Select 
-                   value={docId}
-                   onChange={e => setDocId(e.target.value)}
-                   disabled={!clientId}
-                   className="!h-14 font-bold disabled:opacity-30"
-                   required
-                 >
-                    <option value="">-- Pilih Dokumen --</option>
-                    {filteredDocs.map((d: any) => (
-                      <option key={d.id} value={d.id}>{d.number} - Rp {d.total.toLocaleString('id-ID')}</option>
-                    ))}
-                 </Select>
-                 {!clientId && <p className="text-[9px] text-gray-400 italic px-2">Silakan pilih client terlebih dahulu untuk melihat daftar dokumen.</p>}
-                 {clientId && filteredDocs.length === 0 && <p className="text-[9px] text-rose-500 font-bold px-2">Tidak ada dokumen {refType} yang tersedia untuk client ini.</p>}
+            <div className="space-y-3">
+              <Label className="uppercase tracking-tight ml-1">Referensi Dokumen Asal</Label>
+              <div className="flex gap-4">
+                <Button
+                  type="button"
+                  variant={refType === 'quotation' ? 'success' : 'ghost'}
+                  onClick={() => { setRefType('quotation'); setDocId(''); }}
+                  className={`flex-1 p-6 h-auto !justify-start !items-center gap-3 border ${refType === 'quotation' ? 'border-emerald-200' : 'bg-white border-gray-100 !text-gray-400'}`}
+                >
+                  <FileText size={20} />
+                  <div className="text-left">
+                    <Subtext className="text-[10px]  uppercase">Dari Penawaran</Subtext>
+                    <Subtext className="text-[9px] font-medium opacity-60">Quotation</Subtext>
+                  </div>
+                </Button>
+                <Button
+                  type="button"
+                  variant={refType === 'proforma' ? 'primary' : 'ghost'}
+                  onClick={() => { setRefType('proforma'); setDocId(''); }}
+                  className={`flex-1 p-6 h-auto !justify-start !items-center gap-3 border ${refType === 'proforma' ? 'border-indigo-200' : 'bg-white border-gray-100 !text-gray-400'}`}
+                >
+                  <FileCheck size={20} />
+                  <div className="text-left">
+                    <Subtext className="text-[10px]  uppercase">Dari Proforma</Subtext>
+                    <Subtext className="text-[9px] font-medium opacity-60">Proforma Invoice</Subtext>
+                  </div>
+                </Button>
               </div>
 
-              <Textarea 
-                label="Catatan Tambahan"
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                className="h-32"
-                placeholder="Misal: Tagihan ini untuk termin 1, tolong segera diproses..."
-              />
-           </div>
-
-           <div className="p-6 bg-blue-50/50 border border-blue-100 rounded-2xl flex gap-4">
-              <Info size={24} className="text-blue-500 shrink-0" />
-              <p className="text-[11px] text-blue-700 font-medium leading-relaxed">Setelah disimpan, permintaan akan muncul di dashboard admin finance untuk diproses menjadi Invoice Final. Anda dapat memantau statusnya di halaman utama Request Invoice.</p>
-           </div>
-
-           <div className="pt-6 border-t border-gray-50 flex justify-end">
-              <Button 
-                type="submit" 
-                disabled={isProcessing || !clientId || !docId}
-                isLoading={isProcessing}
-                leftIcon={<Save size={18} />}
-                className="px-10 py-6 h-auto"
+              <Select
+                value={docId}
+                onChange={e => setDocId(e.target.value)}
+                disabled={!clientId}
+                className="!h-14  disabled:opacity-30"
+                required
               >
-                Kirim Pengajuan
-              </Button>
-           </div>
+                <option value="">-- Pilih Dokumen --</option>
+                {filteredDocs.map((d: any) => (
+                  <option key={d.id} value={d.id}>{d.number} - Rp {d.total.toLocaleString('id-ID')}</option>
+                ))}
+              </Select>
+              {!clientId && <Subtext className="text-[9px] text-gray-400 italic px-2">Silakan pilih client terlebih dahulu untuk melihat daftar dokumen.</Subtext>}
+              {clientId && filteredDocs.length === 0 && <Subtext className="text-[9px] text-rose-500  px-2">Tidak ada dokumen {refType} yang tersedia untuk client ini.</Subtext>}
+            </div>
+
+            <Textarea
+              label="Catatan Tambahan"
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              className="h-32"
+              placeholder="Misal: Tagihan ini untuk termin 1, tolong segera diproses..."
+            />
+          </div>
+
+          <div className="p-6 bg-blue-50/50 border border-blue-100 rounded-2xl flex gap-4">
+            <Info size={24} className="text-blue-500 shrink-0" />
+            <Subtext className="text-[11px] text-blue-700 font-medium leading-relaxed">Setelah disimpan, permintaan akan muncul di dashboard admin finance untuk diproses menjadi Invoice Final. Anda dapat memantau statusnya di halaman utama Request Invoice.</Subtext>
+          </div>
+
+          <div className="pt-6 border-t border-gray-50 flex justify-end">
+            <Button
+              type="submit"
+              disabled={isProcessing || !clientId || !docId}
+              isLoading={isProcessing}
+              leftIcon={<Save size={18} />}
+              className="px-10 py-6 h-auto"
+            >
+              Kirim Pengajuan
+            </Button>
+          </div>
         </form>
       </div>
     </div>

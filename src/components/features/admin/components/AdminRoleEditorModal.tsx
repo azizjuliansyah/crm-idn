@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Input, Button, Label } from '@/components/ui';
+import { Input, Button, Label, Modal } from '@/components/ui';
 
 interface PermissionListProps {
   available: string[];
@@ -10,13 +10,13 @@ interface PermissionListProps {
 const PermissionsList: React.FC<PermissionListProps> = ({ available, selected, onToggle }) => (
   <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-60 overflow-y-auto p-2 border border-gray-100 rounded-xl custom-scrollbar">
     {available.map(perm => (
-      <button 
+      <Button 
         key={perm}
         onClick={() => onToggle(perm)}
-        className={`px-3 py-2 rounded-lg text-xs font-bold text-left transition-all ${selected.includes(perm) ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
+        className={`px-3 py-2 rounded-lg text-xs  text-left transition-all ${selected.includes(perm) ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
       >
         {perm}
-      </button>
+      </Button>
     ))}
   </div>
 );

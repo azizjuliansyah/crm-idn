@@ -38,7 +38,7 @@ export const Avatar: React.FC<AvatarProps> = ({
 
   return (
     <div 
-      className={`flex items-center justify-center bg-gray-100 text-gray-500 font-bold shrink-0 overflow-hidden border border-gray-100 ${sizeClasses[size]} ${shapeClasses[shape]} ${className}`}
+      className={`flex items-center justify-center bg-gray-100 text-gray-500  shrink-0 overflow-hidden border border-gray-100 ${sizeClasses[size]} ${shapeClasses[shape]} ${className}`}
     >
       {src ? (
         <img src={src} alt={name} className="w-full h-full object-cover" />

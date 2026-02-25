@@ -1,14 +1,17 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
+import { Loader2, Plus, Tags, Edit2, Trash2, X, CheckCircle as CheckCircle2 } from 'lucide-react';
+
 import { Company, ProductCategory } from '@/lib/types';
-import { 
-  Plus, Edit2, Trash2, Loader2, Tags, AlertTriangle, X, CheckCircle2
-} from 'lucide-react';
-import { Modal } from '@/components/ui/Modal';
+
+import { supabase } from '@/lib/supabase';
+
+import React, { useState, useEffect, useCallback } from 'react';
+
+import { Input, Button, Table, TableHeader, TableBody, TableRow, TableCell, H3, Subtext, Label, Modal, Card, EmptyState } from '@/components/ui';
+
+
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
-import { Table, TableHeader, TableBody, TableRow, TableCell, Input, Button, Card, EmptyState, H3, Subtext } from '@/components/ui';
 
 interface Props {
   company: Company | null;
@@ -22,14 +25,14 @@ export const ProductCategoriesView: React.FC<Props> = ({ company }) => {
   const [form, setForm] = useState<Partial<ProductCategory>>({ name: '' });
 
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; name: string }>({ isOpen: false, id: null, name: '' });
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({ 
-    isOpen: false, title: '', message: '', type: 'success' 
+  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
+    isOpen: false, title: '', message: '', type: 'success'
   });
 
   const fetchData = useCallback(async () => {
     if (!company?.id) {
-        setLoading(false);
-        return;
+      setLoading(false);
+      return;
     }
     setLoading(true);
     try {
@@ -88,31 +91,32 @@ export const ProductCategoriesView: React.FC<Props> = ({ company }) => {
     }
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-blue-600 mb-4" /><p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Memuat Kategori...</p></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-blue-600 mb-4" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Memuat Kategori...</Subtext></div>;
   if (!company) return <div className="text-center p-8 text-gray-500">Pilih workspace terlebih dahulu</div>;
 
   return (
     <div className="max-w-2xl space-y-8 text-gray-900">
-      <Card className="p-10 border-b border-gray-50 flex items-center justify-between !rounded-b-none">
+      <Card>
+        <div className="p-10 border-b border-gray-50 flex items-center justify-between">
           <div>
-             <H3 className="!tracking-tighter !normal-case text-2xl">Kategori Produk</H3>
-             <Subtext className="mt-1">Klasifikasikan produk dan jasa Anda.</Subtext>
+            <H3 className="!tracking-tight !normal-case text-2xl">Kategori Produk</H3>
+            <Subtext className="mt-1">Klasifikasikan produk dan jasa Anda.</Subtext>
           </div>
-          <Button 
+          <Button
             onClick={() => { setForm({ name: '' }); setIsModalOpen(true); }}
             leftIcon={<Plus size={16} />}
+            variant='primary'
           >
             Kategori Baru
           </Button>
-      </Card>
+        </div>
 
-      <Card className="!rounded-t-none !border-t-0 p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableCell className="font-bold text-gray-400 uppercase tracking-widest text-[10px]">Nama Kategori</TableCell>
-                <TableCell className="font-bold text-gray-400 uppercase tracking-widest text-[10px] text-center">Aksi</TableCell>
+                <TableCell isHeader>Nama Kategori</TableCell>
+                <TableCell isHeader className="text-center">Aksi</TableCell>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -123,7 +127,7 @@ export const ProductCategoriesView: React.FC<Props> = ({ company }) => {
                       <div className="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600">
                         <Tags size={16} />
                       </div>
-                      <span className="text-sm font-bold text-gray-900 tracking-tight">{item.name}</span>
+                      <Label className="text-sm text-gray-900 tracking-tight">{item.name}</Label>
                     </div>
                   </TableCell>
                   <TableCell className="text-center">
@@ -141,7 +145,7 @@ export const ProductCategoriesView: React.FC<Props> = ({ company }) => {
               {categories.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={2}>
-                    <EmptyState 
+                    <EmptyState
                       icon={<Tags size={48} className="mx-auto mb-4" />}
                       title="Tidak ada kategori terdaftar"
                       description="Belum ada data kategori produk yang tercatat"
@@ -154,16 +158,16 @@ export const ProductCategoriesView: React.FC<Props> = ({ company }) => {
         </div>
       </Card>
 
-      <Modal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         title={form.id ? "Edit Kategori" : "Tambah Kategori Baru"}
         size="md"
         footer={
-          <Button 
-            onClick={handleSave} 
-            isLoading={isProcessing} 
-            disabled={isProcessing} 
+          <Button
+            onClick={handleSave}
+            isLoading={isProcessing}
+            disabled={isProcessing}
             className="px-10 py-4 shadow-xl flex items-center gap-2"
           >
             Simpan Kategori
@@ -171,20 +175,20 @@ export const ProductCategoriesView: React.FC<Props> = ({ company }) => {
         }
       >
         <div className="space-y-4 pb-2 text-left">
-           <Input 
-             label="Nama Kategori"
-             value={form.name} 
-             onChange={e => setForm({...form, name: e.target.value})} 
-             placeholder="Misal: Perangkat Keras, Langganan Bulanan..." 
-             className="!py-3"
-           />
+          <Input
+            label="Nama Kategori"
+            value={form.name}
+            onChange={e => setForm({ ...form, name: e.target.value })}
+            placeholder="Misal: Perangkat Keras, Langganan Bulanan..."
+            className="!py-3"
+          />
         </div>
       </Modal>
 
       {/* CONFIRM DELETE MODAL */}
-      <ConfirmDeleteModal 
-        isOpen={confirmDelete.isOpen} 
-        onClose={() => setConfirmDelete({ isOpen: false, id: null, name: '' })} 
+      <ConfirmDeleteModal
+        isOpen={confirmDelete.isOpen}
+        onClose={() => setConfirmDelete({ isOpen: false, id: null, name: '' })}
         onConfirm={executeDelete}
         title="Hapus Kategori"
         itemName={confirmDelete.name}
@@ -194,10 +198,10 @@ export const ProductCategoriesView: React.FC<Props> = ({ company }) => {
       {/* NOTIFICATION MODAL */}
       <Modal isOpen={notification.isOpen} onClose={() => setNotification({ ...notification, isOpen: false })} title="" size="sm">
         <div className="flex flex-col items-center py-6 text-center">
-           <div className={`w-16 h-16 rounded-xl flex items-center justify-center mb-6 ${notification.type === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>{notification.type === 'success' ? <CheckCircle2 size={32} /> : <X size={32} />}</div>
-           <H3 className="mb-2 !normal-case">{notification.title}</H3>
-           <Subtext className="mb-8">{notification.message}</Subtext>
-           <Button onClick={() => setNotification({ ...notification, isOpen: false })} className="w-full uppercase tracking-widest">Tutup</Button>
+          <div className={`w-16 h-16 rounded-xl flex items-center justify-center mb-6 ${notification.type === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>{notification.type === 'success' ? <CheckCircle2 size={32} /> : <X size={32} />}</div>
+          <H3 className="mb-2 !normal-case">{notification.title}</H3>
+          <Subtext className="mb-8">{notification.message}</Subtext>
+          <Button onClick={() => setNotification({ ...notification, isOpen: false })} className="w-full uppercase tracking-tight">Tutup</Button>
         </div>
       </Modal>
     </div>

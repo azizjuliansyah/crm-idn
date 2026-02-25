@@ -1,19 +1,8 @@
 import React, { useState } from 'react';
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Avatar, Badge, Card } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { Company, CompanyMember, CompanyRole, Profile } from '@/lib/types';
 import { UserPlus, Trash2, Loader2, AlertTriangle, CheckCircle2, X } from 'lucide-react';
-import { 
-  Button, 
-  Table, 
-  TableHeader, 
-  TableBody, 
-  TableRow, 
-  TableCell, 
-  Badge, 
-  Card, 
-  Avatar,
-  Subtext
-} from '@/components/ui';
 
 import { AdminInviteMemberModal } from './components/AdminInviteMemberModal';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
@@ -82,8 +71,9 @@ export const TeamMembersView: React.FC<Props> = ({ company, members, roles, user
       action={
         <Button 
           onClick={() => setIsInviteModalOpen(true)} 
-          size="sm"
+          size="md"
           leftIcon={<UserPlus size={14} />}
+          variant='primary'
         >
           Tambah
         </Button>
@@ -108,7 +98,7 @@ export const TeamMembersView: React.FC<Props> = ({ company, members, roles, user
                   size="lg" 
                 />
                 <div>
-                  <p className="font-bold">{m.profile?.full_name}</p>
+                  <Subtext className="">{m.profile?.full_name}</Subtext>
                   <Subtext className="text-xs">{m.profile?.email || '-'}</Subtext>
                 </div>
               </TableCell>

@@ -1,5 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
+import { Input, Select, Button, H2, Subtext, Label, SearchInput } from '@/components/ui';
+
 import { supabase } from '@/lib/supabase';
 import { Company, CompanyMember, LeadStage, Lead, ClientCompany, ClientCompanyCategory, LeadSource } from '@/lib/types';
 import { Plus, Search, LayoutGrid, List } from 'lucide-react';
@@ -9,7 +10,6 @@ import { LeadsTableView } from './LeadsTableView';
 import { LeadsKanbanView } from './LeadsKanbanView';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 
-import { Button, Select, H2, Subtext, Card, SearchInput } from '@/components/ui';
 
 interface Props {
   activeCompany: Company | null;
@@ -24,12 +24,12 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>('table');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<{isOpen: boolean, id: number | null}>({ isOpen: false, id: null });
+  const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean, id: number | null }>({ isOpen: false, id: null });
 
   // Drag & Drop State
   const [draggedId, setDraggedId] = useState<number | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
-  
+
   // Auxiliary Data
   const [sources, setSources] = useState<LeadSource[]>([]);
   const [clientCompanies, setClientCompanies] = useState<ClientCompany[]>([]);
@@ -39,6 +39,8 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
+  const [startDateFilter, setStartDateFilter] = useState<string>('');
+  const [endDateFilter, setEndDateFilter] = useState<string>('');
 
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -145,18 +147,22 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
 
   // Filter Logic
   const filteredLeads = leads.filter(lead => {
-    const matchesSearch = 
+    const matchesSearch =
       lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (lead.client_company?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
     const matchesAssignee = assigneeFilter === 'all' || lead.sales_id === assigneeFilter;
-    
-    return matchesSearch && matchesStatus && matchesAssignee;
+
+    const leadDate = lead.input_date || lead.created_at.split('T')[0];
+    const matchesStartDate = !startDateFilter || leadDate >= startDateFilter;
+    const matchesEndDate = !endDateFilter || leadDate <= endDateFilter;
+
+    return matchesSearch && matchesStatus && matchesAssignee && matchesStartDate && matchesEndDate;
   }).sort((a, b) => {
     if (!sortConfig) return 0;
     const valA = (a as any)[sortConfig.key];
     const valB = (b as any)[sortConfig.key];
-    
+
     if (valA === valB) return 0;
     if (valA === null || valA === undefined) return 1;
     if (valB === null || valB === undefined) return -1;
@@ -168,16 +174,16 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
 
   // Group by status for Kanban
   const leadsByStatus = stages.reduce((acc, stage) => {
-    acc[stage.name] = filteredLeads.filter(l => l.status === stage.name.toLowerCase());
+    acc[stage.name.toLowerCase()] = filteredLeads.filter(l => l.status === stage.name.toLowerCase());
     return acc;
   }, {} as Record<string, Lead[]>);
 
   // Drag and Drop handlers
   const handleDrop = async (leadId: number, newStatus: string) => {
-     try {
-       await supabase.from('leads').update({ status: newStatus.toLowerCase() }).eq('id', leadId);
-       fetchData(); // Refresh to update UI
-     } catch (err) { console.error(err); }
+    try {
+      await supabase.from('leads').update({ status: newStatus.toLowerCase() }).eq('id', leadId);
+      fetchData(); // Refresh to update UI
+    } catch (err) { console.error(err); }
   };
 
   const handleDragStart = (e: React.DragEvent, id: number) => {
@@ -205,65 +211,83 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
       <div className="flex flex-col gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
         <div className="flex items-center justify-between">
           <div>
-            <H2 className="text-xl font-black">Leads Pipeline</H2>
-            <Subtext className="text-[10px] font-bold uppercase tracking-widest">Kelola prospek dan konversi penjualan Anda.</Subtext>
+            <H2 className="text-xl ">Leads Pipeline</H2>
+            <Subtext className="text-[10px]  uppercase tracking-tight">Kelola prospek dan konversi penjualan Anda.</Subtext>
           </div>
           <div className="flex items-center gap-3">
-              <div className="flex bg-gray-50 border border-gray-100 p-1 rounded-xl">
-                <Button 
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setViewMode('table')}
-                  className={`!p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-white shadow-sm ring-1 ring-gray-100 text-blue-600' : 'text-gray-400'}`}
-                >
-                  <List size={14} strokeWidth={2.5} />
-                </Button>
-                <Button 
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setViewMode('kanban')}
-                  className={`!p-2 rounded-lg transition-all ${viewMode === 'kanban' ? 'bg-white shadow-sm ring-1 ring-gray-100 text-blue-600' : 'text-gray-400'}`}
-                >
-                  <LayoutGrid size={14} strokeWidth={2.5} />
-                </Button>
-             </div>
-             <Button 
-               onClick={() => setIsAddModalOpen(true)}
-               leftIcon={<Plus size={14} strokeWidth={3} />}
-               className="!px-6 py-2.5 font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-100"
-             >
-               Tambah Lead
-             </Button>
+            <div className="flex bg-gray-50 border border-gray-100 p-1 rounded-xl">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setViewMode('table')}
+                className={`!p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-white shadow-sm ring-1 ring-gray-100 text-blue-600' : 'text-gray-400'}`}
+              >
+                <List size={14} strokeWidth={2.5} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setViewMode('kanban')}
+                className={`!p-2 rounded-lg transition-all ${viewMode === 'kanban' ? 'bg-white shadow-sm ring-1 ring-gray-100 text-blue-600' : 'text-gray-400'}`}
+              >
+                <LayoutGrid size={14} strokeWidth={2.5} />
+              </Button>
+            </div>
+            <Button
+              onClick={() => setIsAddModalOpen(true)}
+              leftIcon={<Plus size={14} strokeWidth={3} />}
+              className="!px-6 py-2.5  text-[10px] uppercase tracking-tight shadow-lg shadow-blue-100"
+              variant='primary'
+              size='sm'
+            >
+              Tambah Lead
+            </Button>
           </div>
         </div>
 
         <div className="flex items-center gap-4 pt-4 border-t border-gray-50 overflow-x-auto scrollbar-hide">
           <div className="w-[400px] shrink-0">
-            <SearchInput 
-              placeholder="Cari lead, klien..." 
+            <SearchInput
+              placeholder="Cari lead, klien..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="rounded-xl border-gray-100 shadow-none bg-gray-50/30"
             />
           </div>
           <div className="flex items-center gap-3 shrink-0 ml-auto">
-            <Select 
-              value={statusFilter} 
+            <div className="flex items-center gap-2 ">
+              <Input
+                type="date"
+                value={startDateFilter}
+                onChange={e => setStartDateFilter(e.target.value)}
+                className="bg-transparent border-none text-[10px] uppercase tracking-tight text-gray-500 py-2 outline-none w-[110px] shadow-none ring-0 focus:ring-0"
+                title="Mulai Tanggal"
+              />
+              <Label className="text-gray-300 text-[10px] ">-</Label>
+              <Input
+                type="date"
+                value={endDateFilter}
+                onChange={e => setEndDateFilter(e.target.value)}
+                className="bg-transparent border-none text-[10px] uppercase tracking-tight text-gray-500 py-2 outline-none w-[110px] shadow-none ring-0 focus:ring-0"
+                title="Sampai Tanggal"
+              />
+            </div>
+            <Select
+              value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
-              className="!text-[10px] !font-black uppercase tracking-widest text-gray-400 w-44"
+              className="!text-[10px] uppercase tracking-tight text-gray-400 w-36"
             >
               <option value="all">SEMUA STATUS</option>
               {stages.map(s => <option key={s.id} value={s.name.toLowerCase()}>{s.name.toUpperCase()}</option>)}
             </Select>
-            <Select 
+            <Select
               value={assigneeFilter}
               onChange={e => setAssigneeFilter(e.target.value)}
-              className="!text-[10px] !font-black uppercase tracking-widest text-gray-400 w-44"
+              className="!text-[10px] uppercase tracking-tight text-gray-400 w-36"
             >
-               <option value="all">SEMUA STAFF</option>
-               {members.map(m => (
-                 <option key={m.id} value={m.user_id}>{(m.profile?.full_name || m.user_id).toUpperCase()}</option>
-               ))}
+              <option value="all">SEMUA STAFF</option>
+              {members.map(m => (
+                <option key={m.id} value={m.user_id}>{(m.profile?.full_name || m.user_id).toUpperCase()}</option>
+              ))}
             </Select>
           </div>
         </div>
@@ -271,11 +295,11 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
 
       <div className="flex-1 overflow-hidden min-h-[400px]">
         {loading ? (
-           <div className="w-full h-full flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-           </div>
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
         ) : viewMode === 'kanban' ? (
-          <LeadsKanbanView 
+          <LeadsKanbanView
             stages={stages}
             leadsByStatus={leadsByStatus}
             onEdit={setSelectedLead}
@@ -287,7 +311,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
             formatIDR={formatIDR}
           />
         ) : (
-          <LeadsTableView 
+          <LeadsTableView
             leads={filteredLeads}
             sortConfig={sortConfig}
             onSort={handleSort}
@@ -302,8 +326,8 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
       </div>
 
       {isAddModalOpen && (
-        <LeadAddModal 
-          isOpen={isAddModalOpen} 
+        <LeadAddModal
+          isOpen={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}
           onSuccess={handleCreateSuccess}
           company={activeCompany}
@@ -318,7 +342,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
       )}
 
       {selectedLead && (
-        <LeadDetailModal 
+        <LeadDetailModal
           isOpen={!!selectedLead}
           lead={selectedLead}
           company={activeCompany}
@@ -327,18 +351,18 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
           onClose={() => setSelectedLead(null)}
           onUpdate={handleUpdate}
           onDelete={() => handleDelete(selectedLead.id)}
-          onConvertToDeal={() => {/* Implement conversion logic */}}
+          onConvertToDeal={() => {/* Implement conversion logic */ }}
           user={members.find(m => m.user_id === selectedLead.sales_id)?.profile as any}
           sources={sources}
           clientCompanies={clientCompanies}
         />
       )}
 
-      <ConfirmDeleteModal 
-        isOpen={confirmDelete.isOpen} 
-        onClose={() => setConfirmDelete({ isOpen: false, id: null })} 
+      <ConfirmDeleteModal
+        isOpen={confirmDelete.isOpen}
+        onClose={() => setConfirmDelete({ isOpen: false, id: null })}
         onConfirm={executeDelete}
-        title="Hapus Lead" 
+        title="Hapus Lead"
         itemName="Lead ini"
         description="Apakah Anda yakin ingin menghapus data lead ini dari sistem?"
       />

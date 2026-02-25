@@ -1,14 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Input, Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, Modal, Badge } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { Company, LeadSource } from '@/lib/types';
-import { 
-  Plus, Search, Edit2, Trash2, Loader2, Globe, 
+import {
+  Plus, Search, Edit2, Trash2, Loader2, Globe,
   Save, AlertTriangle, List, CheckCircle2, X
 } from 'lucide-react';
-import { 
-  Button, Input, Table, TableHeader, TableBody, TableRow, 
-  TableCell, TableEmpty, Badge, Modal, H2, Subtext 
-} from '@/components/ui';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { NotificationModal } from '@/components/shared/modals/NotificationModal';
 
@@ -29,8 +26,8 @@ export const LeadSourcesSettingsView: React.FC<Props> = ({ company }) => {
   });
 
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: string | null; name: string }>({ isOpen: false, id: null, name: '' });
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' | 'warning' }>({ 
-    isOpen: false, title: '', message: '', type: 'success' 
+  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' | 'warning' }>({
+    isOpen: false, title: '', message: '', type: 'success'
   });
 
   const fetchData = useCallback(async () => {
@@ -41,7 +38,7 @@ export const LeadSourcesSettingsView: React.FC<Props> = ({ company }) => {
         .select('*')
         .eq('company_id', company.id)
         .order('name');
-      
+
       const { data: leadsRes } = await supabase
         .from('leads')
         .select('source')
@@ -61,7 +58,7 @@ export const LeadSourcesSettingsView: React.FC<Props> = ({ company }) => {
     fetchData();
   }, [fetchData]);
 
-  const filteredSources = sources.filter(s => 
+  const filteredSources = sources.filter(s =>
     s.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -88,8 +85,8 @@ export const LeadSourcesSettingsView: React.FC<Props> = ({ company }) => {
   const handleDeleteClick = (source: LeadSource) => {
     const isInUse = usedSources.includes(source.name);
     if (isInUse) {
-        setNotification({ isOpen: true, title: 'Akses Ditolak', message: 'Sumber ini sedang aktif digunakan oleh data leads dan tidak dapat dihapus.', type: 'warning' });
-        return;
+      setNotification({ isOpen: true, title: 'Akses Ditolak', message: 'Sumber ini sedang aktif digunakan oleh data leads dan tidak dapat dihapus.', type: 'warning' });
+      return;
     }
     setConfirmDelete({ isOpen: true, id: source.id, name: source.name });
   };
@@ -109,7 +106,7 @@ export const LeadSourcesSettingsView: React.FC<Props> = ({ company }) => {
   if (loading) return (
     <div className="flex flex-col items-center justify-center py-24">
       <Loader2 className="animate-spin text-blue-600 mb-4" />
-      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Memuat Sumber Leads...</p>
+      <Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Memuat Sumber Leads...</Subtext>
     </div>
   );
 
@@ -118,25 +115,26 @@ export const LeadSourcesSettingsView: React.FC<Props> = ({ company }) => {
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="p-10 border-b border-gray-50 flex items-center justify-between">
           <div>
-            <H2 className="text-2xl font-bold tracking-tighter">Manajemen Sumber Leads</H2>
+            <H2 className="text-2xl  tracking-tight">Manajemen Sumber Leads</H2>
             <Subtext className="mt-1">Daftar channel atau asal datangnya calon pelanggan.</Subtext>
           </div>
-          <Button 
+          <Button
             onClick={() => { setForm({ id: '', name: '' }); setIsModalOpen(true); }}
             leftIcon={<Plus size={16} />}
+            variant='primary'
           >
             Tambah Sumber
           </Button>
         </div>
 
         <div className="p-6 border-b border-gray-50">
-           <Input 
-             placeholder="Cari sumber..." 
-             value={searchTerm}
-             onChange={e => setSearchTerm(e.target.value)}
-             leftIcon={<Search size={14} />}
-             className="!py-2.5 max-w-xs"
-           />
+          <Input
+            placeholder="Cari sumber..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            leftIcon={<Search size={14} />}
+            className="!py-2.5 max-w-xs"
+          />
         </div>
 
         <Table>
@@ -157,7 +155,7 @@ export const LeadSourcesSettingsView: React.FC<Props> = ({ company }) => {
                       <div className="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600">
                         <Globe size={16} />
                       </div>
-                      <span className="text-sm font-bold text-gray-900 tracking-tight">{item.name}</span>
+                      <Label className="text-sm  text-gray-900 tracking-tight">{item.name}</Label>
                     </div>
                   </TableCell>
                   <TableCell className="text-center">
@@ -170,10 +168,10 @@ export const LeadSourcesSettingsView: React.FC<Props> = ({ company }) => {
                       <Button variant="ghost" size="sm" onClick={() => { setForm({ id: item.id, name: item.name }); setIsModalOpen(true); }} className="!p-2 text-blue-500">
                         <Edit2 size={16} />
                       </Button>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="sm"
-                        onClick={() => handleDeleteClick(item)} 
+                        onClick={() => handleDeleteClick(item)}
                         disabled={isInUse}
                         className={`!p-2 ${isInUse ? 'text-gray-200' : 'text-rose-500 hover:text-rose-600'}`}
                       >
@@ -191,43 +189,43 @@ export const LeadSourcesSettingsView: React.FC<Props> = ({ company }) => {
         </Table>
       </div>
 
-      <Modal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         title={form.id ? "Edit Sumber Lead" : "Tambah Sumber Baru"}
         size="md"
         footer={
-          <Button 
-            onClick={handleSave} 
+          <Button
+            onClick={handleSave}
             isLoading={isProcessing}
-            className="w-full justify-center"
+            variant='primary'
           >
             Simpan Sumber
           </Button>
         }
       >
         <div className="space-y-4 pb-2">
-           <Input 
-             label="Nama Sumber Lead"
-             value={form.name} 
-             onChange={e => setForm({...form, name: e.target.value})} 
-             placeholder="Misal: Instagram, Event Offline..." 
-           />
+          <Input
+            label="Nama Sumber Lead"
+            value={form.name}
+            onChange={e => setForm({ ...form, name: e.target.value })}
+            placeholder="Misal: Instagram, Event Offline..."
+          />
         </div>
       </Modal>
 
-      <ConfirmDeleteModal 
-        isOpen={confirmDelete.isOpen} 
-        onClose={() => setConfirmDelete({ isOpen: false, id: null, name: '' })} 
+      <ConfirmDeleteModal
+        isOpen={confirmDelete.isOpen}
+        onClose={() => setConfirmDelete({ isOpen: false, id: null, name: '' })}
         onConfirm={executeDelete}
         title="Hapus Sumber"
         itemName={confirmDelete.name}
         isProcessing={isProcessing}
       />
 
-      <NotificationModal 
-        isOpen={notification.isOpen} 
-        onClose={() => setNotification({ ...notification, isOpen: false })} 
+      <NotificationModal
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
         title={notification.title}
         message={notification.message}
         type={notification.type}

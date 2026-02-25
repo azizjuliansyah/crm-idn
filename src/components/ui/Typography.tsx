@@ -1,36 +1,43 @@
 import React from 'react';
 
 interface TextProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   className?: string;
+  title?: string;
 }
 
-export const H1: React.FC<TextProps> = ({ children, className = '' }) => (
-  <h1 className={`text-4xl font-bold tracking-tighter text-gray-900 ${className}`}>
+export const H1: React.FC<TextProps> = ({ children, className = '', title }) => (
+  <h1 title={title} className={`text-4xl font-medium tracking-tight text-gray-900 ${className}`}>
     {children}
   </h1>
 );
 
-export const H2: React.FC<TextProps> = ({ children, className = '' }) => (
-  <h2 className={`text-2xl font-bold tracking-tighter text-gray-900 ${className}`}>
+export const H2: React.FC<TextProps> = ({ children, className = '', title }) => (
+  <h2 title={title} className={`text-2xl font-medium tracking-tight text-gray-900 ${className}`}>
     {children}
   </h2>
 );
 
-export const H3: React.FC<TextProps> = ({ children, className = '' }) => (
-  <h3 className={`text-lg font-bold uppercase tracking-tight text-gray-900 ${className}`}>
+export const H3: React.FC<TextProps> = ({ children, className = '', title }) => (
+  <h3 title={title} className={`text-lg font-medium text-gray-900 uppercase tracking-tight ${className}`}>
     {children}
   </h3>
 );
 
-export const Subtext: React.FC<TextProps> = ({ children, className = '' }) => (
-  <p className={`text-sm text-gray-400 font-medium ${className}`}>
+export const H4: React.FC<TextProps> = ({ children, className = '', title }) => (
+  <h4 title={title} className={`text-[11px] font-medium uppercase tracking-tight text-gray-900 ${className}`}>
+    {children}
+  </h4>
+);
+
+export const Subtext: React.FC<TextProps> = ({ children, className = '', title }) => (
+  <p title={title} className={`text-sm text-gray-500 ${className}`}>
     {children}
   </p>
 );
 
-export const Label: React.FC<TextProps> = ({ children, className = '' }) => (
-  <span className={`text-[10px] font-bold text-gray-400 uppercase tracking-widest ${className}`}>
+export const Label: React.FC<TextProps> = ({ children, className = '', title }) => (
+  <span title={title} className={`text-[10px] font-medium text-gray-400 uppercase tracking-tight ${className}`}>
     {children}
   </span>
 );
@@ -52,7 +59,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({ icon, title, subte
         </div>
       )}
       <div>
-        <h3 className="text-base font-bold text-gray-800 tracking-tight">{title}</h3>
+        <h3 className="text-base font-medium text-gray-800 tracking-tight">{title}</h3>
         {subtext && <p className="text-[11px] font-medium text-gray-400 mt-0.5">{subtext}</p>}
       </div>
     </div>

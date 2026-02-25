@@ -1,26 +1,15 @@
 import React, { useState } from 'react';
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Badge, Card } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { Company, CompanyRole } from '@/lib/types';
 import { Plus, Edit2, Trash2, Loader2, AlertTriangle, CheckCircle2, X } from 'lucide-react';
-import { 
-  Button, 
-  Table, 
-  TableHeader, 
-  TableBody, 
-  TableRow, 
-  TableCell, 
-  Badge, 
-  Card,
-  Subtext,
-  Label
-} from '@/components/ui';
 
 import { AdminRoleEditorModal } from './components/AdminRoleEditorModal';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { NotificationModal } from '@/components/shared/modals/NotificationModal';
 
 // Simplified permissions list mostly for display/selection
-const AVAILABLE_PERMISSIONS = ['Dashboard', 'Leads', 'Deals', 'Projects', 'Perusahaan', 'Anggota Tim', 'Manajemen Role', 'Pengaturan Leads', 'Pengaturan Deals Pipeline', 'Data Client', 'Perusahaan Client', 'Pengaturan Kategori Client', 'Pengaturan Sumber Leads', 'Produk', 'Kategori Produk', 'Satuan', 'Penjualan', 'Penawaran', 'Proforma Invoice', 'Invoice', 'Pengaturan Penjualan', 'Penomoran Otomatis', 'Pengaturan Pajak', 'Template Dokumen', 'Knowledge Base', 'Pengaturan AI', 'Customer Support', 'Support Pipeline', 'Konfigurasi Email', 'Request Invoice', 'SOP', 'AI Assistant'];
+const AVAILABLE_PERMISSIONS = ['Dashboard', 'Leads', 'Deals', 'Projects', 'Perusahaan', 'Anggota Tim', 'Manajemen Role', 'Pengaturan Leads', 'Pengaturan Deals Pipeline', 'Data Client', 'Perusahaan Client', 'Pengaturan Kategori Client', 'Pengaturan Sumber Leads', 'Produk', 'Kategori Produk', 'Satuan', 'Penjualan', 'Penawaran', 'Proforma Invoice', 'Invoice', 'Pengaturan Penjualan', 'Penomoran Otomatis', 'Pengaturan Pajak', 'Template Dokumen', 'Knowledge Base', 'Pengaturan AI', 'Customer Support', 'Support Pipeline', 'Konfigurasi Email', 'Request Invoice', 'SOP', 'AI Assistant', 'Ticket Topic'];
 
 interface Props {
   company: Company;
@@ -83,7 +72,7 @@ export const RolesManagementView: React.FC<Props> = ({ company, roles, onUpdate 
           onClick={() => { setRoleForm({ id: '', name: '', permissions: [] }); setIsRoleModalOpen(true); }} 
           variant="secondary"
           className="bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100"
-          size="sm"
+          size="md"
           leftIcon={<Plus size={14} />}
         >
           Role Baru
@@ -101,7 +90,7 @@ export const RolesManagementView: React.FC<Props> = ({ company, roles, onUpdate 
         <TableBody>
           {roles.map(r => (
             <TableRow key={r.id}>
-              <TableCell><p className="font-bold">{r.name}</p></TableCell>
+              <TableCell><Subtext>{r.name}</Subtext></TableCell>
               <TableCell>
                 <div className="flex flex-wrap gap-2">
                   {r.permissions.slice(0, 5).map(p => (

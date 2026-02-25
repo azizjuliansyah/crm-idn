@@ -1,12 +1,19 @@
 'use client';
 
-import React from 'react';
+import { Profile, Project } from '@/lib/types';
+
+import React, { useState } from 'react';
+
+import { Button, H2, Subtext } from '@/components/ui';
+
+
 import { usePathname, useRouter } from 'next/navigation';
 import { useDashboard } from '@/app/dashboard/DashboardContext';
 import { Layout } from './Layout';
 import { Loader2 } from 'lucide-react';
 import { PlatformAdminView } from '../features/admin/PlatformAdminView';
 import { CompanyWizard } from '../features/settings/CompanyWizard';
+
 
 export function DashboardLayoutClient({ children }: { children: React.ReactNode }) {
   const { user, companies, activeCompany, setActiveCompany, platformSettings, logout, loading } = useDashboard();
@@ -89,18 +96,26 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
     // Sales
     if (pathname.startsWith('/dashboard/sales/quotations')) {
         if (pathname.includes('/create')) return 'buat_penawaran';
+        const parts = pathname.split('/');
+        if (parts.length > 4 && !isNaN(parseInt(parts[4]))) return 'edit_penawaran';
         return 'daftar_penawaran';
     }
     if (pathname.startsWith('/dashboard/sales/proformas')) {
         if (pathname.includes('/create')) return 'buat_proforma';
+        const parts = pathname.split('/');
+        if (parts.length > 4 && !isNaN(parseInt(parts[4]))) return 'edit_proforma';
         return 'daftar_proforma';
     }
     if (pathname.startsWith('/dashboard/sales/invoices')) {
         if (pathname.includes('/create')) return 'buat_invoice';
+        const parts = pathname.split('/');
+        if (parts.length > 4 && !isNaN(parseInt(parts[4]))) return 'edit_invoice';
         return 'daftar_invoice';
     }
     if (pathname.startsWith('/dashboard/sales/invoice-requests')) {
         if (pathname.includes('/create')) return 'buat_request_invoice';
+        const parts = pathname.split('/');
+        if (parts.length > 4 && !isNaN(parseInt(parts[4]))) return 'edit_request_invoice';
         return 'request_invoice';
     }
     
@@ -115,6 +130,7 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
     if (pathname.startsWith('/dashboard/settings/team')) return 'anggota_tim';
     if (pathname.startsWith('/dashboard/settings/roles')) return 'manajemen_role';
     if (pathname.startsWith('/dashboard/settings/profile')) return 'profil_saya';
+    if (pathname.startsWith('/dashboard/settings/ticket-topic')) return 'pengaturan_ticket_topic';
     if (pathname.startsWith('/dashboard/settings/ai')) return 'pengaturan_ai';
     
     // Project Settings
@@ -187,6 +203,7 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
       case 'anggota_tim': router.push('/dashboard/settings/team'); break;
       case 'manajemen_role': router.push('/dashboard/settings/roles'); break;
       case 'profil_saya': router.push('/dashboard/settings/profile'); break;
+      case 'pengaturan_ticket_topic': router.push('/dashboard/settings/ticket-topic'); break;
       case 'pengaturan_ai': router.push('/dashboard/settings/ai'); break;
       
       // Project Settings
@@ -252,15 +269,15 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
                 <div className="flex h-screen items-center justify-center bg-gray-50">
                    <div className="text-center space-y-6">
                       <div>
-                        <h2 className="text-xl font-bold text-gray-900">Selamat Datang, {user.full_name}</h2>
-                        <p className="text-gray-500 mt-2">Silakan pilih workspace untuk memulai.</p>
+                        <H2 className="text-xl  text-gray-900">Selamat Datang, {user.full_name}</H2>
+                        <Subtext className="text-gray-500 mt-2">Silakan pilih workspace untuk memulai.</Subtext>
                       </div>
-                      <button 
+                      <Button 
                         onClick={() => setShowWizard(true)}
-                        className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all"
+                        className="px-6 py-3 bg-blue-600 text-white rounded-xl  shadow-lg hover:bg-blue-700 transition-all"
                       >
                         Buat Workspace Baru
-                      </button>
+                      </Button>
                       {showWizard && (
                         <CompanyWizard userId={user.id} onSuccess={() => window.location.reload()} />
                       )}

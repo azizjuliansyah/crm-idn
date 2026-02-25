@@ -1,10 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
+
+import { Input, Button, Subtext, Label, Modal } from '@/components/ui';
+
+
 import { supabase } from '@/lib/supabase';
 import { Company, KbCategory } from '@/lib/types';
 import { Trash2 } from 'lucide-react';
-import { Modal, Input, Button } from '@/components/ui';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 
 interface Props {
@@ -67,7 +70,7 @@ export const KnowledgeBaseCategoryModal: React.FC<Props> = ({
               type="submit"
               disabled={isProcessing || !name} 
               isLoading={isProcessing}
-              className="px-6 h-[42px] bg-indigo-600 text-white rounded-xl font-bold text-[10px] uppercase shadow-lg shadow-indigo-100 active:scale-95 transition-all"
+              className="px-6 h-[42px] bg-indigo-600 text-white rounded-xl  text-[10px] uppercase shadow-lg shadow-indigo-100 active:scale-95 transition-all"
             >
               Tambah
             </Button>
@@ -76,18 +79,18 @@ export const KnowledgeBaseCategoryModal: React.FC<Props> = ({
          <div className="max-h-72 overflow-y-auto custom-scrollbar space-y-2">
             {categories.map(cat => (
               <div key={cat.id} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100 hover:border-indigo-100 transition-all shadow-sm">
-                 <span className="text-xs font-bold text-gray-700 uppercase tracking-tight">{cat.name}</span>
-                 <button 
+                 <Label className="text-xs  text-gray-700 uppercase tracking-tight">{cat.name}</Label>
+                 <Button 
                   onClick={() => setConfirmDelete({ isOpen: true, id: cat.id })}
                   className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
                  >
                    <Trash2 size={16} />
-                 </button>
+                 </Button>
               </div>
             ))}
             {categories.length === 0 && (
               <div className="py-12 text-center">
-                 <p className="text-[10px] font-bold text-gray-300 uppercase tracking-[0.2em] italic">Belum ada kategori yang dibuat</p>
+                 <Subtext className="text-[10px]  text-gray-300 uppercase tracking-[0.2em] italic">Belum ada kategori yang dibuat</Subtext>
               </div>
             )}
          </div>

@@ -1,20 +1,19 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+
+import { Select, Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, Subtext, Label, Badge, SearchInput } from '@/components/ui';
+
+
 import { supabase } from '@/lib/supabase';
 import { Company, InvoiceRequest } from '@/lib/types';
-import { 
-  Plus, Search, Loader2, FileQuestion, 
-  ChevronRight, ArrowUpDown, ChevronUp, ChevronDown, 
+import {
+  Plus, Search, Loader2, FileQuestion,
+  ChevronRight, ArrowUpDown, ChevronUp, ChevronDown,
   AlertTriangle, CheckCircle2, X, Filter,
   FileText, Clock, User, Building,
   FileCheck, Check, Trash2
 } from 'lucide-react';
-import { 
-  Button, Input, Select, Table, TableHeader, 
-  TableRow, TableCell, TableBody, TableEmpty, Badge,
-  SearchInput, H1, H2, Subtext
-} from '@/components/ui';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { NotificationModal } from '@/components/shared/modals/NotificationModal';
 import { useRouter } from 'next/navigation';
@@ -34,10 +33,10 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'id', direction: 'desc' });
   const [isProcessing, setIsProcessing] = useState(false);
-  
+
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null }>({ isOpen: false, id: null });
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({ 
-    isOpen: false, title: '', message: '', type: 'success' 
+  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
+    isOpen: false, title: '', message: '', type: 'success'
   });
 
   const fetchData = useCallback(async () => {
@@ -49,7 +48,7 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
         .select('*, profiles(*), client:clients(*, client_company:client_companies(*)), quotation:quotations(number), proforma:proformas(number)')
         .eq('company_id', company.id)
         .order('id', { ascending: false });
-      
+
       if (error) throw error;
       if (data) setRequests(data as any);
     } catch (err) {
@@ -65,11 +64,11 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
 
   const filteredRequests = useMemo(() => {
     let result = requests.filter(r => {
-      const matchesSearch = 
+      const matchesSearch =
         (r.client?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (r.quotation?.number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (r.proforma?.number || '').toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       const matchesStatus = filterStatus === 'all' || r.status === filterStatus;
 
       return matchesSearch && matchesStatus;
@@ -78,7 +77,7 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
     if (sortConfig) {
       result.sort((a, b) => {
         let valA: any, valB: any;
-        switch(sortConfig.key) {
+        switch (sortConfig.key) {
           case 'client': valA = a.client?.name || ''; valB = b.client?.name || ''; break;
           case 'status': valA = a.status; valB = b.status; break;
           case 'created_at': valA = a.created_at; valB = b.created_at; break;
@@ -107,7 +106,7 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
         .from('invoice_requests')
         .update({ status: newStatus })
         .eq('id', id);
-      
+
       if (error) throw error;
       setNotification({ isOpen: true, title: 'Berhasil', message: `Request telah di-${newStatus.toLowerCase()}.`, type: 'success' });
       fetchData();
@@ -141,26 +140,26 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
     }
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4 bg-white rounded-2xl border border-gray-100 min-h-[400px]"><Loader2 className="animate-spin text-indigo-600" size={32} /><p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Memuat Request Invoice...</p></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4 bg-white rounded-2xl border border-gray-100 min-h-[400px]"><Loader2 className="animate-spin text-indigo-600" size={32} /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Memuat Request Invoice...</Subtext></div>;
 
   return (
     <div className="flex flex-col gap-6 h-full text-gray-900">
       <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0 overflow-x-auto custom-scrollbar">
         <div className="flex items-center gap-3 shrink-0">
           <div className="w-[400px]">
-            <SearchInput 
-              placeholder="Cari client atau nomor..." 
+            <SearchInput
+              placeholder="Cari client atau nomor..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="rounded-xl border-gray-100 shadow-none bg-gray-50/30"
             />
           </div>
- 
+
           <div className="w-[200px]">
-            <Select 
+            <Select
               value={filterStatus}
               onChange={e => setFilterStatus(e.target.value)}
-              className="!text-[10px] !font-black uppercase tracking-widest text-gray-400 w-full"
+              className="!text-[10px] ! uppercase tracking-tight text-gray-400 w-full"
             >
               <option value="all">SEMUA STATUS</option>
               <option value="Pending">PENDING</option>
@@ -169,117 +168,116 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
             </Select>
           </div>
         </div>
- 
-        <Button 
+
+        <Button
           onClick={() => router.push('/dashboard/sales/invoice-requests/create')}
           variant="primary"
-          className="!px-6 py-2.5 font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100 shrink-0 ml-auto"
+          className="!px-6 py-2.5  text-[10px] uppercase tracking-tight shadow-lg shadow-indigo-100 shrink-0 ml-auto"
         >
           <div className="flex items-center gap-2">
             <Plus size={14} strokeWidth={3} />
-            <span>Request Baru</span>
+            <Label>Request Baru</Label>
           </div>
         </Button>
       </div>
- 
+
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm flex-1">
         <Table>
-            <TableHeader className="sticky top-0 z-10 bg-gray-50/80 backdrop-blur-md border-b border-gray-100">
-              <TableRow className="hover:bg-transparent">
-                <TableCell onClick={() => handleSort('id')} className="font-black text-gray-400 uppercase tracking-widest cursor-pointer text-[10px] py-4 px-6">ID</TableCell>
-                <TableCell onClick={() => handleSort('created_at')} className="font-black text-gray-400 uppercase tracking-widest cursor-pointer text-[10px] py-4 px-6">Tanggal</TableCell>
-                <TableCell onClick={() => handleSort('client')} className="font-black text-gray-400 uppercase tracking-widest cursor-pointer text-[10px] py-4 px-6">Pelanggan</TableCell>
-                <TableCell className="font-black text-gray-400 uppercase tracking-widest text-[10px] py-4 px-6">Referensi</TableCell>
-                <TableCell className="font-black text-gray-400 uppercase tracking-widest text-[10px] py-4 px-6">Pemohon</TableCell>
-                <TableCell onClick={() => handleSort('status')} className="font-black text-gray-400 uppercase tracking-widest cursor-pointer text-center text-[10px] py-4 px-6">Status</TableCell>
-                <TableCell className="font-black text-gray-400 uppercase tracking-widest text-center text-[10px] py-4 px-6">Aksi</TableCell>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredRequests.map(r => (
-                <TableRow key={r.id} className="group hover:bg-indigo-50/30 transition-colors border-b border-gray-50/50 last:border-0">
-                  <TableCell className="text-[10px] font-bold text-gray-400 py-5 px-6">#{r.id}</TableCell>
-                  <TableCell className="py-5 px-6">
-                    <div className="flex items-center gap-2 text-gray-400">
-                      <Clock size={12} strokeWidth={2.5} />
-                      <span className="text-[11px] font-bold">{new Date(r.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
+          <TableHeader className="sticky top-0 z-10 bg-gray-50/80 backdrop-blur-md border-b border-gray-100">
+            <TableRow className="hover:bg-transparent">
+              <TableCell isHeader>ID</TableCell>
+              <TableCell isHeader>Tanggal</TableCell>
+              <TableCell isHeader>Pelanggan</TableCell>
+              <TableCell isHeader>Referensi</TableCell>
+              <TableCell isHeader>Pemohon</TableCell>
+              <TableCell isHeader className="text-center">Status</TableCell>
+              <TableCell isHeader className="text-center">Aksi</TableCell>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredRequests.map(r => (
+              <TableRow key={r.id} className="group hover:bg-indigo-50/30 transition-colors border-b border-gray-50/50 last:border-0">
+                <TableCell className="text-[10px] text-gray-500 py-5 px-6">#{r.id}</TableCell>
+                <TableCell className="py-5 px-6">
+                  <div className="flex items-center gap-2 text-gray-400">
+                    <Clock size={12} strokeWidth={2.5} />
+                    <Label className="text-[11px] ">{new Date(r.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</Label>
+                  </div>
+                </TableCell>
+                <TableCell className="py-5 px-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center  text-[10px] uppercase shadow-sm border border-indigo-100">{r.client?.name.charAt(0)}</div>
+                    <div>
+                      <Subtext className="text-xs text-gray-900 tracking-tight">{r.client?.name}</Subtext>
+                      <Subtext className="text-[10px] !text-gray-400 mt-1 uppercase tracking-tight italic">{r.client?.client_company?.name || 'Personal'}</Subtext>
                     </div>
-                  </TableCell>
-                  <TableCell className="py-5 px-6">
-                    <div className="flex items-center gap-3">
-                       <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-[10px] uppercase shadow-sm border border-indigo-100">{r.client?.name.charAt(0)}</div>
-                       <div>
-                          <p className="text-xs font-black text-gray-900 leading-tight tracking-tight">{r.client?.name}</p>
-                          <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">{r.client?.client_company?.name || 'Personal'}</p>
-                       </div>
+                  </div>
+                </TableCell>
+                <TableCell className="py-5 px-6">
+                  {r.quotation ? (
+                    <Badge variant="secondary" className="gap-1.5 py-1 px-2.5 rounded-lg border-indigo-100 bg-indigo-50 text-indigo-600">
+                      <FileText size={10} strokeWidth={2.5} />
+                      <Label className=" text-[9px] !text-blue-700 uppercase tracking-tight">{r.quotation.number}</Label>
+                    </Badge>
+                  ) : r.proforma ? (
+                    <Badge variant="secondary" className="gap-1.5 py-1 px-2.5 rounded-lg border-gray-100 bg-gray-50 text-gray-600">
+                      <FileCheck size={10} strokeWidth={2.5} />
+                      <Label className=" text-[9px] !text-blue-700 uppercase tracking-tight">{r.proforma.number}</Label>
+                    </Badge>
+                  ) : (
+                    <Label className="text-[10px] text-gray-300 italic ">NO REF</Label>
+                  )}
+                </TableCell>
+                <TableCell className="py-5 px-6">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-gray-50 flex items-center justify-center border border-gray-100">
+                      <User size={10} strokeWidth={2.5} className="text-gray-400" />
                     </div>
-                  </TableCell>
-                  <TableCell className="py-5 px-6">
-                    {r.quotation ? (
-                      <Badge variant="secondary" className="gap-1.5 py-1 px-2.5 rounded-lg border-indigo-100 bg-indigo-50 text-indigo-600">
-                        <FileText size={10} strokeWidth={2.5} />
-                        <span className="font-black text-[9px] uppercase tracking-widest">{r.quotation.number}</span>
-                      </Badge>
-                    ) : r.proforma ? (
-                      <Badge variant="secondary" className="gap-1.5 py-1 px-2.5 rounded-lg border-gray-100 bg-gray-50 text-gray-600">
-                        <FileCheck size={10} strokeWidth={2.5} />
-                        <span className="font-black text-[9px] uppercase tracking-widest">{r.proforma.number}</span>
-                      </Badge>
-                    ) : (
-                      <span className="text-[10px] text-gray-300 italic font-bold">NO REF</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="py-5 px-6">
-                    <div className="flex items-center gap-2">
-                       <div className="w-6 h-6 rounded-full bg-gray-50 flex items-center justify-center border border-gray-100">
-                         <User size={10} strokeWidth={2.5} className="text-gray-400" />
-                       </div>
-                       <span className="text-[11px] font-bold text-gray-600">{r.profile?.full_name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center py-5 px-6">
-                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all duration-300 ${
-                      r.status === 'Approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                      r.status === 'Rejected' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                    <Label className="text-[11px]  text-gray-600">{r.profile?.full_name}</Label>
+                  </div>
+                </TableCell>
+                <TableCell className="text-center py-5 px-6">
+                  <Label className={`px-3 py-1 rounded-full text-[9px]  uppercase tracking-tight border transition-all duration-300 ${r.status === 'Approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                    r.status === 'Rejected' ? 'bg-rose-50 text-rose-600 border-rose-100' :
                       'bg-amber-50 text-amber-600 border-amber-100'
                     }`}>
-                      {r.status}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-center py-5 px-6">
-                    <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-x-2 group-hover:translate-x-0">
-                      {r.status === 'Pending' && (
-                        <>
-                          <Button variant="ghost" size="sm" onClick={() => handleUpdateStatus(r.id, 'Approved')} className="!p-2 text-emerald-500 hover:bg-emerald-50 rounded-xl transition-colors" title="Approve"><Check size={16} strokeWidth={3} /></Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleUpdateStatus(r.id, 'Rejected')} className="!p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors" title="Reject"><X size={16} strokeWidth={3} /></Button>
-                        </>
-                      )}
-                      <Button variant="ghost" size="sm" onClick={() => setConfirmDelete({ isOpen: true, id: r.id })} className="!p-2 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-colors" title="Hapus"><Trash2 size={16} strokeWidth={2.5} /></Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filteredRequests.length === 0 && (
-                 <TableEmpty colSpan={7} message="Belum ada request invoice" icon={<FileQuestion size={48} />} />
-              )}
-            </TableBody>
-          </Table>
+                    {r.status}
+                  </Label>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center justify-center gap-2">
+                    {r.status === 'Pending' && (
+                      <>
+                        <Button variant="ghost" size="sm" onClick={() => handleUpdateStatus(r.id, 'Approved')} className="!p-2 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors" title="Approve"><Check size={16} strokeWidth={3} /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleUpdateStatus(r.id, 'Rejected')} className="!p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors" title="Reject"><X size={16} strokeWidth={3} /></Button>
+                      </>
+                    )}
+                    <Button variant="ghost" size="sm" onClick={() => setConfirmDelete({ isOpen: true, id: r.id })} className="!p-2 text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg" title="Hapus"><Trash2 size={14} /></Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+            {filteredRequests.length === 0 && (
+              <TableEmpty colSpan={7} message="Belum ada request invoice" icon={<FileQuestion size={48} />} />
+            )}
+          </TableBody>
+        </Table>
       </div>
- 
-      <ConfirmDeleteModal 
-        isOpen={confirmDelete.isOpen} 
-        onClose={() => setConfirmDelete({ isOpen: false, id: null })} 
+
+      <ConfirmDeleteModal
+        isOpen={confirmDelete.isOpen}
+        onClose={() => setConfirmDelete({ isOpen: false, id: null })}
         onConfirm={executeDelete}
-        title="Hapus Request" 
+        title="Hapus Request"
         itemName="Request Invoice ini"
         isProcessing={isProcessing}
         description="Apakah Anda yakin ingin menghapus catatan permintaan invoice ini?"
       />
- 
-      <NotificationModal 
-        isOpen={notification.isOpen} 
-        onClose={() => setNotification({ ...notification, isOpen: false })} 
-        title={notification.title} 
+
+      <NotificationModal
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+        title={notification.title}
         message={notification.message}
         type={notification.type}
       />

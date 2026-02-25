@@ -1,8 +1,9 @@
-
+import { Company } from '@/lib/types';
 import React, { useState } from 'react';
+import { Input, Textarea, Button, H1, H2, Subtext, Label } from '@/components/ui';
+
 import { supabase } from '@/lib/supabase';
 import { Building2, MapPin, Loader2, Rocket, ArrowRight, X, AlertCircle } from 'lucide-react';
-import { Button, Input, Textarea, Label } from '@/components/ui';
 
 interface Props {
   userId: string;
@@ -32,7 +33,7 @@ const compressImage = (file: File, maxWidth: number = 800): Promise<Blob> => {
         const ctx = canvas.getContext('2d');
         ctx?.clearRect(0, 0, width, height);
         ctx?.drawImage(img, 0, 0, width, height);
-        
+
         canvas.toBlob((blob) => {
           if (blob) resolve(blob);
           else reject(new Error('Compression failed'));
@@ -62,7 +63,7 @@ export const CompanyWizard: React.FC<Props> = ({ userId, onSuccess }) => {
       const { error: uploadError } = await supabase.storage
         .from('platform')
         .upload(fileName, compressedBlob, { contentType: 'image/png' });
-      
+
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage.from('platform').getPublicUrl(fileName);
@@ -77,7 +78,7 @@ export const CompanyWizard: React.FC<Props> = ({ userId, onSuccess }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.address) return;
-    
+
     setLoading(true);
     setError(null);
 
@@ -101,7 +102,7 @@ export const CompanyWizard: React.FC<Props> = ({ userId, onSuccess }) => {
           .eq('company_id', company.id)
           .eq('name', 'Administrator')
           .maybeSingle();
-        
+
         if (data) {
           adminRole = data;
           break;
@@ -109,7 +110,7 @@ export const CompanyWizard: React.FC<Props> = ({ userId, onSuccess }) => {
         // Tunggu sebentar jika trigger database masih memproses seeding
         await new Promise(r => setTimeout(r, 500));
       }
-      
+
       // 3. Attach current user as the first member
       // Jika adminRole tetap null, sistem tetap mengizinkan member masuk sebagai 'member' biasa tanpa role_id
       const { error: memErr } = await supabase.from('company_members').insert({
@@ -139,25 +140,25 @@ export const CompanyWizard: React.FC<Props> = ({ userId, onSuccess }) => {
           <div className="w-14 h-14 bg-white/10 rounded-lg flex items-center justify-center mb-8 backdrop-blur-md aspect-square">
             <Rocket size={28} />
           </div>
-          <h1 className="text-4xl font-bold tracking-tighter leading-[1.1] mb-6">
+          <H1 className="text-4xl  tracking-tight leading-[1.1] mb-6">
             Satu Langkah Lagi Menuju Bisnis Pintar.
-          </h1>
-          <p className="text-blue-100 font-medium leading-relaxed opacity-90">
+          </H1>
+          <Subtext className="text-blue-100 font-medium leading-relaxed opacity-90">
             Daftarkan identitas bisnis Anda untuk mengaktifkan seluruh fitur manajemen CRM Pintar.
-          </p>
+          </Subtext>
         </div>
 
         <div className="flex-1 flex items-center justify-center p-8 md:p-20 overflow-y-auto bg-white">
           <form onSubmit={handleSubmit} className="max-w-md w-full space-y-8">
             <div className="space-y-2">
-              <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Profil Perusahaan</h2>
-              <p className="text-gray-400 font-medium text-sm">Mari buat identitas digital untuk perusahaan Anda.</p>
+              <H2 className="text-3xl  text-gray-900 tracking-tight">Profil Perusahaan</H2>
+              <Subtext className="text-gray-400 font-medium text-sm">Mari buat identitas digital untuk perusahaan Anda.</Subtext>
             </div>
 
             {error && (
               <div className="p-4 bg-red-50 border border-red-100 rounded-lg flex items-start gap-3">
                 <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={18} />
-                <p className="text-xs font-bold text-red-600 leading-relaxed">{error}</p>
+                <Subtext className="text-xs  text-red-600 leading-relaxed">{error}</Subtext>
               </div>
             )}
 
@@ -167,7 +168,7 @@ export const CompanyWizard: React.FC<Props> = ({ userId, onSuccess }) => {
                   {form.logo_url ? (
                     <img src={form.logo_url} className="w-full h-full object-contain p-2" alt="Preview" />
                   ) : (
-                    <div className="flex items-center justify-center w-full h-full bg-blue-50 text-blue-600 font-bold text-2xl">
+                    <div className="flex items-center justify-center w-full h-full bg-blue-50 text-blue-600  text-2xl">
                       {form.name ? getInitial(form.name) : <Building2 className="text-gray-300" size={28} />}
                     </div>
                   )}
@@ -178,14 +179,14 @@ export const CompanyWizard: React.FC<Props> = ({ userId, onSuccess }) => {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <p className="text-xs font-bold text-gray-900 uppercase tracking-widest">Logo (Opsional)</p>
+                  <Subtext className="text-xs  text-gray-900 uppercase tracking-tight">Logo (Opsional)</Subtext>
                   <div className="flex items-center gap-2">
-                    <Label className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:bg-blue-100 transition-all active:scale-95">
+                    <Label className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-[10px]  uppercase tracking-tight cursor-pointer hover:bg-blue-100 transition-all active:scale-95">
                       Upload
                       <Input type="file" className="hidden" accept="image/*" onChange={handleUploadLogo} disabled={uploading || loading} />
                     </Label>
                     {form.logo_url && (
-                      <Button variant="ghost" size="sm" onClick={() => setForm({...form, logo_url: ''})} className="!p-2 text-gray-300 hover:text-red-500">
+                      <Button variant="ghost" size="sm" onClick={() => setForm({ ...form, logo_url: '' })} className="!p-2 text-gray-300 hover:text-red-500">
                         <X size={16} />
                       </Button>
                     )}
@@ -193,47 +194,47 @@ export const CompanyWizard: React.FC<Props> = ({ userId, onSuccess }) => {
                 </div>
               </div>
 
-               <div className="space-y-2">
-                 <Label className="uppercase tracking-[0.2em] ml-1">Nama Perusahaan</Label>
-                 <div className="relative">
-                   <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 z-10" size={18} />
-                   <Input 
-                     type="text" 
-                     required
-                     disabled={loading}
-                     value={form.name}
-                     onChange={(e: any) => setForm({...form, name: e.target.value})}
-                     placeholder="PT Teknologi Maju"
-                     className="!pl-12 !py-4 shadow-sm"
-                   />
-                 </div>
-               </div>
+              <div className="space-y-2">
+                <Label className="uppercase tracking-[0.2em] ml-1">Nama Perusahaan</Label>
+                <div className="relative">
+                  <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 z-10" size={18} />
+                  <Input
+                    type="text"
+                    required
+                    disabled={loading}
+                    value={form.name}
+                    onChange={(e: any) => setForm({ ...form, name: e.target.value })}
+                    placeholder="PT Teknologi Maju"
+                    className="!pl-12 !py-4 shadow-sm"
+                  />
+                </div>
+              </div>
 
-               <div className="space-y-2">
-                 <Label className="uppercase tracking-[0.2em] ml-1">Alamat Kantor</Label>
-                 <div className="relative">
-                   <MapPin className="absolute left-4 top-4 text-gray-300 z-10" size={18} />
-                   <Textarea 
-                     required
-                     disabled={loading}
-                     value={form.address}
-                     onChange={(e: any) => setForm({...form, address: e.target.value})}
-                     placeholder="Alamat lengkap operasional..."
-                     className="!pl-12 !py-4 shadow-sm !h-28"
-                   />
-                 </div>
-               </div>
+              <div className="space-y-2">
+                <Label className="uppercase tracking-[0.2em] ml-1">Alamat Kantor</Label>
+                <div className="relative">
+                  <MapPin className="absolute left-4 top-4 text-gray-300 z-10" size={18} />
+                  <Textarea
+                    required
+                    disabled={loading}
+                    value={form.address}
+                    onChange={(e: any) => setForm({ ...form, address: e.target.value })}
+                    placeholder="Alamat lengkap operasional..."
+                    className="!pl-12 !py-4 shadow-sm !h-28"
+                  />
+                </div>
+              </div>
             </div>
 
-            <Button 
-               type="submit"
-               isLoading={loading}
-               disabled={uploading}
-               rightIcon={!loading && <ArrowRight size={18} />}
-               className="w-full !py-4 shadow-xl shadow-blue-100"
-             >
-               {loading ? 'Memproses...' : 'Aktifkan Dashboard'}
-             </Button>
+            <Button
+              type="submit"
+              isLoading={loading}
+              disabled={uploading}
+              rightIcon={!loading && <ArrowRight size={18} />}
+              className="w-full !py-4 shadow-xl shadow-blue-100"
+            >
+              {loading ? 'Memproses...' : 'Aktifkan Dashboard'}
+            </Button>
           </form>
         </div>
       </div>

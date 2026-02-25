@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Input, Textarea, Button } from '@/components/ui';
+import { Input, Textarea, Button, Modal } from '@/components/ui';
 
 interface PlatformWorkspaceFormModalProps {
   isOpen: boolean;

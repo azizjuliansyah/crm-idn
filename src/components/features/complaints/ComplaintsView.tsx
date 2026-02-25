@@ -1,13 +1,16 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+
+import { Button, H1, Subtext, SearchInput } from '@/components/ui';
+
+
 import { supabase } from '@/lib/supabase';
-import { SupportTicket, Profile, Company, CompanyMember, SupportStage, Client } from '@/lib/types';
-import { 
-  Plus, Search, Trello, Table as TableIcon, 
+import { SupportTicket, Profile, Company, CompanyMember, SupportStage, Client, TicketTopic } from '@/lib/types';
+import {
+  Plus, Search, Trello, Table as TableIcon,
   AlertTriangle, CheckCircle2, Trash2, X, Loader2
 } from 'lucide-react';
-import { Modal, Button, Input, SearchInput, H1, H2, Subtext } from '@/components/ui';
 import { ComplaintAddModal } from '@/components/features/complaints/ComplaintAddModal';
 import { ComplaintDetailModal } from '@/components/features/complaints/ComplaintDetailModal';
 import { ComplaintsTableView } from '@/components/features/complaints/ComplaintsTableView';
@@ -28,6 +31,7 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
   const [stages, setStages] = useState<SupportStage[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [members, setMembers] = useState<CompanyMember[]>([]);
+  const [topics, setTopics] = useState<TicketTopic[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
@@ -36,10 +40,10 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  
+
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; name: string }>({ isOpen: false, id: null, name: '' });
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({ 
-    isOpen: false, title: '', message: '', type: 'success' 
+  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
+    isOpen: false, title: '', message: '', type: 'success'
   });
 
   const [draggingId, setDraggingId] = useState<number | null>(null);
@@ -48,17 +52,19 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
   const fetchData = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
-      const [ticketsRes, stagesRes, clientsRes, membersRes] = await Promise.all([
-        supabase.from('support_tickets').select('*, assigned_profile:profiles(*), client:clients(*)').eq('company_id', company.id).eq('type', 'complaint').order('id', { ascending: false }),
+      const [ticketsRes, stagesRes, clientsRes, membersRes, topicsRes] = await Promise.all([
+        supabase.from('support_tickets').select('*, assigned_profile:profiles(*), client:clients(*), ticket_topics(*)').eq('company_id', company.id).eq('type', 'complaint').order('id', { ascending: false }),
         supabase.from('support_stages').select('*').eq('company_id', company.id).order('sort_order', { ascending: true }),
         supabase.from('clients').select('*').eq('company_id', company.id).order('name'),
-        supabase.from('company_members').select('*, profile:profiles(*)').eq('company_id', company.id)
+        supabase.from('company_members').select('*, profile:profiles(*)').eq('company_id', company.id),
+        supabase.from('ticket_topics').select('*').eq('company_id', company.id).order('name')
       ]);
 
       if (ticketsRes.data) setTickets(ticketsRes.data as SupportTicket[]);
       if (stagesRes.data) setStages(stagesRes.data);
       if (clientsRes.data) setClients(clientsRes.data);
       if (membersRes.data) setMembers(membersRes.data as any);
+      if (topicsRes.data) setTopics(topicsRes.data);
     } finally {
       if (showLoading) setLoading(false);
     }
@@ -111,8 +117,8 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
   };
 
   const filteredTickets = useMemo(() => {
-    return tickets.filter(t => 
-      t.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    return tickets.filter(t =>
+      t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (t.client?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [tickets, searchTerm]);
@@ -127,28 +133,29 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
     return groups;
   }, [filteredTickets, stages]);
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-rose-600 mb-4" size={32} /><Subtext className="!text-[10px] font-bold uppercase tracking-widest text-gray-400">Sinkronisasi Complaints...</Subtext></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-rose-600 mb-4" size={32} /><Subtext className="!text-[10px]  uppercase tracking-tight text-gray-400">Sinkronisasi Complaints...</Subtext></div>;
 
   return (
     <div className="flex flex-col gap-6 h-full text-gray-900">
       <div className="flex items-center justify-between">
-         <div>
-            <H1>Customer Complaints</H1>
-            <Subtext>Kelola keluhan dan komplain dari pelanggan.</Subtext>
-         </div>
-         <Button 
-           onClick={() => setIsAddModalOpen(true)} 
-           leftIcon={<Plus size={14} />}
-           variant="danger"
-         >
-           Complaint Baru
-         </Button>
+        <div>
+          <H1>Customer Complaints</H1>
+          <Subtext>Kelola keluhan dan komplain dari pelanggan.</Subtext>
+        </div>
+        <Button
+          onClick={() => setIsAddModalOpen(true)}
+          leftIcon={<Plus size={14} />}
+          variant="danger"
+          size='sm'
+        >
+          Complaint Baru
+        </Button>
       </div>
 
       <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0 overflow-x-auto custom-scrollbar">
         <div className="w-[400px] shrink-0">
-          <SearchInput 
-            placeholder="Cari keluhan..." 
+          <SearchInput
+            placeholder="Cari keluhan..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             className="rounded-xl border-gray-100 shadow-none bg-gray-50/30"
@@ -156,18 +163,18 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
         </div>
         <div className="flex items-center gap-3 shrink-0 ml-auto">
           <div className="flex items-center p-1 bg-gray-50 border border-gray-100 rounded-xl">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setViewMode('table')} 
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setViewMode('table')}
               className={`!p-2.5 transition-all ${viewMode === 'table' ? 'bg-white text-rose-600 shadow-sm ring-1 ring-gray-100' : '!text-gray-400'}`}
             >
               <TableIcon size={14} />
             </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setViewMode('kanban')} 
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setViewMode('kanban')}
               className={`!p-2.5 transition-all ${viewMode === 'kanban' ? 'bg-white text-rose-600 shadow-sm ring-1 ring-gray-100' : '!text-gray-400'}`}
             >
               <Trello size={14} />
@@ -178,13 +185,13 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
 
       <div className="flex-1 overflow-hidden">
         {viewMode === 'table' ? (
-          <ComplaintsTableView 
-            tickets={filteredTickets} 
+          <ComplaintsTableView
+            tickets={filteredTickets}
             onEdit={(t) => { setSelectedTicket(t); setIsDetailModalOpen(true); }}
             onDelete={handleDeleteClick}
           />
         ) : (
-          <ComplaintsKanbanView 
+          <ComplaintsKanbanView
             stages={stages}
             ticketsByStatus={ticketsByStatus}
             onEdit={(t) => { setSelectedTicket(t); setIsDetailModalOpen(true); }}
@@ -198,19 +205,20 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
       </div>
 
       {isAddModalOpen && (
-        <ComplaintAddModal 
+        <ComplaintAddModal
           isOpen={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}
           company={company}
           members={members}
           stages={stages}
           clients={clients}
+          topics={topics}
           onSuccess={() => { fetchData(false); showNotification('Berhasil', 'Keluhan baru telah didaftarkan.'); }}
         />
       )}
-  
+
       {selectedTicket && isDetailModalOpen && (
-        <ComplaintDetailModal 
+        <ComplaintDetailModal
           isOpen={isDetailModalOpen}
           onClose={() => setIsDetailModalOpen(false)}
           ticket={selectedTicket}
@@ -219,6 +227,7 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
           members={members}
           stages={stages}
           clients={clients}
+          topics={topics}
           onUpdate={() => fetchData(false)}
           onDelete={handleDeleteClick}
         />

@@ -1,13 +1,16 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+
+import { Button, H1, H3, Subtext, Modal, SearchInput } from '@/components/ui';
+
+
 import { supabase } from '@/lib/supabase';
-import { SupportTicket, Profile, Company, CompanyMember, SupportStage, Client } from '@/lib/types';
-import { 
-  Plus, Search, Trello, Table as TableIcon, 
+import { SupportTicket, Profile, Company, CompanyMember, SupportStage, Client, TicketTopic } from '@/lib/types';
+import {
+  Plus, Search, Trello, Table as TableIcon,
   AlertTriangle, CheckCircle2, Trash2, X, Loader2
 } from 'lucide-react';
-import { Modal, Button, Input, H1, Subtext, SearchInput } from '@/components/ui';
 import { SupportTicketAddModal } from '@/components/features/support/SupportTicketAddModal';
 import { SupportTicketDetailModal } from '@/components/features/support/SupportTicketDetailModal';
 import { SupportTicketsTableView } from '@/components/features/support/SupportTicketsTableView';
@@ -26,6 +29,7 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
   const [stages, setStages] = useState<SupportStage[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [members, setMembers] = useState<CompanyMember[]>([]);
+  const [topics, setTopics] = useState<TicketTopic[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
@@ -34,10 +38,10 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  
+
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; name: string }>({ isOpen: false, id: null, name: '' });
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({ 
-    isOpen: false, title: '', message: '', type: 'success' 
+  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
+    isOpen: false, title: '', message: '', type: 'success'
   });
 
   const [draggingId, setDraggingId] = useState<number | null>(null);
@@ -46,17 +50,19 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
   const fetchData = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
-      const [ticketsRes, stagesRes, clientsRes, membersRes] = await Promise.all([
-        supabase.from('support_tickets').select('*, assigned_profile:profiles(*), client:clients(*)').eq('company_id', company.id).order('id', { ascending: false }),
+      const [ticketsRes, stagesRes, clientsRes, membersRes, topicsRes] = await Promise.all([
+        supabase.from('support_tickets').select('*, assigned_profile:profiles(*), client:clients(*), ticket_topics(*)').eq('company_id', company.id).order('id', { ascending: false }),
         supabase.from('support_stages').select('*').eq('company_id', company.id).order('sort_order', { ascending: true }),
         supabase.from('clients').select('*').eq('company_id', company.id).order('name'),
-        supabase.from('company_members').select('*, profile:profiles(*)').eq('company_id', company.id)
+        supabase.from('company_members').select('*, profile:profiles(*)').eq('company_id', company.id),
+        supabase.from('ticket_topics').select('*').eq('company_id', company.id).order('name')
       ]);
 
       if (ticketsRes.data) setTickets(ticketsRes.data as SupportTicket[]);
       if (stagesRes.data) setStages(stagesRes.data);
       if (clientsRes.data) setClients(clientsRes.data);
       if (membersRes.data) setMembers(membersRes.data as any);
+      if (topicsRes.data) setTopics(topicsRes.data);
     } finally {
       if (showLoading) setLoading(false);
     }
@@ -109,8 +115,8 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
   };
 
   const filteredTickets = useMemo(() => {
-    return tickets.filter(t => 
-      t.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    return tickets.filter(t =>
+      t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (t.client?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [tickets, searchTerm]);
@@ -128,31 +134,31 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
   if (loading) return (
     <div className="flex flex-col items-center justify-center py-24 bg-white rounded-2xl border border-gray-100 min-h-[400px]">
       <Loader2 className="animate-spin text-rose-600 mb-4" size={32} />
-      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Sinkronisasi Customer Support...</p>
+      <Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Sinkronisasi Customer Support...</Subtext>
     </div>
   );
 
   return (
     <div className="flex flex-col gap-6 h-full text-gray-900">
       <div className="flex items-center justify-between">
-         <div>
-            <H1>Customer Support</H1>
-            <Subtext>Kelola bantuan dan tiket masalah pelanggan.</Subtext>
-         </div>
-         <Button 
-           onClick={() => setIsAddModalOpen(true)} 
-           leftIcon={<Plus size={14} />}
-           variant="danger"
-           className="shadow-lg shadow-rose-100"
-         >
-           Tiket Baru
-         </Button>
+        <div>
+          <H1>Customer Support</H1>
+          <Subtext>Kelola bantuan dan tiket masalah pelanggan.</Subtext>
+        </div>
+        <Button
+          onClick={() => setIsAddModalOpen(true)}
+          leftIcon={<Plus size={14} />}
+          variant="danger"
+          size='sm'
+        >
+          Tiket Baru
+        </Button>
       </div>
 
       <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0 overflow-x-auto custom-scrollbar">
         <div className="w-[400px] shrink-0">
-          <SearchInput 
-            placeholder="Cari ticket bantuan..." 
+          <SearchInput
+            placeholder="Cari ticket bantuan..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             className="rounded-xl border-gray-100 shadow-none bg-gray-50/30"
@@ -160,35 +166,35 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
         </div>
         <div className="flex items-center gap-3 shrink-0 ml-auto">
           <div className="flex items-center p-1 bg-gray-50 border border-gray-100 rounded-xl">
-             <Button 
-               variant="ghost" 
-               size="sm" 
-               onClick={() => setViewMode('table')} 
-               className={`!p-2.5 transition-all ${viewMode === 'table' ? 'bg-white text-rose-600 shadow-sm ring-1 ring-gray-100' : '!text-gray-400 opacity-50 hover:opacity-100'}`}
-             >
-               <TableIcon size={14} />
-             </Button>
-             <Button 
-               variant="ghost" 
-               size="sm" 
-               onClick={() => setViewMode('kanban')} 
-               className={`!p-2.5 transition-all ${viewMode === 'kanban' ? 'bg-white text-rose-600 shadow-sm ring-1 ring-gray-100' : '!text-gray-400 opacity-50 hover:opacity-100'}`}
-             >
-               <Trello size={14} />
-             </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setViewMode('table')}
+              className={`!p-2.5 transition-all ${viewMode === 'table' ? 'bg-white text-rose-600 shadow-sm ring-1 ring-gray-100' : '!text-gray-400 opacity-50 hover:opacity-100'}`}
+            >
+              <TableIcon size={14} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setViewMode('kanban')}
+              className={`!p-2.5 transition-all ${viewMode === 'kanban' ? 'bg-white text-rose-600 shadow-sm ring-1 ring-gray-100' : '!text-gray-400 opacity-50 hover:opacity-100'}`}
+            >
+              <Trello size={14} />
+            </Button>
           </div>
         </div>
       </div>
 
       <div className="flex-1 overflow-hidden">
         {viewMode === 'table' ? (
-          <SupportTicketsTableView 
-            tickets={filteredTickets} 
+          <SupportTicketsTableView
+            tickets={filteredTickets}
             onEdit={(t) => { setSelectedTicket(t); setIsDetailModalOpen(true); }}
             onDelete={handleDeleteClick}
           />
         ) : (
-          <SupportTicketsKanbanView 
+          <SupportTicketsKanbanView
             stages={stages}
             ticketsByStatus={ticketsByStatus}
             onEdit={(t) => { setSelectedTicket(t); setIsDetailModalOpen(true); }}
@@ -202,19 +208,20 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
       </div>
 
       {isAddModalOpen && (
-        <SupportTicketAddModal 
+        <SupportTicketAddModal
           isOpen={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}
           company={company}
           members={members}
           stages={stages}
           clients={clients}
+          topics={topics}
           onSuccess={() => { fetchData(false); showNotification('Berhasil', 'Ticket baru telah dibuat.'); }}
         />
       )}
-  
+
       {selectedTicket && isDetailModalOpen && (
-        <SupportTicketDetailModal 
+        <SupportTicketDetailModal
           isOpen={isDetailModalOpen}
           onClose={() => setIsDetailModalOpen(false)}
           ticket={selectedTicket}
@@ -223,42 +230,43 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
           members={members}
           stages={stages}
           clients={clients}
+          topics={topics}
           onUpdate={() => fetchData(false)}
           onDelete={handleDeleteClick}
         />
       )}
 
       {/* CONFIRM DELETE MODAL */}
-      <Modal 
-        isOpen={confirmDelete.isOpen} 
-        onClose={() => setConfirmDelete({ isOpen: false, id: null, name: '' })} 
-        title="Hapus Ticket" 
+      <Modal
+        isOpen={confirmDelete.isOpen}
+        onClose={() => setConfirmDelete({ isOpen: false, id: null, name: '' })}
+        title="Hapus Ticket"
         size="sm"
         footer={
           <div className="flex w-full gap-3">
-             <Button variant="ghost" onClick={() => setConfirmDelete({ isOpen: false, id: null, name: '' })} className="flex-1">Batal</Button>
-             <Button variant="danger" onClick={executeDelete} isLoading={isProcessing} leftIcon={<Trash2 size={14} />} className="flex-1">Ya, Hapus</Button>
+            <Button variant="ghost" onClick={() => setConfirmDelete({ isOpen: false, id: null, name: '' })} className="flex-1">Batal</Button>
+            <Button variant="danger" onClick={executeDelete} isLoading={isProcessing} leftIcon={<Trash2 size={14} />} className="flex-1">Ya, Hapus</Button>
           </div>
         }
       >
         <div className="flex flex-col items-center py-6 text-center">
           <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mb-6"><AlertTriangle size={32} /></div>
-          <p className="text-lg font-bold text-gray-900 tracking-tight">Hapus {confirmDelete.name}?</p>
-          <p className="text-sm text-gray-500 font-medium leading-relaxed mt-2">Tindakan ini permanen. Seluruh riwayat percakapan pada ticket ini akan hilang.</p>
+          <Subtext className="text-lg  text-gray-900 tracking-tight">Hapus {confirmDelete.name}?</Subtext>
+          <Subtext className="text-sm text-gray-500 font-medium leading-relaxed mt-2">Tindakan ini permanen. Seluruh riwayat percakapan pada ticket ini akan hilang.</Subtext>
         </div>
       </Modal>
- 
-      <Modal 
-        isOpen={notification.isOpen} 
-        onClose={() => setNotification({ ...notification, isOpen: false })} 
-        title="" 
+
+      <Modal
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+        title=""
         size="sm"
         footer={<Button onClick={() => setNotification({ ...notification, isOpen: false })} className="w-full">Tutup</Button>}
       >
         <div className="flex flex-col items-center py-6 text-center">
-           <div className={`w-16 h-16 rounded-xl flex items-center justify-center mb-6 ${notification.type === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>{notification.type === 'success' ? <CheckCircle2 size={32} /> : <X size={32} />}</div>
-           <h3 className="text-lg font-bold text-gray-900 mb-2">{notification.title}</h3>
-           <p className="text-sm text-gray-500 font-medium leading-relaxed">{notification.message}</p>
+          <div className={`w-16 h-16 rounded-xl flex items-center justify-center mb-6 ${notification.type === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>{notification.type === 'success' ? <CheckCircle2 size={32} /> : <X size={32} />}</div>
+          <H3 className="text-lg  text-gray-900 mb-2">{notification.title}</H3>
+          <Subtext className="text-sm text-gray-500 font-medium leading-relaxed">{notification.message}</Subtext>
         </div>
       </Modal>
     </div>

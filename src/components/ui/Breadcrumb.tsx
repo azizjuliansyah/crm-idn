@@ -20,7 +20,7 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = '' })
           <div className="flex items-center gap-2">
             <span 
               className={`font-medium tracking-tight ${
-                item.active ? 'text-gray-900 font-bold' : 'text-gray-400'
+                item.active ? 'text-gray-900 ' : 'text-gray-400'
               }`}
             >
               {item.label}

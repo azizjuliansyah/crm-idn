@@ -1,5 +1,6 @@
-
 import React, { useState, useEffect, useRef } from 'react';
+import { Textarea, Button, Subtext, Avatar } from '@/components/ui';
+
 import { supabase } from '@/lib/supabase';
 import { Company, Profile, AiSetting } from '@/lib/types';
 import { 
@@ -10,13 +11,6 @@ import {
   Sparkles, 
   AlertCircle 
 } from 'lucide-react';
-import { 
-  Button, 
-  Textarea, 
-  Avatar, 
-  Subtext, 
-  Label 
-} from '@/components/ui';
 
 interface Props {
   company: Company;
@@ -157,12 +151,12 @@ export const AiAssistantView: React.FC<Props> = ({ company, user }) => {
             <Sparkles size={20} />
           </div>
           <div>
-            <p className="text-sm font-bold text-gray-900">AI Workspace Assistant</p>
+            <Subtext className="text-sm  text-gray-900">AI Workspace Assistant</Subtext>
             <Subtext className="text-[10px]">Powered by Gemini 2.0 Flash</Subtext>
           </div>
         </div>
         {!settings?.gemini_api_key && (
-           <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 text-amber-600 rounded-lg text-[10px] font-bold">
+           <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 text-amber-600 rounded-lg text-[10px] ">
               <AlertCircle size={12} /> API Key Missing
            </div>
         )}
@@ -187,7 +181,7 @@ export const AiAssistantView: React.FC<Props> = ({ company, user }) => {
                   : 'bg-white border border-indigo-100 text-gray-800 rounded-tl-none'
               }`}>
                 {msg.content.split('\n').map((line, i) => (
-                  <p key={i} className="mb-1 last:mb-0">{line}</p>
+                  <Subtext key={i} className="mb-1 last:mb-0">{line}</Subtext>
                 ))}
               </div>
               <Subtext className="text-[10px] px-1">
@@ -215,7 +209,7 @@ export const AiAssistantView: React.FC<Props> = ({ company, user }) => {
           onSubmit={handleSend} 
           className="flex items-end gap-2 bg-gray-50 border border-gray-100 rounded-2xl px-2 py-2 focus-within:bg-white focus-within:border-indigo-200 transition-all"
         >
-          <textarea
+          <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {

@@ -1,16 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { Input, Textarea, Button, H3, Subtext, Card } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { Company, AiSetting } from '@/lib/types';
 import { Loader2, Save, BrainCircuit, Check, AlertTriangle } from 'lucide-react';
-import { 
-  Card, 
-  Input, 
-  Textarea, 
-  Button, 
-  H3, 
-  Subtext, 
-  Label 
-} from '@/components/ui';
 import { NotificationModal } from '@/components/shared/modals/NotificationModal';
 
 interface Props {
@@ -21,12 +13,12 @@ export const AiSettingsView: React.FC<Props> = ({ company }) => {
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [settings, setSettings] = useState<AiSetting | null>(null);
-  
+
   const [apiKey, setApiKey] = useState('');
   const [instruction, setInstruction] = useState('');
 
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' | 'warning' }>({ 
-    isOpen: false, title: '', message: '', type: 'success' 
+  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' | 'warning' }>({
+    isOpen: false, title: '', message: '', type: 'success'
   });
 
   useEffect(() => {
@@ -41,7 +33,7 @@ export const AiSettingsView: React.FC<Props> = ({ company }) => {
         .select('*')
         .eq('company_id', company.id)
         .maybeSingle();
-      
+
       if (data) {
         setSettings(data);
         setApiKey(data.gemini_api_key || '');
@@ -83,11 +75,11 @@ export const AiSettingsView: React.FC<Props> = ({ company }) => {
     }
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-indigo-600 mb-4" /><p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Memuat Konfigurasi AI...</p></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-indigo-600 mb-4" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Memuat Konfigurasi AI...</Subtext></div>;
 
   return (
     <div className="max-w-3xl">
-      <Card 
+      <Card
         title={
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
@@ -101,34 +93,34 @@ export const AiSettingsView: React.FC<Props> = ({ company }) => {
         }
       >
         <form onSubmit={handleSave} className="p-8 space-y-6">
-           <Input 
-             label="Gemini API Key"
-             type="password" 
-             value={apiKey}
-             onChange={e => setApiKey(e.target.value)}
-             className="font-mono text-sm"
-             placeholder="Ex: AIzaSy..."
-           />
-           <Subtext className="text-[11px] -mt-4 ml-1">Dapatkan API Key di <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline">Google AI Studio</a>.</Subtext>
+          <Input
+            label="Gemini API Key"
+            type="password"
+            value={apiKey}
+            onChange={e => setApiKey(e.target.value)}
+            className="font-mono text-sm"
+            placeholder="Ex: AIzaSy..."
+          />
+          <Subtext className="text-[11px] -mt-4 ml-1">Dapatkan API Key di <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline">Google AI Studio</a>.</Subtext>
 
-           <Textarea 
-             label="System Instruction (Persona)"
-             value={instruction}
-             onChange={e => setInstruction(e.target.value)}
-             rows={6}
-             placeholder="Berikan instruksi bagaimana AI harus berperilaku, nada bicara, dan batasan pengetahuannya..."
-           />
+          <Textarea
+            label="System Instruction (Persona)"
+            value={instruction}
+            onChange={e => setInstruction(e.target.value)}
+            rows={6}
+            placeholder="Berikan instruksi bagaimana AI harus berperilaku, nada bicara, dan batasan pengetahuannya..."
+          />
 
-           <div className="pt-2">
-              <Button 
-                type="submit" 
-                isLoading={isProcessing}
-                leftIcon={!isProcessing && <Save size={16} />}
-                className="px-10 bg-indigo-600 hover:bg-indigo-700"
-              >
-                Simpan Konfigurasi
-              </Button>
-           </div>
+          <div className="pt-2">
+            <Button
+              type="submit"
+              isLoading={isProcessing}
+              leftIcon={!isProcessing && <Save size={16} />}
+              variant='primary'
+            >
+              Simpan Konfigurasi
+            </Button>
+          </div>
         </form>
       </Card>
 

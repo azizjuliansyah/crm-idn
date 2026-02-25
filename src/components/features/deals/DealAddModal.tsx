@@ -1,12 +1,12 @@
+import React, { useState, useMemo } from 'react';
+import { Input, Select, Textarea, Button, Subtext, Label, SectionHeader, Modal, ComboBox, H4 } from '@/components/ui';
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Deal, Company, CompanyMember, Pipeline, Client, ClientCompany, ClientCompanyCategory } from '@/lib/types';
 import { 
-  Plus, Building, Target, User, FileText, Loader2, Save, X, 
-  Contact2, CheckCircle2, Mail, Check as CheckIcon, Wallet, AlertCircle, Search, ChevronDown
+  Plus, Building, Target, User, FileText, Save, X, 
+  Contact2, CheckCircle2, Mail, Check as CheckIcon, Wallet
 } from 'lucide-react';
-import { Modal, Button, Input, Select, Textarea, SectionHeader } from '@/components/ui';
 
 interface Props {
   isOpen: boolean;
@@ -38,39 +38,15 @@ export const DealAddModal: React.FC<Props> = ({
   const [isAddingCatInCo, setIsAddingCatInCo] = useState(false);
   const [newCatInCoName, setNewCatInCoName] = useState('');
   
-  // Custom Searchable Dropdown State
-  const [clientSearch, setClientSearch] = useState('');
-  const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
   // Error states for validation
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [form, setForm] = useState<Partial<Deal>>({
     name: '', client_id: undefined, customer_company: '', contact_name: '', 
     whatsapp: '', email: '', expected_value: 0, sales_id: user.id, 
-    source: 'Manual Deal', notes: '', stage_id: pipeline?.stages?.[0]?.id || ''
+    source: 'Manual Deal', notes: '', stage_id: pipeline?.stages?.[0]?.id || '',
+    input_date: new Date().toISOString().split('T')[0]
   });
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setIsClientDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const filteredClients = useMemo(() => {
-    return clients.filter(c => {
-      const co = clientCompanies.find(cc => cc.id === c.client_company_id);
-      // Enhanced search to include client name AND company name
-      const nameMatch = c.name.toLowerCase().includes(clientSearch.toLowerCase());
-      const coMatch = co?.name.toLowerCase().includes(clientSearch.toLowerCase()) || false;
-      return nameMatch || coMatch;
-    });
-  }, [clients, clientCompanies, clientSearch]);
 
   const handleWaNumberChange = (val: string) => {
     let cleaned = val.replace(/\D/g, '');
@@ -206,7 +182,8 @@ export const DealAddModal: React.FC<Props> = ({
         stage_id: form.stage_id || pipeline.stages?.[0]?.id,
         company_id: company.id,
         pipeline_id: pipeline.id,
-        source: form.source
+        source: form.source,
+        input_date: form.input_date
       };
       await supabase.from('deals').insert(dealData);
       onSuccess();
@@ -236,13 +213,8 @@ export const DealAddModal: React.FC<Props> = ({
           delete next.client_id;
           return next;
         });
-        setIsClientDropdownOpen(false);
-        setClientSearch('');
     }
   };
-
-  const selectedClient = clients.find(c => c.id === form.client_id);
-  const selectedClientCo = selectedClient ? clientCompanies.find(cc => cc.id === selectedClient.client_company_id) : null;
 
   return (
     <Modal 
@@ -255,12 +227,12 @@ export const DealAddModal: React.FC<Props> = ({
            {isAddingClient ? (
              <React.Fragment>
                 <Button variant="ghost" onClick={() => setIsAddingClient(false)} className="px-6 text-gray-400">Batal</Button>
-                <Button onClick={handleQuickAddClient} isLoading={isProcessing} leftIcon={<CheckCircle2 size={14} />} variant="success">
+                <Button onClick={handleQuickAddClient} isLoading={isProcessing} leftIcon={<CheckCircle2 size={14} />} variant="success" className="rounded-md">
                   Simpan & Pilih Client
                 </Button>
              </React.Fragment>
            ) : (
-             <Button onClick={handleSave} isLoading={isProcessing} leftIcon={<Save size={14} />}>
+             <Button onClick={handleSave} isLoading={isProcessing} leftIcon={<Save size={14} />} className="rounded-md">
                Simpan Transaksi
              </Button>
            )}
@@ -283,7 +255,7 @@ export const DealAddModal: React.FC<Props> = ({
                         label="Sapaan & Nama Lengkap*"
                         value={newClient.salutation} 
                         onChange={e => setNewClient({...newClient, salutation: e.target.value})} 
-                        className="!w-32"
+                        className="!w-32 rounded-md"
                       >
                         <option value="">Sapaan</option>
                         <option value="Bapak">Bapak</option>
@@ -293,6 +265,7 @@ export const DealAddModal: React.FC<Props> = ({
                         value={newClient.name} 
                         onChange={e => setNewClient({...newClient, name: e.target.value})} 
                         placeholder="Ketik nama lengkap client..." 
+                        className="rounded-md"
                       />
                     </div>
                   </div>
@@ -303,16 +276,17 @@ export const DealAddModal: React.FC<Props> = ({
                     onChange={e => setNewClient({...newClient, email: e.target.value})} 
                     leftIcon={<Mail size={16} />}
                     placeholder="nama@perusahaan.com" 
+                    className="rounded-md"
                   />
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">WhatsApp</label>
-                    <div className="flex bg-gray-50 border border-gray-100 rounded-xl overflow-hidden focus-within:border-blue-500 focus-within:bg-white transition-all shadow-sm">
-                      <div className="px-4 py-3.5 bg-gray-100/50 text-[11px] font-bold text-gray-400 border-r border-gray-100 flex items-center">+62</div>
-                      <input 
+                    <Label className="text-[10px] text-gray-400 uppercase !capitalize !tracking-tight ml-1">WhatsApp</Label>
+                    <div className="flex border border-gray-100 rounded-md overflow-hidden focus-within:border-blue-500 transition-all">
+                      <div className="px-4 py-3.5 bg-gray-50 text-[11px] text-gray-400 border-r border-gray-100 flex items-center">+62</div>
+                      <Input 
                         type="tel" 
                         value={waNumber} 
                         onChange={e => handleWaNumberChange(e.target.value)} 
-                        className="flex-1 px-4 py-3.5 text-sm font-bold outline-none bg-transparent" 
+                        className="flex-1 px-4 py-3.5 text-sm outline-none bg-transparent border-none focus:ring-0" 
                         placeholder="812..." 
                       />
                     </div>
@@ -328,12 +302,12 @@ export const DealAddModal: React.FC<Props> = ({
                 />
                 <div className="space-y-3">
                   <div className="flex items-center justify-between px-1">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pilih Data Perusahaan</label>
+                    <Label className="text-[10px] text-gray-400 uppercase !capitalize !tracking-tight">Pilih Data Perusahaan</Label>
                     <Button 
                       variant="ghost" 
                       size="sm"
                       onClick={() => setIsAddingCo(!isAddingCo)} 
-                      className="!p-0 text-blue-600 hover:underline h-auto font-bold"
+                      className="!p-0 text-blue-600 hover:underline h-auto"
                       leftIcon={isAddingCo ? <X size={10}/> : <Plus size={10}/>}
                     >
                       {isAddingCo ? 'Batal' : 'Tambah Baru'}
@@ -341,22 +315,23 @@ export const DealAddModal: React.FC<Props> = ({
                   </div>
 
                   {isAddingCo ? (
-                    <div className="p-6 bg-blue-50/30 border border-blue-100 rounded-2xl space-y-5 shadow-inner">
+                    <div className="p-6 bg-blue-50/30 border border-blue-100 rounded-md space-y-5 shadow-inner">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <Input 
                               label="Nama Instansi*"
                               value={newCo.name} 
                               onChange={e => setNewCo({...newCo, name: e.target.value})} 
                               placeholder="PT..." 
+                              className="rounded-md"
                             />
                             <div className="space-y-1">
                                <div className="flex items-center justify-between">
-                                  <p className="text-[9px] font-bold text-gray-400 uppercase ml-1">Kategori*</p>
+                                   <Subtext className="text-[9px] text-gray-400 uppercase !capitalize !tracking-tight ml-1">Kategori*</Subtext>
                                   <Button 
                                     variant="ghost" 
                                     size="sm"
                                     onClick={() => setIsAddingCatInCo(!isAddingCatInCo)} 
-                                    className="!p-0 text-blue-600 hover:underline h-auto font-bold !text-[8px]"
+                                    className="!p-0 text-blue-600 hover:underline h-auto !text-[8px]"
                                   >
                                     {isAddingCatInCo ? 'Batal' : '+ Kategori'}
                                   </Button>
@@ -368,11 +343,12 @@ export const DealAddModal: React.FC<Props> = ({
                                       value={newCatInCoName} 
                                       onChange={e => setNewCatInCoName(e.target.value)} 
                                       placeholder="Kategori..." 
+                                      className="rounded-md"
                                      />
-                                     <Button onClick={handleQuickAddCatInCo} variant="primary" className="!px-3"><CheckIcon size={14}/></Button>
+                                     <Button onClick={handleQuickAddCatInCo} variant="primary" className="!px-3 rounded-md"><CheckIcon size={14}/></Button>
                                   </div>
                                ) : (
-                                  <Select value={newCo.category_id} onChange={e => setNewCo({...newCo, category_id: e.target.value})}>
+                                  <Select value={newCo.category_id} onChange={e => setNewCo({...newCo, category_id: e.target.value})} className="rounded-md">
                                       <option value="">-- Pilih Kategori --</option>
                                       {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                   </Select>
@@ -384,13 +360,14 @@ export const DealAddModal: React.FC<Props> = ({
                                   value={newCo.address} 
                                   onChange={e => setNewCo({...newCo, address: e.target.value})} 
                                   placeholder="Jalan raya no 123..." 
+                                  className="rounded-md"
                                 />
                             </div>
                         </div>
-                        <Button onClick={handleQuickAddCo} isLoading={coProcessing} className="w-full">SIMPAN PERUSAHAAN</Button>
+                        <Button onClick={handleQuickAddCo} isLoading={coProcessing} className="w-full rounded-md">SIMPAN PERUSAHAAN</Button>
                     </div>
                   ) : (
-                    <Select value={newClient.client_company_id || ''} onChange={e => setNewClient({...newClient, client_company_id: e.target.value ? Number(e.target.value) : null})}>
+                    <Select value={newClient.client_company_id || ''} onChange={e => setNewClient({...newClient, client_company_id: e.target.value ? Number(e.target.value) : null})} className="rounded-md">
                         <option value="">-- Perorangan --</option>
                         {clientCompanies.map(co => <option key={co.id} value={co.id}>{co.name}</option>)}
                     </Select>
@@ -407,6 +384,13 @@ export const DealAddModal: React.FC<Props> = ({
                   className="pb-2 border-b border-gray-50 mb-4"
                 />
                 <Input 
+                  label="Tanggal Input"
+                  type="date"
+                  value={form.input_date || ''}
+                  onChange={e => setForm({...form, input_date: e.target.value})}
+                  className="rounded-md"
+                />
+                <Input 
                   label="Nama Project / Deal*"
                   value={form.name} 
                   onChange={e => {
@@ -415,7 +399,8 @@ export const DealAddModal: React.FC<Props> = ({
                   }} 
                   error={errors.name}
                   placeholder="Misal: Proyek Pengadaan Kursi 2025" 
-                />
+                  className="rounded-md"
+                />                
              </div>
              
              <div className="space-y-5">
@@ -428,7 +413,7 @@ export const DealAddModal: React.FC<Props> = ({
                       variant="ghost" 
                       size="sm"
                       onClick={() => setIsAddingClient(true)} 
-                      className="!p-0 text-emerald-600 hover:underline h-auto font-bold"
+                      className="!text-[10px] !p-1 !text-blue-600"
                       leftIcon={<Plus size={10} />}
                     >
                       Tambah Baru
@@ -436,65 +421,21 @@ export const DealAddModal: React.FC<Props> = ({
                   }
                 />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                   <div className="md:col-span-2 space-y-2 relative" ref={dropdownRef}>
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Pilih Client*</label>
-                      <button 
-                        type="button"
-                        onClick={() => setIsClientDropdownOpen(!isClientDropdownOpen)}
-                        className={`w-full flex items-center justify-between px-5 py-3.5 bg-gray-50 border ${errors.client_id ? 'border-red-500' : 'border-gray-100'} rounded-xl font-bold outline-none shadow-sm transition-all text-left ${!selectedClient ? 'text-gray-400' : 'text-gray-900'}`}
-                      >
-                        <span className="truncate">
-                          {selectedClient 
-                            ? `${selectedClient.salutation ? `${selectedClient.salutation} ` : ''}${selectedClient.name} - ${selectedClientCo?.name || 'Perorangan'}` 
-                            : '-- Pilih Client Terdaftar --'
-                          }
-                        </span>
-                        <ChevronDown size={14} className={`transition-transform duration-300 ${isClientDropdownOpen ? 'rotate-180' : ''}`} />
-                      </button>
-
-                      {isClientDropdownOpen && (
-                        <div className="absolute top-[calc(100%+8px)] left-0 right-0 bg-white border border-gray-100 rounded-xl shadow-2xl z-[150] overflow-hidden">
-                          <div className="p-3 border-b border-gray-50">
-                            <div className="relative">
-                              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" size={14} />
-                              <input 
-                                autoFocus
-                                type="text" 
-                                placeholder="Cari nama client atau perusahaan..." 
-                                value={clientSearch}
-                                onChange={e => setClientSearch(e.target.value)}
-                                className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-transparent rounded-lg text-xs font-bold outline-none focus:bg-white focus:border-blue-100 transition-all"
-                              />
-                            </div>
-                          </div>
-                          <div className="max-h-48 overflow-y-auto custom-scrollbar">
-                            {filteredClients.length > 0 ? (
-                              filteredClients.map(c => {
-                                const co = clientCompanies.find(cc => cc.id === c.client_company_id);
-                                return (
-                                  <button 
-                                    key={c.id}
-                                    type="button"
-                                    onClick={() => handleClientChange(c.id)}
-                                    className="w-full px-4 py-3 flex flex-col items-start hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-none"
-                                  >
-                                    <span className="text-[11px] font-bold text-gray-900">{c.salutation ? `${c.salutation} ` : ''}{c.name}</span>
-                                    <span className="text-[9px] font-bold text-gray-400 uppercase">{co?.name || 'Perorangan'}</span>
-                                  </button>
-                                );
-                              })
-                            ) : (
-                              <div className="p-6 text-center text-[10px] font-bold text-gray-300 uppercase tracking-widest italic">Tidak ada client ditemukan</div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {errors.client_id && (
-                        <p className="flex items-center gap-1 text-[10px] font-bold text-red-500 mt-1 ml-1">
-                           <AlertCircle size={10} /> {errors.client_id}
-                        </p>
-                      )}
+                   <div className="md:col-span-2">
+                     <ComboBox 
+                        label="Pilih Client*"
+                        placeholder="Pilih Client Terdaftar"
+                        value={form.client_id ?? undefined}
+                        onChange={(val: string | number) => handleClientChange(Number(val))}
+                        options={clients.map(c => ({
+                          value: c.id,
+                          label: c.name,
+                          sublabel: clientCompanies.find(cc => cc.id === c.client_company_id)?.name || 'PERORANGAN'
+                        }))}
+                        error={errors.client_id}
+                        onAddNew={() => setIsAddingClient(true)}
+                        leftIcon={<User size={16} />}
+                     />
                    </div>
                 </div>
              </div>
@@ -511,13 +452,15 @@ export const DealAddModal: React.FC<Props> = ({
                     type="number" 
                     value={form.expected_value} 
                     onChange={e => setForm({...form, expected_value: Number(e.target.value)})} 
-                    leftIcon={<span className="text-[11px] font-bold text-indigo-500">Rp</span>}
+                    leftIcon={<Label className="text-[11px] text-indigo-500">Rp</Label>}
                     placeholder="0" 
+                    className="rounded-md"
                   />
                   <Select 
                     label="Penanggung Jawab (Sales)"
                     value={form.sales_id} 
                     onChange={e => setForm({...form, sales_id: e.target.value})}
+                    className="rounded-md"
                   >
                     {members.map(m => <option key={m.user_id} value={m.user_id}>{m.profile?.full_name || 'Tanpa Nama'}</option>)}
                   </Select>
@@ -534,7 +477,7 @@ export const DealAddModal: React.FC<Props> = ({
                   value={form.notes} 
                   onChange={e => setForm({...form, notes: e.target.value})} 
                   placeholder="Tambahkan catatan strategis atau instruksi khusus untuk tim penangan deal ini..." 
-                  className="h-32"
+                  className="h-32 rounded-md"
                 />
              </div>
           </div>
