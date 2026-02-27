@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Input, Select, Button, H1, Subtext, Label, SearchInput } from '@/components/ui';
+import { Input, Select, Button, H1, Subtext, Label, SearchInput, DateFilterDropdown } from '@/components/ui';
 
 import { supabase } from '@/lib/supabase';
 import { Company, CompanyMember, PipelineStage, Deal, Pipeline, Client, ClientCompany, ClientCompanyCategory, Profile } from '@/lib/types';
@@ -41,6 +41,8 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
   const [startDateFilter, setStartDateFilter] = useState<string>('');
   const [endDateFilter, setEndDateFilter] = useState<string>('');
+  const [dateFilterType, setDateFilterType] = useState<string>('all');
+  const [followUpFilter, setFollowUpFilter] = useState<string>('all');
 
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -183,10 +185,18 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
     const matchesAssignee = assigneeFilter === 'all' || deal.sales_id === assigneeFilter;
 
     const dealDate = deal.input_date || deal.created_at.split('T')[0];
-    const matchesStartDate = !startDateFilter || dealDate >= startDateFilter;
-    const matchesEndDate = !endDateFilter || dealDate <= endDateFilter;
+    let matchesDate = true;
+    if (dateFilterType === 'custom') {
+      matchesDate = (!startDateFilter || dealDate >= startDateFilter) && (!endDateFilter || dealDate <= endDateFilter);
+    } else if (dateFilterType !== 'all') {
+      const daysAgo = parseInt(dateFilterType);
+      const filterDate = new Date();
+      filterDate.setDate(filterDate.getDate() - daysAgo);
+      matchesDate = dealDate >= filterDate.toISOString().split('T')[0];
+    }
+    const matchesFollowUp = followUpFilter === 'all' || (deal.follow_up || 0).toString() === followUpFilter;
 
-    return matchesSearch && matchesStatus && matchesAssignee && matchesStartDate && matchesEndDate;
+    return matchesSearch && matchesStatus && matchesAssignee && matchesDate && matchesFollowUp;
   }).sort((a, b) => {
     if (!sortConfig) return 0;
     const valA = (a as any)[sortConfig.key];
@@ -273,7 +283,7 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
           </div>
         </div>
 
-        <div className="flex items-center gap-4 pt-4 border-t border-gray-50 overflow-x-auto scrollbar-hide">
+        <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-gray-50">
           <div className="w-[400px] shrink-0">
             <SearchInput
               placeholder="Cari deal, klien..."
@@ -283,23 +293,26 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
             />
           </div>
           <div className="flex gap-3 shrink-0 ml-auto items-center">
-            <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-2">
-              <Input
-                type="date"
-                value={startDateFilter}
-                onChange={e => setStartDateFilter(e.target.value)}
-                className="bg-transparent border-none text-[10px]  uppercase tracking-tight text-gray-500 py-2 outline-none w-[110px]"
-                title="Mulai Tanggal"
-              />
-              <Label className="text-gray-300 text-[10px] ">-</Label>
-              <Input
-                type="date"
-                value={endDateFilter}
-                onChange={e => setEndDateFilter(e.target.value)}
-                className="bg-transparent border-none text-[10px]  uppercase tracking-tight text-gray-500 py-2 outline-none w-[110px]"
-                title="Sampai Tanggal"
-              />
-            </div>
+            <DateFilterDropdown
+              value={dateFilterType}
+              onChange={setDateFilterType}
+              startDate={startDateFilter}
+              endDate={endDateFilter}
+              onStartDateChange={setStartDateFilter}
+              onEndDateChange={setEndDateFilter}
+            />
+            <Select
+              value={followUpFilter}
+              onChange={e => setFollowUpFilter(e.target.value)}
+              className="!text-[10px] uppercase tracking-tight text-gray-400 w-36"
+            >
+              <option value="all">SEMUA FOLLOW UP</option>
+              {Array.from(new Set(deals.map(d => d.follow_up || 0))).sort((a, b) => a - b).map(fu => (
+                <option key={`fu-${fu}`} value={fu.toString()}>
+                  {fu === 0 ? 'BELUM FU' : `FU ${fu} KALI`}
+                </option>
+              ))}
+            </Select>
             <Select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}

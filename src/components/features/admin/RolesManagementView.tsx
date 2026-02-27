@@ -9,7 +9,7 @@ import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModa
 import { NotificationModal } from '@/components/shared/modals/NotificationModal';
 
 // Simplified permissions list mostly for display/selection
-const AVAILABLE_PERMISSIONS = ['Dashboard', 'Leads', 'Deals', 'Projects', 'Perusahaan', 'Anggota Tim', 'Manajemen Role', 'Pengaturan Leads', 'Pengaturan Deals Pipeline', 'Data Client', 'Perusahaan Client', 'Pengaturan Kategori Client', 'Pengaturan Sumber Leads', 'Produk', 'Kategori Produk', 'Satuan', 'Penjualan', 'Penawaran', 'Proforma Invoice', 'Invoice', 'Pengaturan Penjualan', 'Penomoran Otomatis', 'Pengaturan Pajak', 'Template Dokumen', 'Knowledge Base', 'Pengaturan AI', 'Customer Support', 'Support Pipeline', 'Konfigurasi Email', 'Request Invoice', 'SOP', 'AI Assistant', 'Ticket Topic'];
+const AVAILABLE_PERMISSIONS = ['Dashboard', 'Leads', 'Deals', 'Projects', 'Perusahaan', 'Anggota Tim', 'Manajemen Role', 'Pengaturan Leads', 'Pengaturan Deals Pipeline', 'Data Client', 'Perusahaan Client', 'Pengaturan Kategori Client', 'Pengaturan Sumber Leads', 'Produk', 'Kategori Produk', 'Satuan', 'Penjualan', 'Penawaran', 'Proforma Invoice', 'Invoice', 'Pengaturan Penjualan', 'Penomoran Otomatis', 'Pengaturan Pajak', 'Template Dokumen', 'Knowledge Base', 'Pengaturan AI', 'Customer Support', 'Support Pipeline', 'Konfigurasi Email', 'Request Invoice', 'Persetujuan Request Invoice', 'SOP', 'AI Assistant', 'Ticket Topic'];
 
 interface Props {
   company: Company;
@@ -38,10 +38,10 @@ export const RolesManagementView: React.FC<Props> = ({ company, roles, onUpdate 
       } else {
         await supabase.from('company_roles').insert({ company_id: company.id, name: roleForm.name, permissions: roleForm.permissions });
       }
-      setIsRoleModalOpen(false); 
+      setIsRoleModalOpen(false);
       onUpdate();
       showAlert('Berhasil', 'Role berhasil disimpan.', 'success');
-    } catch(err: any) {
+    } catch (err: any) {
       showAlert('Gagal', err.message, 'error');
     } finally {
       setIsProcessing(false);
@@ -57,7 +57,7 @@ export const RolesManagementView: React.FC<Props> = ({ company, roles, onUpdate 
       setPendingDelete(null);
       onUpdate();
       showAlert('Berhasil', 'Role berhasil dihapus.', 'success');
-    } catch(err: any) {
+    } catch (err: any) {
       showAlert('Gagal', err.message, 'error');
     } finally {
       setIsProcessing(false);
@@ -65,11 +65,11 @@ export const RolesManagementView: React.FC<Props> = ({ company, roles, onUpdate 
   };
 
   return (
-    <Card 
-      title="Manajemen Role" 
+    <Card
+      title="Manajemen Role"
       action={
-        <Button 
-          onClick={() => { setRoleForm({ id: '', name: '', permissions: [] }); setIsRoleModalOpen(true); }} 
+        <Button
+          onClick={() => { setRoleForm({ id: '', name: '', permissions: [] }); setIsRoleModalOpen(true); }}
           variant="secondary"
           className="bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100"
           size="md"
@@ -79,7 +79,7 @@ export const RolesManagementView: React.FC<Props> = ({ company, roles, onUpdate 
         </Button>
       }
     >
-      <Table>
+      <Table className='px-4'>
         <TableHeader>
           <TableRow>
             <TableCell isHeader>Role</TableCell>
@@ -101,18 +101,18 @@ export const RolesManagementView: React.FC<Props> = ({ company, roles, onUpdate 
               </TableCell>
               <TableCell className="text-center">
                 <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className="p-2 text-indigo-500 hover:bg-indigo-50"
                     onClick={() => { setRoleForm({ id: r.id, name: r.name, permissions: r.permissions }); setIsRoleModalOpen(true); }}
                   >
                     <Edit2 size={16} />
                   </Button>
                   {!r.is_system && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className="p-2 text-red-400 hover:bg-red-50"
                       onClick={() => { setPendingDelete(r.id); setIsConfirmModalOpen(true); }}
                     >

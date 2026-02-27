@@ -16,3 +16,4 @@ export * from './Textarea';
 export * from './SearchInput';
 export * from './ComboBox';
 export * from './Checkbox';
+export * from './DateFilterDropdown';

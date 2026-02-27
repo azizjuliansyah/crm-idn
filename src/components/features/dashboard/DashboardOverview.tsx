@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H3, Subtext, Label, Badge } from '@/components/ui';
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H3, Subtext, Label, Badge, H1, H2 } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { Company } from '@/lib/types';
 import {
@@ -145,8 +145,8 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
               <ArrowUpRight size={12} /> 12.5%
             </div>
           </div>
-          <Subtext className="text-blue-50 text-[10px]  uppercase tracking-[0.15em] mb-1 relative z-10">Total Leads</Subtext>
-          <H3 className="text-3xl  text-white tracking-tight relative z-10">{stats.totalLeads}</H3>
+          <Subtext className="!text-blue-50 text-[10px]  uppercase tracking-[0.15em] mb-1 relative z-10">Total Leads</Subtext>
+          <H2 className="text-white">{stats.totalLeads}</H2>
         </div>
 
         <div className="bg-gradient-to-br from-violet-700 via-violet-600 to-purple-600 p-6 rounded-2xl shadow-xl shadow-purple-100 hover:translate-y-[-4px] transition-all group overflow-hidden relative">
@@ -159,8 +159,8 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
               <ArrowUpRight size={12} /> 8.2%
             </div>
           </div>
-          <Subtext className="text-purple-50 text-[10px]  uppercase tracking-[0.15em] mb-1 relative z-10">Active Deals</Subtext>
-          <H3 className="text-3xl  text-white tracking-tight relative z-10">{stats.totalDeals}</H3>
+          <Subtext className="!text-purple-50 text-[10px]  uppercase tracking-[0.15em] mb-1 relative z-10">Active Deals</Subtext>
+          <H2 className="text-white">{stats.totalDeals}</H2>
         </div>
 
         <div className="bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 p-6 rounded-2xl shadow-xl shadow-emerald-100 hover:translate-y-[-4px] transition-all group overflow-hidden relative">
@@ -173,8 +173,8 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
               <ArrowDownRight size={12} /> 3.1%
             </div>
           </div>
-          <Subtext className="text-emerald-50 text-[10px]  uppercase tracking-[0.15em] mb-1 relative z-10">Total Revenue</Subtext>
-          <H3 className="text-3xl  text-white tracking-tight relative z-10">{formatIDR(stats.totalRevenue)}</H3>
+          <Subtext className="!text-emerald-50 text-[10px]  uppercase tracking-[0.15em] mb-1 relative z-10">Total Revenue</Subtext>
+          <H2 className="text-white">{formatIDR(stats.totalRevenue)}</H2>
         </div>
 
         <div className="bg-gradient-to-br from-rose-600 via-rose-500 to-pink-500 p-6 rounded-2xl shadow-xl shadow-rose-100 hover:translate-y-[-4px] transition-all group overflow-hidden relative">
@@ -187,8 +187,8 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
               Live
             </div>
           </div>
-          <Subtext className="text-rose-50 text-[10px]  uppercase tracking-[0.15em] mb-1 relative z-10">Support Tickets</Subtext>
-          <H3 className="text-3xl  text-white tracking-tight relative z-10">{stats.activeTickets}</H3>
+          <Subtext className="!text-rose-50 text-[10px]  uppercase tracking-[0.15em] mb-1 relative z-10">Support Tickets</Subtext>
+          <H2 className="text-white">{stats.activeTickets}</H2>
         </div>
       </div>
 

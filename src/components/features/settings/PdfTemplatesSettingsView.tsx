@@ -1,170 +1,491 @@
-import React, { useState, useEffect } from 'react';
-import { Button, H3, Subtext, Modal } from '@/components/ui';
+'use client';
 
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Company, DocumentTemplateSetting } from '@/lib/types';
-import { Loader2, Save, FileText, Check, LayoutTemplate } from 'lucide-react';
+import {
+  FileText, FileCheck, Loader2, Save, CheckCircle2,
+  Layout, Palette, Check, Star, Settings2, Image as ImageIcon,
+  Upload, X, Eye, ExternalLink
+} from 'lucide-react';
+import { Modal } from '@/components/ui';
+import { jsPDF } from 'jspdf';
+import { generateTemplate1, generateTemplate5, generateTemplate6 } from '@/lib/pdf-templates';
 
 interface Props {
   company: Company;
 }
 
-const DOCUMENT_TYPES = [
-  { id: 'quotation', label: 'Penawaran Harga (Quotation)' },
-  { id: 'proforma', label: 'Proforma Invoice' },
-  { id: 'invoice', label: 'Invoice / Faktur' },
-];
+const compressImage = (file: File, maxWidth: number = 800, quality: number = 0.8): Promise<Blob> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        // Clear canvas with transparency
+        ctx?.clearRect(0, 0, width, height);
+        ctx?.drawImage(img, 0, 0, width, height);
 
-const TEMPLATE_OPTIONS = [
-  { id: 'modern', name: 'Modern Clean', description: 'Tampilan bersih dengan aksen warna perusahaan.' },
-  { id: 'classic', name: 'Classic Professional', description: 'Gaya formal dan tradisional.' },
-  { id: 'bold', name: 'Bold Header', description: 'Header tebal untuk penekanan branding.' },
-];
+        // Use image/png to preserve transparency
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error('Compression failed'));
+        }, 'image/png');
+      };
+    };
+    reader.onerror = (error) => reject(error);
+  });
+};
+
+
 
 export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
   const [settings, setSettings] = useState<DocumentTemplateSetting[]>([]);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'quotation' | 'proforma' | 'invoice'>('quotation');
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
-    isOpen: false, title: '', message: '', type: 'success'
+  const [isConfiguring, setIsConfiguring] = useState<string | null>(null);
+  const [uploading, setUploading] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewTitle, setPreviewTitle] = useState('');
+
+  const [configForm, setConfigForm] = useState<any>({
+    top_contact: '',
+    payment_info: '',
+    note_footer: '',
+    signature_name: '',
+    signature_title: '',
+    signature_company: '',
+    footer_bar_text: '',
+    footer_text: '',
+    logo_url: '',
+    signature_url: ''
   });
 
-  useEffect(() => {
-    fetchSettings();
-  }, [company.id]);
-
-  const fetchSettings = async () => {
+  const fetchData = useCallback(async () => {
+    if (!company?.id) return;
     setLoading(true);
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('document_template_settings')
         .select('*')
         .eq('company_id', company.id);
 
-      if (data) setSettings(data);
+      if (error) throw error;
+      setSettings(data || []);
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [company.id]);
 
-  const getCurrentSetting = (type: string) => {
-    return settings.find(s => s.document_type === type);
-  };
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
-  const handleSave = async (templateId: string) => {
+  const handleUpdateTemplate = async (docType: 'quotation' | 'invoice', templateId: string) => {
     setIsProcessing(true);
     try {
-      const current = getCurrentSetting(activeTab);
+      const existing = settings.find(s => s.document_type === docType);
+      const { error } = await supabase
+        .from('document_template_settings')
+        .upsert({
+          company_id: company.id,
+          document_type: docType,
+          template_id: templateId,
+          config: existing?.config || {},
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'company_id, document_type' });
 
-      const payload = {
-        company_id: company.id,
-        document_type: activeTab,
-        template_id: templateId,
-        config: current?.config || {}, // Preserve existing config or init empty
-        updated_at: new Date().toISOString()
-      };
-
-      if (current) {
-        await supabase
-          .from('document_template_settings')
-          .update(payload)
-          .eq('id', current.id);
-      } else {
-        await supabase
-          .from('document_template_settings')
-          .insert(payload);
-      }
-
-      await fetchSettings();
-      setNotification({ isOpen: true, title: 'Berhasil', message: `Template ${activeTab} berhasil disimpan.`, type: 'success' });
+      if (error) throw error;
+      await fetchData();
     } catch (err: any) {
-      setNotification({ isOpen: true, title: 'Gagal', message: err.message, type: 'error' });
+      alert(err.message);
     } finally {
       setIsProcessing(false);
     }
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-blue-600 mb-4" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Memuat Pengaturan Template...</Subtext></div>;
+  const openConfig = (docType: string) => {
+    const s = settings.find(st => st.document_type === docType);
+    if (s) {
+      setConfigForm({
+        top_contact: s.config?.top_contact || '',
+        payment_info: s.config?.payment_info || '',
+        note_footer: s.config?.note_footer || '',
+        signature_name: s.config?.signature_name || '',
+        signature_title: s.config?.signature_title || '',
+        signature_company: s.config?.signature_company || '',
+        footer_bar_text: s.config?.footer_bar_text || '',
+        footer_text: s.config?.footer_text || '',
+        logo_url: s.config?.logo_url || '',
+        signature_url: s.config?.signature_url || ''
+      });
+      setIsConfiguring(docType);
+    } else {
+      setConfigForm({
+        top_contact: '',
+        payment_info: '',
+        note_footer: '',
+        signature_name: '',
+        signature_title: '',
+        signature_company: '',
+        footer_bar_text: '',
+        footer_text: '',
+        logo_url: '',
+        signature_url: ''
+      });
+      setIsConfiguring(docType);
+    }
+  };
 
-  const currentTemplateId = getCurrentSetting(activeTab)?.template_id || 'modern'; // Default to modern
+  const handleSaveConfig = async () => {
+    if (!isConfiguring) return;
+    setIsProcessing(true);
+    try {
+      const existing = settings.find(s => s.document_type === isConfiguring);
+
+      if (existing) {
+        const { error } = await supabase
+          .from('document_template_settings')
+          .update({
+            config: configForm,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existing.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('document_template_settings')
+          .insert({
+            company_id: company.id,
+            document_type: isConfiguring,
+            template_id: 'template1',
+            config: configForm,
+            updated_at: new Date().toISOString()
+          });
+
+        if (error) throw error;
+      }
+
+      await fetchData();
+      setIsConfiguring(null);
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleUploadImage = async (e: React.ChangeEvent<HTMLInputElement>, field: 'logo_url' | 'signature_url') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(field);
+    try {
+      const compressedBlob = await compressImage(file);
+      const fileName = `template-assets/${company.id}-${field}-${Date.now()}.png`;
+
+      const { error: upErr } = await supabase.storage.from('platform').upload(fileName, compressedBlob, { contentType: 'image/png' });
+      if (upErr) throw upErr;
+
+      const { data: { publicUrl } } = supabase.storage.from('platform').getPublicUrl(fileName);
+      setConfigForm({ ...configForm, [field]: publicUrl });
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setUploading(null);
+    }
+  };
+
+  const getActiveTemplate = (docType: string) => {
+    return settings.find(s => s.document_type === docType)?.template_id || 'template1';
+  };
+
+  const formatIDR = (num: number = 0) => {
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num).replace('Rp', 'Rp');
+  };
+
+  const formatDateString = (dateStr: string | null) => {
+    if (!dateStr) return '-';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return dateStr;
+  };
+
+  const handlePreview = async (templateId: string, templateName: string) => {
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const padX = 18;
+
+    const qData = {
+      number: 'QT/2025/SAMPLE/001',
+      date: new Date().toISOString().split('T')[0],
+      expiry_date: '2025-12-31',
+      subtotal: 10000000,
+      discount_value: 0,
+      tax_value: 1100000,
+      total: 11100000,
+      client: {
+        name: 'John Doe (Sample)',
+        salutation: 'Bapak',
+        address: 'Jl. Sudirman No. 123, Jakarta Pusat',
+        whatsapp: '08123456789',
+        email: 'john.sample@example.com',
+        client_company: { name: 'PT Sampel Teknologi Indonesia' }
+      },
+      quotation_items: [
+        { products: { name: 'Profesional support' }, description: 'Mikrotik BGP + Server - Juli 2025', qty: 1, unit_name: 'pax', price: 3800000, total: 3800000 },
+        { products: { name: 'Cloud Infrastructure' }, description: 'Dedicated resources storage enterprise', qty: 1, unit_name: 'unit', price: 6200000, total: 6200000 }
+      ]
+    };
+
+    const s = settings.find(st => st.document_type === 'quotation');
+    const config = s?.config || {
+      top_contact: '0851-XXXX-XXXX  |  info@spiznet.com  |  www.spiznet.com',
+      payment_info: 'Bank MANDIRI 1650003926038 a.n. SPIZNET',
+      note_footer: '- Please send payment confirmation\n- Terms & conditions apply',
+      signature_name: 'Administrator',
+      signature_company: company.name,
+      footer_bar_text: 'Thank you for your business',
+      footer_text: `${company.name} | Professional Services`
+    };
+
+    if (templateId === 'template5') {
+      await generateTemplate5(doc, qData, config, company, pageWidth, padX);
+    } else if (templateId === 'template6') {
+      await generateTemplate6(doc, qData, config, company, pageWidth, padX);
+    } else if (templateId === 'template1') {
+      await generateTemplate1(doc, qData, config, company, pageWidth, padX);
+    }
+
+    const blob = doc.output('blob');
+    const url = URL.createObjectURL(blob);
+    setPreviewUrl(url);
+    setPreviewTitle(templateName);
+  };
+
+  const openInNewTab = () => {
+    if (previewUrl) {
+      window.open(previewUrl, '_blank');
+    }
+  };
 
   return (
-    <div className="space-y-8 max-w-4xl">
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-        <div className="p-8 border-b border-gray-50">
-          <H3 className="text-lg text-gray-900 tracking-tight">Desain Dokumen PDF</H3>
-          <Subtext className="text-xs text-gray-400 font-medium mt-1 tracking-tight">Pilih tata letak dan desain untuk dokumen bisnis Anda.</Subtext>
-        </div>
-
-        <div className="flex border-b border-gray-100">
-          {DOCUMENT_TYPES.map(type => (
-            <Button
-              key={type.id}
-              variant="ghost"
-              onClick={() => setActiveTab(type.id as any)}
-              className={`flex-1 !py-4 !text-xs  uppercase tracking-tight transition-all !rounded-none border-b-2 shadow-none ${activeTab === type.id
-                ? 'border-blue-600 !text-blue-600 bg-blue-50/50'
-                : 'border-transparent !text-gray-400 hover:!text-gray-600 hover:bg-gray-50'
-                }`}
-            >
-              {type.label}
-            </Button>
-          ))}
-        </div>
-
-        <div className="p-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {TEMPLATE_OPTIONS.map(template => {
-              const isActive = currentTemplateId === template.id;
-              return (
-                <div
-                  key={template.id}
-                  onClick={() => !isProcessing && handleSave(template.id)}
-                  className={`relative border-2 rounded-xl p-4 cursor-pointer transition-all hover:shadow-md ${isActive
-                    ? 'border-blue-600 bg-blue-50/30'
-                    : 'border-gray-100 hover:border-gray-200 bg-white'
-                    }`}
-                >
-                  {isActive && (
-                    <div className="absolute top-3 right-3 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-sm">
-                      <Check size={14} strokeWidth={3} />
-                    </div>
-                  )}
-
-                  {/* Mock Preview */}
-                  <div className="aspect-[210/297] bg-white border border-gray-100 shadow-sm rounded-lg mb-4 overflow-hidden flex flex-col p-2">
-                    {/* Header Mock */}
-                    <div className={`h-8 w-full mb-2 rounded ${template.id === 'bold' ? 'bg-gray-800' : 'bg-gray-100'}`}></div>
-                    <div className="space-y-1">
-                      <div className="h-1 w-1/3 bg-gray-100 rounded"></div>
-                      <div className="h-1 w-1/4 bg-gray-50 rounded"></div>
-                    </div>
-                    <div className="mt-4 space-y-2">
-                      <div className="h-2 w-full bg-gray-50 rounded"></div>
-                      <div className="h-2 w-full bg-gray-50 rounded"></div>
-                      <div className="h-2 w-full bg-gray-50 rounded"></div>
-                    </div>
-                  </div>
-
-                  <h4 className={`text-sm tracking-tight ${isActive ? 'text-blue-700' : 'text-gray-900'}`}>{template.name}</h4>
-                  <Subtext className="text-xs text-gray-400 mt-1 leading-relaxed tracking-tight">{template.description}</Subtext>
-                </div>
-              );
-            })}
+    <div className="space-y-10 animate-in fade-in duration-500 pb-20">
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="p-10 border-b border-gray-50 bg-gray-50/30">
+          <div className="flex items-center gap-6">
+            <div className="w-16 h-16 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-blue-100">
+              <Palette size={32} />
+            </div>
+            <div>
+              <h3 className="text-2xl font-medium text-gray-900 tracking-tight">Katalog Template Dokumen</h3>
+              <p className="text-sm text-gray-400 font-medium">Pilih gaya visual untuk penawaran dan invoice perusahaan Anda.</p>
+            </div>
           </div>
+        </div>
+
+        <div className="p-10 space-y-12">
+          {['quotation', 'invoice'].map((type) => (
+            <div key={type} className="space-y-6">
+              <div className="flex items-center justify-between px-2">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${type === 'quotation' ? 'bg-blue-50 text-blue-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                    {type === 'quotation' ? <FileText size={20} /> : <FileCheck size={20} />}
+                  </div>
+                  <div>
+                    <h4 className="text-[10px] font-medium text-gray-400 uppercase tracking-[0.2em]">Dokumen</h4>
+                    <h5 className="text-lg font-medium text-gray-900 capitalize">{type}</h5>
+                  </div>
+                </div>
+                <button
+                  onClick={() => openConfig(type)}
+                  className="px-5 py-2.5 bg-white border border-gray-200 rounded-xl text-[10px] font-medium uppercase tracking-widest text-gray-600 hover:bg-gray-50 transition-all flex items-center gap-2"
+                >
+                  <Settings2 size={14} /> Konfigurasi Konten
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[
+                  { id: 'template1', name: 'Classic Blue', desc: 'Desain standar yang bersih dan profesional.' },
+                  { id: 'template5', name: 'Premium Teal Banner', desc: 'Modern dengan header warna solid yang elegan.' },
+                  { id: 'template6', name: 'IDN Professional', desc: 'Desain formal IDN template dengan banner terperinci.' },
+                ].map((tmpl) => {
+                  const isActive = getActiveTemplate(type) === tmpl.id;
+                  return (
+                    <div
+                      key={tmpl.id}
+                      onClick={() => handleUpdateTemplate(type as any, tmpl.id)}
+                      className={`relative p-6 rounded-3xl border transition-all cursor-pointer group flex flex-col justify-between h-48 ${isActive ? 'bg-indigo-50/50 border-indigo-200 shadow-lg shadow-indigo-100/50' : 'bg-white border-gray-100 hover:border-indigo-100'}`}
+                    >
+                      {isActive && (
+                        <div className="absolute -top-2 -right-2 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-lg border-2 border-white z-10 animate-in zoom-in">
+                          <Check size={16} strokeWidth={4} />
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <h6 className="font-medium text-gray-900 tracking-tight">{tmpl.name}</h6>
+                          {tmpl.id === 'template5' && <Star size={14} className="text-amber-400 fill-amber-400" />}
+                        </div>
+                        <p className="text-[11px] text-gray-400 leading-relaxed">{tmpl.desc}</p>
+                      </div>
+
+                      <div className="flex items-center justify-between mt-4">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handlePreview(tmpl.id, tmpl.name); }}
+                          className="px-4 py-2 bg-white border border-gray-100 rounded-lg text-[10px] font-medium uppercase tracking-widest text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm flex items-center gap-2"
+                        >
+                          <Eye size={12} /> Preview
+                        </button>
+                        {isActive && <span className="text-[9px] font-medium text-indigo-400 uppercase tracking-widest">AKTIF</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      <Modal isOpen={notification.isOpen} onClose={() => setNotification({ ...notification, isOpen: false })} title="" size="sm">
-        <div className="flex flex-col items-center py-6 text-center">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${notification.type === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
-            }`}>
-            {notification.type === 'success' ? <Check size={24} /> : <FileText size={24} />}
+      <Modal
+        isOpen={isConfiguring !== null}
+        onClose={() => setIsConfiguring(null)}
+        title={`Konfigurasi Dokumen: ${isConfiguring}`}
+        size="lg"
+        footer={<button onClick={handleSaveConfig} disabled={isProcessing} className="px-10 py-4 bg-indigo-600 text-white rounded-xl font-medium text-xs uppercase tracking-widest shadow-xl shadow-indigo-100 flex items-center gap-2">{isProcessing && <Loader2 className="animate-spin" size={14} />} Simpan Konfigurasi</button>}
+      >
+        <div className="space-y-10 py-4">
+          {/* Section Header */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 pb-2 border-b border-gray-50">
+              <Layout size={16} className="text-indigo-500" />
+              <h4 className="text-[11px] font-medium uppercase tracking-widest text-gray-900">Branding & Header</h4>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest">Logo Kustom</p>
+                <div className="flex items-center gap-4">
+                  <div className="w-20 h-20 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-center overflow-hidden relative shadow-inner">
+                    {configForm.logo_url ? <img src={configForm.logo_url} className="w-full h-full object-contain p-2" /> : <ImageIcon size={24} className="text-gray-200" />}
+                    {uploading === 'logo_url' && <div className="absolute inset-0 bg-white/80 flex items-center justify-center"><Loader2 className="animate-spin" size={16} /></div>}
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-medium uppercase tracking-widest cursor-pointer hover:bg-indigo-100 transition-all">
+                      Upload Logo
+                      <input type="file" className="hidden" accept="image/*" onChange={e => handleUploadImage(e, 'logo_url')} disabled={!!uploading} />
+                    </label>
+                    {configForm.logo_url && <button onClick={() => setConfigForm({ ...configForm, logo_url: '' })} className="text-[9px] font-medium text-rose-500 uppercase tracking-widest hover:underline">Hapus Logo</button>}
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-medium text-gray-400 uppercase tracking-widest ml-1">Kontak Header (Single Line)</label>
+                <input type="text" value={configForm.top_contact} onChange={e => setConfigForm({ ...configForm, top_contact: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-xl font-bold text-xs" placeholder="Misal: 0851-XXXX | info@company.com" />
+              </div>
+            </div>
           </div>
-          <H3 className="text-lg  text-gray-900 mb-2">{notification.title}</H3>
-          <Subtext className="text-sm text-gray-500 font-medium mb-6">{notification.message}</Subtext>
-          <Button onClick={() => setNotification({ ...notification, isOpen: false })} className="w-full !py-3 shadow-xl">Tutup</Button>
+
+          {/* Section Payment */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 pb-2 border-b border-gray-50">
+              <Settings2 size={16} className="text-emerald-500" />
+              <h4 className="text-[11px] font-medium uppercase tracking-widest text-gray-900">Informasi Pembayaran & Catatan</h4>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-medium text-gray-400 uppercase tracking-widest ml-1">Instruksi Pembayaran</label>
+                <textarea value={configForm.payment_info} onChange={e => setConfigForm({ ...configForm, payment_info: e.target.value })} className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-xl font-bold text-xs h-24 resize-none" placeholder="Bank Mandiri No. Rek ..." />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-medium text-gray-400 uppercase tracking-widest ml-1">Catatan Kaki (Note)</label>
+                <textarea value={configForm.note_footer} onChange={e => setConfigForm({ ...configForm, note_footer: e.target.value })} className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-xl font-bold text-xs h-24 resize-none" placeholder="- Berlaku 7 hari..." />
+              </div>
+            </div>
+          </div>
+
+          {/* Section Signature */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 pb-2 border-b border-gray-50">
+              <Star size={16} className="text-amber-500" />
+              <h4 className="text-[11px] font-medium uppercase tracking-widest text-gray-900">Tanda Tangan & Footer Bar</h4>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+              <div className="space-y-4">
+                <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest">Gambar Tanda Tangan (PNG Transparan)</p>
+                <div className="flex items-center gap-4">
+                  <div className="w-40 h-24 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-center overflow-hidden relative shadow-inner">
+                    {configForm.signature_url ? <img src={configForm.signature_url} className="w-full h-full object-contain" /> : <ImageIcon size={24} className="text-gray-200" />}
+                    {uploading === 'signature_url' && <div className="absolute inset-0 bg-white/80 flex items-center justify-center"><Loader2 className="animate-spin" size={16} /></div>}
+                  </div>
+                  <label className="px-4 py-2 bg-amber-50 text-amber-600 rounded-lg text-[10px] font-medium uppercase tracking-widest cursor-pointer hover:bg-amber-100 transition-all">
+                    Upload TTD
+                    <input type="file" className="hidden" accept="image/*" onChange={e => handleUploadImage(e, 'signature_url')} disabled={!!uploading} />
+                  </label>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-medium text-gray-400 uppercase tracking-widest ml-1">Nama Penanda Tangan</label>
+                  <input type="text" value={configForm.signature_name} onChange={e => setConfigForm({ ...configForm, signature_name: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-xl font-bold text-xs" placeholder="John Doe" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-medium text-gray-400 uppercase tracking-widest ml-1">Nama Perusahaan Penanda Tangan</label>
+                  <input type="text" value={configForm.signature_company} onChange={e => setConfigForm({ ...configForm, signature_company: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-xl font-bold text-xs" placeholder={company.name} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-medium text-gray-400 uppercase tracking-widest ml-1">Teks di Bar Footer</label>
+                <input type="text" value={configForm.footer_bar_text} onChange={e => setConfigForm({ ...configForm, footer_bar_text: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-xl font-bold text-xs" placeholder="Thank you for your business" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-medium text-gray-400 uppercase tracking-widest ml-1">Teks Footer Kecil</label>
+                <input type="text" value={configForm.footer_text} onChange={e => setConfigForm({ ...configForm, footer_text: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-xl font-bold text-xs" placeholder="Your Company | Professional Solution" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* PDF PREVIEW MODAL */}
+      <Modal
+        isOpen={!!previewUrl}
+        onClose={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }}
+        title={`Preview Template: ${previewTitle}`}
+        size="xl"
+      >
+        <div className="flex flex-col h-[75vh]">
+          <div className="flex items-center justify-between p-3 bg-gray-50 border-b border-gray-200">
+            <p className="text-[11px] text-gray-500 font-medium">Beberapa browser mungkin memblokir pratinjau di dalam frame.</p>
+            <button
+              onClick={openInNewTab}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-[10px] font-medium uppercase tracking-widest flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-sm"
+            >
+              <ExternalLink size={14} /> Buka di Tab Baru
+            </button>
+          </div>
+          <div className="flex-1 w-full bg-gray-100 rounded-b-xl overflow-hidden shadow-inner border border-gray-200">
+            {previewUrl && <iframe src={previewUrl} className="w-full h-full" title="PDF Preview" />}
+          </div>
         </div>
       </Modal>
     </div>

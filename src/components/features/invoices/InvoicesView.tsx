@@ -339,11 +339,10 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
         <Button
           onClick={() => router.push('/dashboard/sales/invoices/create')}
           variant="primary"
-          className="!px-6 py-2.5  text-[10px] uppercase tracking-tight shadow-lg shadow-indigo-100 shrink-0"
         >
           <div className="flex items-center gap-2">
             <Plus size={14} strokeWidth={3} />
-            <Label>Buat Invoice</Label>
+            Buat Invoice
           </div>
         </Button>
       </div>
@@ -376,9 +375,12 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
                   </Button>
                 </TableCell>
                 <TableCell className="py-5 px-6">
-                  <div className="flex flex-col">
-                    <Label className="text-xs text-gray-900 tracking-tight">{inv.client?.name || 'Umum'}</Label>
-                    <Label className="text-[10px] !text-gray-400 mt-1 uppercase tracking-tight italic">{inv.client?.client_company?.name || 'Personal'}</Label>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center  text-[10px] uppercase shadow-sm border border-indigo-100">{inv.client?.name.charAt(0)}</div>
+                    <div>
+                      <Subtext className="text-xs text-gray-900 tracking-tight">{inv.client?.name}</Subtext>
+                      <Subtext className="text-[10px] !text-gray-400 mt-1 uppercase tracking-tight italic">{inv.client?.client_company?.name || 'Personal'}</Subtext>
+                    </div>
                   </div>
                 </TableCell>
                 <TableCell className="text-right  text-indigo-600 text-xs py-5 px-6 bg-indigo-50/5 group-hover:bg-indigo-50/20">{formatIDR(inv.total)}</TableCell>

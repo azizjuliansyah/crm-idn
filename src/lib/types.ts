@@ -144,6 +144,7 @@ export interface Deal {
   email?: string;
   whatsapp?: string;
   expected_value?: number;
+  probability?: number;
   follow_up?: number;
   follow_up_date?: string | null;
   follow_up_notes?: string | null;

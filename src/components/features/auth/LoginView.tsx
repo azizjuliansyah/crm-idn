@@ -261,7 +261,7 @@ export const LoginView: React.FC<Props> = ({ platformSettings }) => {
               type="submit"
               isLoading={loading}
               variant="primary"
-              className="w-full !py-6 bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-100/50 rounded-2xl font-bold text-sm tracking-tight flex items-center justify-center gap-2 group !normal-case"
+              className="w-full shadow-xl shadow-blue-100/50 font-bold "
               rightIcon={!loading && <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />}
             >
               Masuk Sekarang

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Select, Button, Table, TableHeader, TableBody, TableRow, TableCell, H3, Subtext, Label, Modal, EmptyState, SearchInput } from '@/components/ui';
+import { Select, Button, Table, TableHeader, TableBody, TableRow, TableCell, H3, Subtext, Label, Modal, EmptyState, SearchInput, Badge } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -11,7 +11,8 @@ import {
   Plus, Search, Edit2, Trash2, Loader2, FileText,
   ChevronRight, ArrowUpDown, ChevronUp, ChevronDown,
   AlertTriangle, CheckCircle2, MoreVertical, X, Filter,
-  FileDown
+  FileDown, FileCheck,
+  Clock
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -510,6 +511,7 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
           <Table>
             <TableHeader className="sticky top-0 z-10 bg-gray-50/80 backdrop-blur-md border-b border-gray-100">
               <TableRow className="hover:bg-transparent">
+                <TableCell isHeader>ID</TableCell>
                 <TableCell onClick={() => handleSort('date')} isHeader className="cursor-pointer">Tanggal</TableCell>
                 <TableCell onClick={() => handleSort('number')} isHeader className="cursor-pointer">Nomor</TableCell>
                 <TableCell onClick={() => handleSort('client')} isHeader className="cursor-pointer">Pelanggan</TableCell>
@@ -521,33 +523,38 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
             <TableBody>
               {filteredQuotations.map(q => (
                 <TableRow key={q.id} className="group hover:bg-indigo-50/30 transition-colors border-b border-gray-50/50 last:border-0">
-                  <TableCell className="text-[11px] text-gray-500 py-5 px-6">{formatDateString(q.date)}</TableCell>
-                  <TableCell className="py-5 px-6">
-                    <Button
-                      onClick={() => router.push(`/dashboard/sales/quotations/${q.id}`)}
-                      className="text-indigo-600 text-xs tracking-tight hover:underline text-left flex items-center gap-1.5"
-                    >
-                      <FileText size={12} className="text-indigo-400" />
-                      {q.number}
-                    </Button>
+                  <TableCell className="text-[10px] text-gray-500 py-5">#{q.id}</TableCell>
+                  <TableCell className="py-5">
+                    <div className="flex items-center gap-2 text-gray-400">
+                      <Clock size={12} strokeWidth={2.5} />
+                      <Label className="text-[11px] ">{new Date(q.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</Label>
+                    </div>
+                  </TableCell>
+                  <TableCell className="py-5">
+                    <Badge variant="secondary" className="gap-1.5 rounded-lg">
+                      <FileCheck size={10} strokeWidth={2.5} />
+                      <Label className="!text-indigo-600">{q.number}</Label>
+                    </Badge>
                   </TableCell>
                   <TableCell className="py-5 px-6">
-                    <div className="flex flex-col">
-                      <Label className="text-xs text-gray-900 tracking-tight">{q.client?.name || 'Umum'}</Label>
-                      <Label className="text-[10px] !text-gray-400 mt-1 uppercase tracking-tight italic">
-                        {q.client?.client_company?.name || 'Personal'}
-                      </Label>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center  text-[10px] uppercase shadow-sm border border-indigo-100">{q.client?.name.charAt(0)}</div>
+                      <div>
+                        <Subtext className="text-xs text-gray-900 tracking-tight">{q.client?.name}</Subtext>
+                        <Subtext className="text-[10px] !text-gray-400 mt-1 uppercase tracking-tight italic">{q.client?.client_company?.name || 'Personal'}</Subtext>
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell className="text-right text-indigo-600 text-xs py-5 px-6 bg-indigo-50/5 group-hover:bg-indigo-50/20">{formatIDR(q.total)}</TableCell>
                   <TableCell className="text-center py-5 px-6">
-                    <Label className={`px-3 py-1 rounded-full text-[9px] uppercase tracking-tight border transition-all duration-300 ${q.status === 'Draft' ? 'bg-gray-50 text-gray-400 border-gray-200' :
-                      q.status === 'Sent' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                        q.status === 'Accepted' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                          'bg-rose-50 text-rose-600 border-rose-100'
-                      }`}>
+                    <Badge variant={
+                      q.status === 'Draft' ? 'neutral' :
+                        q.status === 'Sent' ? 'indigo' :
+                          q.status === 'Accepted' ? 'emerald' :
+                            'rose'
+                    }>
                       {q.status}
-                    </Label>
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-center gap-2">
@@ -555,16 +562,27 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDownloadPDF(q)}
-                        className="!p-2 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors"
+                        className="!p-2 !text-emerald-500 hover:!bg-emerald-50 rounded-lg transition-colors"
                         title="Unduh PDF"
                       >
                         <FileDown size={14} />
                       </Button>
+                      {q.status === 'Accepted' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => router.push(`/dashboard/sales/proformas/create?quotationId=${q.id}`)}
+                          className="!p-2 !text-amber-500 hover:!bg-amber-50 rounded-lg transition-colors"
+                          title="Jadikan Proforma"
+                        >
+                          <FileCheck size={14} />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => router.push(`/dashboard/sales/quotations/${q.id}`)}
-                        className="!p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                        className="!p-2 !text-blue-500 hover:!bg-blue-50 rounded-lg transition-colors"
                         title="Edit"
                       >
                         <Edit2 size={14} />
@@ -573,7 +591,7 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
                         variant="ghost"
                         size="sm"
                         onClick={() => setConfirmDelete({ isOpen: true, id: q.id, number: q.number })}
-                        className="!p-2 text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg"
+                        className="!p-2 !text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg"
                         title="Hapus"
                       >
                         <Trash2 size={14} />

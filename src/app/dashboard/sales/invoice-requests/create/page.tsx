@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useDashboard } from '@/app/dashboard/DashboardContext';
 import { InvoiceRequestFormView } from '@/components/features/invoices/InvoiceRequestFormView';
 import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 
 export default function CreateInvoiceRequestsPage() {
   const { activeCompany: company, user } = useDashboard();
@@ -12,14 +13,16 @@ export default function CreateInvoiceRequestsPage() {
   if (!company || !user) return null;
 
   return (
-    <InvoiceRequestFormView 
-      company={company} 
-      user={user}
-      onNavigate={(path) => {
-        if (path === 'request_invoice') {
-          router.push('/dashboard/sales/invoice-requests');
-        }
-      }}
-    />
+    <Suspense fallback={<div className="flex justify-center p-24"><Loader2 className="animate-spin text-indigo-600" /></div>}>
+      <InvoiceRequestFormView
+        company={company}
+        user={user}
+        onNavigate={(path) => {
+          if (path === 'request_invoice') {
+            router.push('/dashboard/sales/invoice-requests');
+          }
+        }}
+      />
+    </Suspense>
   );
 }

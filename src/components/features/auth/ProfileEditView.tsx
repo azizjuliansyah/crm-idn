@@ -33,7 +33,7 @@ const compressImage = (file: File, maxWidth: number = 600, quality: number = 0.8
         const ctx = canvas.getContext('2d');
         ctx?.clearRect(0, 0, width, height);
         ctx?.drawImage(img, 0, 0, width, height);
-        
+
         canvas.toBlob((blob) => {
           if (blob) resolve(blob);
           else reject(new Error('Compression failed'));
@@ -48,7 +48,7 @@ export const ProfileEditView: React.FC<Props> = ({ user, onUpdate }) => {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
-  
+
   const [form, setForm] = useState({
     full_name: user.full_name,
     whatsapp: user.whatsapp || '',
@@ -68,7 +68,7 @@ export const ProfileEditView: React.FC<Props> = ({ user, onUpdate }) => {
       const { error: uploadError } = await supabase.storage
         .from('platform')
         .upload(fileName, compressedBlob, { contentType: 'image/png' });
-      
+
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage.from('platform').getPublicUrl(fileName);
@@ -116,7 +116,7 @@ export const ProfileEditView: React.FC<Props> = ({ user, onUpdate }) => {
 
   return (
     <div className="max-w-2xl">
-      <Card 
+      <Card
         title={
           <div>
             <H3 className="text-2xl normal-case">Profil Saya</H3>
@@ -127,11 +127,11 @@ export const ProfileEditView: React.FC<Props> = ({ user, onUpdate }) => {
         <div className="p-10 space-y-12">
           <div className="flex flex-col sm:flex-row items-center gap-8">
             <div className="relative group">
-              <Avatar 
-                src={user.avatar_url || ''} 
-                name={user.full_name} 
-                size="xl" 
-                shape="square" 
+              <Avatar
+                src={user.avatar_url || ''}
+                name={user.full_name}
+                size="xl"
+                shape="square"
                 className="w-32 h-32 text-4xl shadow-inner border-gray-100"
               />
               {uploading && (
@@ -139,10 +139,10 @@ export const ProfileEditView: React.FC<Props> = ({ user, onUpdate }) => {
                   <Loader2 className="animate-spin text-blue-600" size={24} />
                 </div>
               )}
-              <Label className="absolute -bottom-2 -right-2 w-10 h-10 bg-gray-900 text-white rounded-lg flex items-center justify-center cursor-pointer hover:bg-black transition-all shadow-lg active:scale-90 border-2 border-white aspect-square z-20">
+              <label className="absolute -bottom-2 -right-2 w-10 h-10 bg-gray-900 text-white rounded-lg flex items-center justify-center cursor-pointer hover:bg-black transition-all shadow-lg active:scale-90 border-2 border-white aspect-square z-20">
                 <Camera size={18} />
-                <Input type="file" className="hidden" accept="image/*" onChange={handleUploadAvatar} disabled={uploading} />
-              </Label>
+                <input type="file" className="hidden" accept="image/*" onChange={handleUploadAvatar} disabled={uploading} />
+              </label>
             </div>
             <div className="text-center sm:text-left space-y-1">
               <Label className="text-gray-900 normal-case text-sm">Foto Profil</Label>
@@ -159,28 +159,28 @@ export const ProfileEditView: React.FC<Props> = ({ user, onUpdate }) => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Input 
-                label="Nama Lengkap" 
-                type="text" 
+              <Input
+                label="Nama Lengkap"
+                type="text"
                 required
                 value={form.full_name}
-                onChange={e => setForm({...form, full_name: e.target.value})}
+                onChange={e => setForm({ ...form, full_name: e.target.value })}
                 leftIcon={<User size={18} />}
               />
-              <Input 
-                label="WhatsApp" 
-                type="text" 
+              <Input
+                label="WhatsApp"
+                type="text"
                 value={form.whatsapp}
-                onChange={e => setForm({...form, whatsapp: e.target.value})}
+                onChange={e => setForm({ ...form, whatsapp: e.target.value })}
                 placeholder="08123456789"
                 leftIcon={<Phone size={18} />}
               />
             </div>
 
             <div className="space-y-2">
-              <Input 
-                label="Alamat Email (Akun)" 
-                type="email" 
+              <Input
+                label="Alamat Email (Akun)"
+                type="email"
                 disabled
                 value={user.email}
                 leftIcon={<Mail size={18} />}
@@ -189,10 +189,10 @@ export const ProfileEditView: React.FC<Props> = ({ user, onUpdate }) => {
             </div>
 
             <div className="pt-6">
-              <Button 
+              <Button
                 type="submit"
                 isLoading={loading}
-                className="w-full sm:w-auto px-10 bg-gray-900 hover:bg-black shadow-gray-200"
+                variant="primary"
               >
                 Simpan Perubahan Profil
               </Button>

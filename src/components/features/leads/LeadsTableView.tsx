@@ -1,6 +1,6 @@
 import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, Subtext, Label, Badge, Checkbox } from '@/components/ui';
 import { Lead } from '@/lib/types';
-import { Table as TableIcon, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
+import { Table as TableIcon, Trash2, ChevronUp, ChevronDown, Clock } from 'lucide-react';
 
 interface Props {
   leads: Lead[];
@@ -46,12 +46,22 @@ export const LeadsTableView: React.FC<Props> = ({
                 variant="blue"
               />
             </TableCell>
-            <TableCell isHeader className="cursor-pointer" onClick={() => onSort('id')}>ID <SortIndicator column="id" /></TableCell>
-            <TableCell isHeader className="cursor-pointer" onClick={() => onSort('input_date')}>Tanggal Input <SortIndicator column="input_date" /></TableCell>
-            <TableCell isHeader className="cursor-pointer" onClick={() => onSort('name')}>Lead <SortIndicator column="name" /></TableCell>
+            <TableCell isHeader className="cursor-pointer" onClick={() => onSort('id')}>
+              <div className="flex items-center gap-1">ID <SortIndicator column="id" /></div>
+            </TableCell>
+            <TableCell isHeader className="cursor-pointer" onClick={() => onSort('input_date')}>
+              <div className="flex items-center gap-1">Tanggal Input <SortIndicator column="input_date" /></div>
+            </TableCell>
+            <TableCell isHeader className="cursor-pointer" onClick={() => onSort('name')}>
+              <div className="flex items-center gap-1">Lead <SortIndicator column="name" /></div>
+            </TableCell>
             <TableCell isHeader>Nilai (Est)</TableCell>
-            <TableCell isHeader className="cursor-pointer" onClick={() => onSort('sales_name')}>PIC <SortIndicator column="sales_name" /></TableCell>
-            <TableCell isHeader className="cursor-pointer text-center" onClick={() => onSort('status')}>Status <SortIndicator column="status" /></TableCell>
+            <TableCell isHeader className="cursor-pointer" onClick={() => onSort('sales_name')}>
+              <div className="flex items-center gap-1">PIC <SortIndicator column="sales_name" /></div>
+            </TableCell>
+            <TableCell isHeader className="cursor-pointer text-center" onClick={() => onSort('status')}>
+              <div className="flex items-center justify-center gap-1">Status <SortIndicator column="status" /></div>
+            </TableCell>
             <TableCell isHeader className="text-center">Aksi</TableCell>
           </TableRow>
         </TableHeader>
@@ -69,8 +79,11 @@ export const LeadsTableView: React.FC<Props> = ({
                   />
                 </TableCell>
                 <TableCell className="text-gray-500 font-mono">#{String(lead.id).padStart(4, '0')}</TableCell>
-                <TableCell className="text-gray-500">
-                  {lead.input_date ? new Date(lead.input_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                <TableCell className="py-5">
+                  <div className="flex items-center gap-2 text-gray-400">
+                    <Clock size={12} strokeWidth={2.5} />
+                    <Label className="text-[11px] ">{lead.input_date ? new Date(lead.input_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}</Label>
+                  </div>
                 </TableCell>
                 <TableCell>
                   {lead.salutation && <span className="!text-blue-400 mr-1">{lead.salutation}</span>}
@@ -78,7 +91,11 @@ export const LeadsTableView: React.FC<Props> = ({
                   <Subtext className="text-[10px] !text-gray-400 mt-1 uppercase tracking-tight">{lead.client_company?.name || 'Perorangan'}</Subtext>
                 </TableCell>
                 <TableCell className=" text-gray-600">{formatIDR(lead.expected_value)}</TableCell>
-                <TableCell className="text-gray-600 ">{lead.sales_profile?.full_name || '-'}</TableCell>
+                <TableCell className="py-4 w-[150px]">
+                  <Label className="text-gray-700">
+                    {lead.sales_profile?.full_name?.split(' ')[0] || '-'}
+                  </Label>
+                </TableCell>
                 <TableCell className="text-center">
                   <Badge variant={getStatusVariant(lead.status)}>{lead.status}</Badge>
                 </TableCell>

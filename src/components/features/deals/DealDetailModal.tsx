@@ -194,6 +194,7 @@ export const DealDetailModal: React.FC<Props> = ({
         email: form.email,
         whatsapp: form.whatsapp,
         expected_value: form.expected_value || 0,
+        probability: form.probability || 0,
         sales_id: form.sales_id,
         stage_id: form.stage_id || deal.stage_id,
         company_id: company.id,
@@ -399,10 +400,10 @@ export const DealDetailModal: React.FC<Props> = ({
               {isFollowUpExpanded && (
                 <div className="p-4 pt-0 border-t border-gray-100 bg-white/50 space-y-4">
                   <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div className="space-y-1.5">
+                    <div className="">
                       <Label className="text-[10px] text-gray-400 uppercase font-semibold">Jumlah Follow Up</Label>
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg p-1 shadow-sm w-fit">
+                      <div className="flex flex-col">
+                        <div className="flex items-center bg-white border border-gray-200 rounded-lg shadow-sm w-fit">
                           <Button
                             onClick={(e) => { e.stopPropagation(); handleFollowUpChange('decrease'); }}
                             size='sm'
@@ -430,8 +431,8 @@ export const DealDetailModal: React.FC<Props> = ({
                         {followUpErrors.count && <p className="text-[9px] text-rose-500 font-medium ml-1">{followUpErrors.count}</p>}
                       </div>
                     </div>
-                    <div className="space-y-1.5 flex flex-col">
-                      <Label className="text-[10px] text-gray-400 uppercase font-semibold">Tgl Follow Up Berikutnya *</Label>
+                    <div className=" flex flex-col">
+                      <Label className="text-[10px] text-gray-400 uppercase font-semibold mt-2">Tgl Follow Up Berikutnya *</Label>
                       <input
                         type="date"
                         value={followUpDate}
@@ -593,7 +594,7 @@ export const DealDetailModal: React.FC<Props> = ({
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <Input
                   label="Tanggal Input"
                   type="date"
@@ -608,6 +609,17 @@ export const DealDetailModal: React.FC<Props> = ({
                   leftIcon={<Label>RP</Label>}
                   placeholder="0"
                 />
+                <Select
+                  label="Probabilitas (%)"
+                  value={form.probability?.toString()}
+                  onChange={e => setForm({ ...form, probability: Number(e.target.value) })}
+                >
+                  <option value="0">0%</option>
+                  <option value="25">25%</option>
+                  <option value="50">50%</option>
+                  <option value="75">75%</option>
+                  <option value="100">100%</option>
+                </Select>
               </div>
 
               <Select

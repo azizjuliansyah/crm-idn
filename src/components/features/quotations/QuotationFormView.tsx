@@ -7,7 +7,7 @@ import {
   ArrowLeft, Save, Plus, Trash2, Calendar, FileText,
   User, ChevronDown, Package, Loader2, CheckCircle2, X, AlertCircle, Tags, Weight,
   Building, Mail, Phone, Search, FileDown, Layers, Check as CheckIcon,
-  DollarSign
+  DollarSign, FileCheck
 } from 'lucide-react';
 import { Modal, Button, Input, Select, Breadcrumb, SectionHeader, Card, Label, Textarea, Table, TableHeader, TableBody, TableRow, TableCell, ComboBox, Subtext } from '@/components/ui';
 import { jsPDF } from 'jspdf';
@@ -591,13 +591,25 @@ export const QuotationFormView: React.FC<Props> = ({ company, editingId, initial
           <div className="flex items-center gap-3">
             <Button variant="ghost" onClick={() => router.push('/dashboard/sales/quotations')} className="text-gray-500">Batal</Button>
             {editingId && (
-              <Button
-                onClick={handleDownloadPDF}
-                variant='danger'
-                leftIcon={<FileDown size={16} />}
-              >
-                PDF
-              </Button>
+              <>
+                {status === 'Accepted' && (
+                  <Button
+                    onClick={() => router.push(`/dashboard/sales/proformas/create?quotationId=${editingId}`)}
+                    variant='secondary'
+                    leftIcon={<FileCheck size={16} />}
+                    className="text-amber-600 border-amber-200 hover:bg-amber-50"
+                  >
+                    Jadikan Proforma
+                  </Button>
+                )}
+                <Button
+                  onClick={handleDownloadPDF}
+                  variant='danger'
+                  leftIcon={<FileDown size={16} />}
+                >
+                  PDF
+                </Button>
+              </>
             )}
             <Button
               onClick={handleSave}
@@ -645,77 +657,79 @@ export const QuotationFormView: React.FC<Props> = ({ company, editingId, initial
             title="Item Produk"
             className="mb-8"
           />
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableCell isHeader className="w-1/3 py-3 text-[10px]">Produk</TableCell>
-                <TableCell isHeader className="py-3 text-[10px]">Deskripsi</TableCell>
-                <TableCell isHeader className="text-center w-20 py-3 text-[10px]">Qty</TableCell>
-                <TableCell isHeader className="text-center w-24 py-3 text-[10px]">Satuan</TableCell>
-                <TableCell isHeader className="text-right w-32 py-3 text-[10px]">Harga</TableCell>
-                <TableCell isHeader className="text-right w-36 py-3 text-[10px]">Jumlah</TableCell>
-                <TableCell isHeader className="w-10">{''}</TableCell>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item, idx) => (
-                <TableRow key={idx}>
-                  <TableCell>
-                    <ComboBox
-                      placeholder="Pilih Produk"
-                      value={item.productId}
-                      onChange={(val: string | number) => handleSelectProduct(idx, products.find(p => p.id.toString() === val.toString()) || null)}
-                      options={products.map(p => ({
-                        value: p.id.toString(),
-                        label: p.name,
-                        sublabel: formatIDRVal(p.price)
-                      }))}
-                      onAddNew={() => setIsQuickProductModalOpen(true)}
-                      addNewLabel="Daftar Produk Baru"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <input
-                      type="text"
-                      value={item.description}
-                      onChange={(e: any) => { const n = [...items]; n[idx].description = e.target.value; setItems(n); }}
-                      className="w-full text-xs px-3 py-2 bg-white border border-gray-200 rounded-md outline-none focus:border-blue-500 transition-all font-medium"
-                      placeholder="Detail spesifikasi..."
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <input
-                      type="number"
-                      value={item.qty}
-                      onChange={(e: any) => { const n = [...items]; n[idx].qty = Number(e.target.value); n[idx].total = n[idx].qty * n[idx].price; setItems(n); }}
-                      className="w-full text-xs px-2 py-2 text-center font-bold bg-white border border-gray-200 rounded-md outline-none focus:border-blue-500 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="w-full px-2 py-2 bg-gray-50 border border-gray-100 rounded-[4px] text-[10px] text-center text-gray-400 font-bold uppercase tracking-tight">
-                      {item.unit}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <input
-                      type="number"
-                      value={item.price}
-                      onChange={(e: any) => { const n = [...items]; n[idx].price = Number(e.target.value); n[idx].total = n[idx].qty * n[idx].price; setItems(n); }}
-                      className="w-full text-xs px-3 py-2 text-right font-bold bg-white border border-gray-200 rounded-md outline-none focus:border-blue-500 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                  </TableCell>
-                  <TableCell className="text-right font-bold text-gray-700 text-sm whitespace-nowrap">
-                    {formatIDRVal(item.total)}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Button variant="ghost" size="sm" onClick={() => handleRemoveItem(idx)} className="!p-1.5 text-gray-300 hover:text-rose-500 hover:bg-rose-50">
-                      <Trash2 size={16} />
-                    </Button>
-                  </TableCell>
+          <div className="overflow-visible">
+            <Table className="overflow-visible">
+              <TableHeader>
+                <TableRow>
+                  <TableCell isHeader className="w-1/3 py-3 text-[10px]">Produk</TableCell>
+                  <TableCell isHeader className="py-3 text-[10px]">Deskripsi</TableCell>
+                  <TableCell isHeader className="text-center w-20 py-3 text-[10px]">Qty</TableCell>
+                  <TableCell isHeader className="text-center w-24 py-3 text-[10px]">Satuan</TableCell>
+                  <TableCell isHeader className="text-right w-32 py-3 text-[10px]">Harga</TableCell>
+                  <TableCell isHeader className="text-right w-36 py-3 text-[10px]">Jumlah</TableCell>
+                  <TableCell isHeader className="w-10">{''}</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {items.map((item, idx) => (
+                  <TableRow key={idx}>
+                    <TableCell>
+                      <ComboBox
+                        placeholder="Pilih Produk"
+                        value={item.productId}
+                        onChange={(val: string | number) => handleSelectProduct(idx, products.find(p => p.id.toString() === val.toString()) || null)}
+                        options={products.map(p => ({
+                          value: p.id.toString(),
+                          label: p.name,
+                          sublabel: formatIDRVal(p.price)
+                        }))}
+                        onAddNew={() => setIsQuickProductModalOpen(true)}
+                        addNewLabel="Daftar Produk Baru"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <input
+                        type="text"
+                        value={item.description}
+                        onChange={(e: any) => { const n = [...items]; n[idx].description = e.target.value; setItems(n); }}
+                        className="w-full text-xs px-3 py-2 bg-white border border-gray-200 rounded-md outline-none focus:border-blue-500 transition-all font-medium"
+                        placeholder="Detail spesifikasi..."
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <input
+                        type="number"
+                        value={item.qty}
+                        onChange={(e: any) => { const n = [...items]; n[idx].qty = Number(e.target.value); n[idx].total = n[idx].qty * n[idx].price; setItems(n); }}
+                        className="w-full text-xs px-2 py-2 text-center font-bold bg-white border border-gray-200 rounded-md outline-none focus:border-blue-500 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="w-full px-2 py-2 bg-gray-50 border border-gray-100 rounded-[4px] text-[10px] text-center text-gray-400 font-bold uppercase tracking-tight">
+                        {item.unit}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <input
+                        type="number"
+                        value={item.price}
+                        onChange={(e: any) => { const n = [...items]; n[idx].price = Number(e.target.value); n[idx].total = n[idx].qty * n[idx].price; setItems(n); }}
+                        className="w-full text-xs px-3 py-2 text-right font-bold bg-white border border-gray-200 rounded-md outline-none focus:border-blue-500 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                    </TableCell>
+                    <TableCell className="text-right font-bold text-gray-700 text-sm whitespace-nowrap">
+                      {formatIDRVal(item.total)}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Button variant="ghost" size="sm" onClick={() => handleRemoveItem(idx)} className="!p-1.5 text-gray-300 hover:text-rose-500 hover:bg-rose-50">
+                        <Trash2 size={16} />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
           <Button onClick={handleAddItem} variant="ghost" size="sm" leftIcon={<Plus size={14} />} className="mt-4 !text-[#4F46E5] hover:bg-indigo-50 font-bold tracking-tight uppercase text-[10px]">
             Tambah Baris
           </Button>

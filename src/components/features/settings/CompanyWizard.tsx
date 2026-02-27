@@ -181,10 +181,10 @@ export const CompanyWizard: React.FC<Props> = ({ userId, onSuccess }) => {
                 <div className="space-y-2">
                   <Subtext className="text-xs  text-gray-900 uppercase tracking-tight">Logo (Opsional)</Subtext>
                   <div className="flex items-center gap-2">
-                    <Label className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-[10px]  uppercase tracking-tight cursor-pointer hover:bg-blue-100 transition-all active:scale-95">
+                    <label className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-medium uppercase tracking-tight cursor-pointer hover:bg-blue-100 transition-all active:scale-95">
                       Upload
-                      <Input type="file" className="hidden" accept="image/*" onChange={handleUploadLogo} disabled={uploading || loading} />
-                    </Label>
+                      <input type="file" className="hidden" accept="image/*" onChange={handleUploadLogo} disabled={uploading || loading} />
+                    </label>
                     {form.logo_url && (
                       <Button variant="ghost" size="sm" onClick={() => setForm({ ...form, logo_url: '' })} className="!p-2 text-gray-300 hover:text-red-500">
                         <X size={16} />

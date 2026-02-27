@@ -560,10 +560,10 @@ export const PlatformAdminView: React.FC<Props> = ({ activeView, onSettingsUpdat
                         {uploading === 'logo_url' && <div className="absolute inset-0 bg-white/80 flex items-center justify-center"><Loader2 className="animate-spin text-blue-600" size={16} /></div>}
                       </div>
                       <div className="flex flex-col gap-2">
-                        <Label className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-[10px]  uppercase tracking-tight cursor-pointer hover:bg-blue-100 transition-all">
+                        <label className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-medium uppercase tracking-tight cursor-pointer hover:bg-blue-100 transition-all">
                           Ganti Logo
-                          <Input type="file" className="hidden" accept="image/*" onChange={handleUploadLogo} disabled={!!uploading} />
-                        </Label>
+                          <input type="file" className="hidden" accept="image/*" onChange={handleUploadLogo} disabled={!!uploading} />
+                        </label>
                         {platformSettings.logo_url && <Button variant="ghost" size="sm" onClick={() => setPlatformSettings({ ...platformSettings, logo_url: '' })} className="text-[9px] text-rose-500 lowercase p-0 hover:bg-transparent">Hapus Logo</Button>}
                       </div>
                     </div>

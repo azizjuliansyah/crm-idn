@@ -129,10 +129,10 @@ export const CompanySettingsView: React.FC<Props> = ({ company, onCompanyUpdate 
                 </div>
               )}
             </div>
-            <Label className="absolute -bottom-3 -right-3 w-12 h-12 bg-gray-900 text-white rounded-2xl flex items-center justify-center cursor-pointer hover:bg-black transition-all shadow-xl active:scale-90 border-4 border-white aspect-square">
+            <label className="absolute -bottom-3 -right-3 w-12 h-12 bg-gray-900 text-white rounded-2xl flex items-center justify-center cursor-pointer hover:bg-black transition-all shadow-xl active:scale-90 border-4 border-white aspect-square">
               <Camera size={20} />
-              <Input type="file" className="hidden" accept="image/*" onChange={handleUploadLogo} disabled={uploadingLogo} />
-            </Label>
+              <input type="file" className="hidden" accept="image/*" onChange={handleUploadLogo} disabled={uploadingLogo} />
+            </label>
           </div>
           <div className="text-center space-y-1">
             <Subtext className="text-[10px] text-gray-400 uppercase tracking-tight">Logo Perusahaan</Subtext>

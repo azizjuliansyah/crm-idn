@@ -49,7 +49,7 @@ export const Select: React.FC<SelectProps> = ({
   ...props
 }) => {
   return (
-    <div className="space-y-2 w-full">
+    <div className="space-y-2">
       {label && (
         <label className="text-[10px] font-medium text-gray-400 uppercase tracking-tight ml-1">
           {label}

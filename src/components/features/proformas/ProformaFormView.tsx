@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Input, Select, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, H1, H3, Subtext, Label, Modal, Card, ComboBox } from '@/components/ui';
+import { Input, Select, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, H3, Subtext, Label, Modal, Card, ComboBox, Breadcrumb, SectionHeader } from '@/components/ui';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useRouter } from 'next/navigation';
@@ -14,7 +14,7 @@ import {
 import {
   ArrowLeft, FileDown, Loader2, Save, FileCheck, User,
   ChevronDown, Search, Package, Trash2, Plus, X,
-  Check as CheckIcon, CheckCircle as CheckCircle2
+  Check as CheckIcon, CheckCircle as CheckCircle2, FileText, DollarSign
 } from 'lucide-react';
 
 interface Props {
@@ -600,29 +600,56 @@ export const ProformaFormView: React.FC<Props> = ({ company, editingId, initialC
   if (loading && !items.length) return <div className="flex flex-col items-center justify-center py-24 gap-4 bg-white min-h-screen"><Loader2 className="animate-spin text-indigo-600" size={32} /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Menyiapkan Proforma...</Subtext></div>;
 
   return (
-    <div className="bg-[#F9FAFB] min-h-screen pb-24 font-inter relative">
+    <div className="bg-[#F9FAFB] min-h-screen pb-24 font-sans relative">
       <div className="sticky top-0 z-30 bg-white border-b border-gray-100 px-10 py-5">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-5">
-            <Button onClick={() => onNavigate ? onNavigate('daftar_proforma') : router.push('/dashboard/sales/proformas')} className="p-2 text-gray-400 hover:text-gray-900 border border-gray-100 rounded-lg hover:bg-gray-50 transition-all"><ArrowLeft size={20} /></Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onNavigate ? onNavigate('daftar_proforma') : router.push('/dashboard/sales/proformas')}
+              className="!p-2 text-gray-400 hover:text-gray-900 border border-gray-100 lg:flex hidden"
+            >
+              <ArrowLeft size={20} />
+            </Button>
             <div>
-              <H1 className="text-xl  text-gray-900 tracking-tight">{editingId ? 'Ubah Proforma' : 'Proforma Invoice Baru'}</H1>
-              <Subtext className="text-[11px] font-medium text-indigo-600 uppercase tracking-tight mt-0.5">{proformaNumber}</Subtext>
+              <Breadcrumb
+                items={[
+                  { label: 'Proforma' },
+                  { label: editingId ? 'Ubah Proforma' : 'Proforma Invoice Baru', active: true }
+                ]}
+              />
+              <Subtext className="text-[11px] font-medium text-blue-600 uppercase tracking-tight mt-0.5">{proformaNumber}</Subtext>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="secondary" onClick={() => onNavigate ? onNavigate('daftar_proforma') : router.push('/dashboard/sales/proformas')}>Batal</Button>
+            <Button variant="ghost" onClick={() => onNavigate ? onNavigate('daftar_proforma') : router.push('/dashboard/sales/proformas')} className="text-gray-500">Batal</Button>
             {editingId && (
-              <Button
-                onClick={handleDownloadPDF}
-                variant="secondary"
-                leftIcon={<FileDown size={16} />}
-                className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-              >
-                PDF
-              </Button>
+              <>
+                {status !== 'Draft' && (
+                  <Button
+                    onClick={() => router.push(`/dashboard/sales/invoice-requests/create?proformaId=${editingId}`)}
+                    variant='secondary'
+                    leftIcon={<FileCheck size={16} />}
+                    className="text-amber-600 border-amber-200 hover:bg-amber-50"
+                  >
+                    Request Invoice
+                  </Button>
+                )}
+                <Button
+                  onClick={handleDownloadPDF}
+                  variant='danger'
+                  leftIcon={<FileDown size={16} />}
+                >
+                  PDF
+                </Button>
+              </>
             )}
-            <Button onClick={handleSave} disabled={loading} leftIcon={loading ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}>
+            <Button
+              onClick={handleSave}
+              isLoading={loading}
+              leftIcon={<Save size={16} />}
+              variant='primary'>
               {editingId ? 'Update Proforma' : 'Simpan Proforma'}
             </Button>
           </div>
@@ -631,10 +658,11 @@ export const ProformaFormView: React.FC<Props> = ({ company, editingId, initialC
 
       <div className="max-w-7xl mx-auto px-10 py-8 space-y-6">
         <Card className="p-8">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center"><FileCheck size={18} /></div>
-            <H3 className="!normal-case !tracking-tight text-gray-800">Detail Proforma</H3>
-          </div>
+          <SectionHeader
+            icon={<FileText size={18} />}
+            title="Rincian Proforma"
+            className="mb-8"
+          />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
             <ComboBox
               label="Pelanggan"
@@ -671,114 +699,177 @@ export const ProformaFormView: React.FC<Props> = ({ company, editingId, initialC
         </Card>
 
         <Card className="p-8">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center"><Package size={18} /></div>
-            <H3 className="!normal-case !tracking-tight text-gray-800">Daftar Item Tagihan</H3>
-          </div>
-          <Table>
-            <TableHeader className="bg-gray-50/30">
-              <TableRow>
-                <TableCell className="text-[10px]  text-gray-400 uppercase w-1/4 border-b">Produk</TableCell>
-                <TableCell className="text-[10px]  text-gray-400 uppercase border-b">Deskripsi</TableCell>
-                <TableCell className="text-[10px]  text-gray-400 uppercase text-center w-24 border-b">Qty</TableCell>
-                <TableCell className="text-[10px]  text-gray-400 uppercase text-center w-24 border-b">Satuan</TableCell>
-                <TableCell className="text-[10px]  text-gray-400 uppercase text-right w-40 border-b">Harga</TableCell>
-                <TableCell className="text-[10px]  text-gray-400 uppercase text-right w-40 border-b">Jumlah</TableCell>
-                <TableCell className="w-12 border-b">{null}</TableCell>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item, idx) => (
-                <TableRow key={idx}>
-                  <TableCell className="px-8 py-5 relative">
-                    <div ref={idx === activeRowIdx ? productDropdownRef : null}>
-                      <Button onClick={() => { setActiveRowIdx(idx === activeRowIdx ? null : idx); setProductSearch(''); }} className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded text-xs text-left truncate flex items-center justify-between shadow-sm">
-                        <Label>{item.productId ? products.find(p => p.id.toString() === item.productId)?.name : 'Pilih Produk'}</Label>
-                        <ChevronDown size={14} className="text-gray-300" />
-                      </Button>
-                      {activeRowIdx === idx && (
-                        <div className="absolute top-full left-8 right-8 bg-white border border-gray-100 shadow-xl z-50 rounded-lg overflow-hidden mt-1 bg-white">
-                          <div className="p-2 border-b border-gray-50 bg-gray-50">
-                            <Input autoFocus placeholder="Cari..." value={productSearch} onChange={(e: any) => setProductSearch(e.target.value)} className="!py-1.5 !text-xs" />
-                          </div>
-                          <div className="max-h-48 overflow-y-auto custom-scrollbar">
-                            {filteredProducts.map(p => (
-                              <Button key={p.id} onClick={() => handleSelectProduct(idx, p)} className="w-full px-4 py-2.5 text-left text-xs hover:bg-indigo-50 border-b border-gray-50 last:border-none flex items-center justify-between">
-                                <Label className="">{p.name}</Label>
-                                <Label className="text-[10px] text-gray-400">{formatIDRVal(p.price)}</Label>
-                              </Button>
-                            ))}
-                            <Button onClick={() => { setIsQuickProductModalOpen(true); setActiveRowIdx(null); }} className="w-full p-2.5 bg-blue-50 text-blue-600 text-[10px]  uppercase tracking-tight">+ Daftar Produk Baru</Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell><Input value={item.description} onChange={(e: any) => { const n = [...items]; n[idx].description = e.target.value; setItems(n); }} placeholder="Detail spesifikasi..." className="!py-2 !text-xs" /></TableCell>
-                  <TableCell><Input type="number" value={item.qty} onChange={(e: any) => { const n = [...items]; n[idx].qty = Number(e.target.value); n[idx].total = n[idx].qty * n[idx].price; setItems(n); }} className="!py-2 !text-xs text-center " /></TableCell>
-                  <TableCell><div className="w-full px-2 py-2 bg-gray-50 border border-gray-100 rounded text-xs text-center text-gray-400  uppercase tracking-tight">{item.unit}</div></TableCell>
-                  <TableCell><Input type="number" value={item.price} onChange={(e: any) => { const n = [...items]; n[idx].price = Number(e.target.value); n[idx].total = n[idx].qty * n[idx].price; setItems(n); }} className="!py-2 !text-xs text-right " /></TableCell>
-                  <TableCell className="text-right  text-indigo-700 text-sm">Rp {formatIDRVal(item.total)}</TableCell>
-                  <TableCell className="text-center"><Button onClick={() => handleRemoveItem(idx)} className="p-2 text-gray-300 hover:text-rose-500 transition-colors"><Trash2 size={16} /></Button></TableCell>
+          <SectionHeader
+            icon={<Package size={18} />}
+            title="Daftar Item Tagihan"
+            className="mb-8"
+          />
+          <div className="overflow-visible">
+            <Table className="overflow-visible">
+              <TableHeader>
+                <TableRow>
+                  <TableCell isHeader className="w-1/3 py-3 text-[10px]">Produk</TableCell>
+                  <TableCell isHeader className="py-3 text-[10px]">Deskripsi</TableCell>
+                  <TableCell isHeader className="text-center w-20 py-3 text-[10px]">Qty</TableCell>
+                  <TableCell isHeader className="text-center w-24 py-3 text-[10px]">Satuan</TableCell>
+                  <TableCell isHeader className="text-right w-32 py-3 text-[10px]">Harga</TableCell>
+                  <TableCell isHeader className="text-right w-36 py-3 text-[10px]">Jumlah</TableCell>
+                  <TableCell isHeader className="w-10">{''}</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <Button variant="ghost" onClick={handleAddItem} leftIcon={<Plus size={16} />} className="mt-6 text-indigo-600 hover:bg-indigo-50 !text-[11px] uppercase tracking-tight ">Tambah Baris</Button>
+              </TableHeader>
+              <TableBody>
+                {items.map((item, idx) => (
+                  <TableRow key={idx}>
+                    <TableCell>
+                      <ComboBox
+                        placeholder="Pilih Produk"
+                        value={item.productId}
+                        onChange={(val: string | number) => handleSelectProduct(idx, products.find(p => p.id.toString() === val.toString()) || null)}
+                        options={products.map(p => ({
+                          value: p.id.toString(),
+                          label: p.name,
+                          sublabel: formatIDRVal(p.price)
+                        }))}
+                        onAddNew={() => setIsQuickProductModalOpen(true)}
+                        addNewLabel="Daftar Produk Baru"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <input
+                        type="text"
+                        value={item.description}
+                        onChange={(e: any) => { const n = [...items]; n[idx].description = e.target.value; setItems(n); }}
+                        className="w-full text-xs px-3 py-2 bg-white border border-gray-200 rounded-md outline-none focus:border-blue-500 transition-all font-medium"
+                        placeholder="Detail spesifikasi..."
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <input
+                        type="number"
+                        value={item.qty}
+                        onChange={(e: any) => { const n = [...items]; n[idx].qty = Number(e.target.value); n[idx].total = n[idx].qty * n[idx].price; setItems(n); }}
+                        className="w-full text-xs px-2 py-2 text-center font-bold bg-white border border-gray-200 rounded-md outline-none focus:border-blue-500 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="w-full px-2 py-2 bg-gray-50 border border-gray-100 rounded-[4px] text-[10px] text-center text-gray-400 font-bold uppercase tracking-tight">
+                        {item.unit}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <input
+                        type="number"
+                        value={item.price}
+                        onChange={(e: any) => { const n = [...items]; n[idx].price = Number(e.target.value); n[idx].total = n[idx].qty * n[idx].price; setItems(n); }}
+                        className="w-full text-xs px-3 py-2 text-right font-bold bg-white border border-gray-200 rounded-md outline-none focus:border-blue-500 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                    </TableCell>
+                    <TableCell className="text-right font-bold text-gray-700 text-sm whitespace-nowrap">
+                      {formatIDRVal(item.total)}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Button variant="ghost" size="sm" onClick={() => handleRemoveItem(idx)} className="!p-1.5 text-gray-300 hover:text-rose-500 hover:bg-rose-50">
+                        <Trash2 size={16} />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <Button onClick={handleAddItem} variant="ghost" size="sm" leftIcon={<Plus size={14} />} className="mt-4 !text-[#4F46E5] hover:bg-indigo-50 font-bold tracking-tight uppercase text-[10px]">
+            Tambah Baris
+          </Button>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           <Card className="p-8 space-y-4">
-            <Label>Syarat & Ketentuan</Label>
-            <Textarea value={notes} onChange={(e: any) => setNotes(e.target.value)} className="h-44 resize-none" placeholder="Informasi rekening pembayaran, dll..." />
+            <SectionHeader
+              icon={<FileText size={18} />}
+              title="Syarat & Ketentuan"
+              className="mb-4"
+            />
+            <Textarea value={notes} onChange={(e: any) => setNotes(e.target.value)} className="h-44 shadow-sm" placeholder="Informasi rekening pembayaran, dll..." />
           </Card>
+
           <Card className="p-8 space-y-5">
+            <SectionHeader
+              icon={<DollarSign size={18} />}
+              title="Ringkasan Biaya"
+              className="mb-4"
+            />
             <div className="flex items-center justify-between border-b border-gray-50 pb-4">
-              <Label className="text-xs  text-gray-400 uppercase tracking-tight">Subtotal</Label>
-              <Label className="text-sm  text-gray-900">{formatIDRVal(subtotal)}</Label>
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">Subtotal</span>
+              <span className="text-sm font-bold text-gray-900">{formatIDRVal(subtotal)}</span>
             </div>
+
             <div className="flex items-center justify-between border-b border-gray-50 pb-4">
               <div className="flex items-center gap-4">
-                <Label className="text-xs  text-gray-400 uppercase tracking-tight">Diskon</Label>
-                <div className="flex items-center border border-gray-200 rounded overflow-hidden h-9 w-32">
-                  <Select value={discountType} onChange={(e: any) => setDiscountType(e.target.value as any)} className="bg-gray-50 h-full px-2 border-r text-[10px]  uppercase outline-none" style={{ WebkitAppearance: 'none' }}><option value="Rp">Rp</option><option value="%">%</option></Select>
-                  <Input type="number" value={discountValue} onChange={(e: any) => setDiscountValue(Number(e.target.value))} className="w-full h-full px-2 text-xs  outline-none" />
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">Diskon</span>
+                <div className="flex bg-white rounded border border-gray-200 overflow-hidden shadow-sm h-11">
+                  <Select
+                    value={discountType}
+                    onChange={(e: any) => setDiscountType(e.target.value as any)}
+                    className="!bg-gray-50 !px-2 !border-0 !border-r !rounded-none !h-full text-[10px] font-bold uppercase cursor-pointer"
+                  >
+                    <option value="Rp">Rp</option>
+                    <option value="%">%</option>
+                  </Select>
+                  <Input
+                    type="number"
+                    value={discountValue}
+                    onChange={(e: any) => setDiscountValue(Number(e.target.value))}
+                    className="!w-20 !px-3 font-bold !border-0 !h-full !rounded-none"
+                  />
                 </div>
               </div>
-              <Label className="text-sm  text-rose-600">- {formatIDRVal(discountAmount)}</Label>
+              <span className="text-sm font-bold text-rose-600">- {formatIDRVal(discountAmount)}</span>
             </div>
 
             <div className="space-y-4 border-b border-gray-50 pb-4">
               <div className="flex items-center justify-between">
-                <Label className="text-xs  text-gray-400 uppercase tracking-tight">Pajak</Label>
-                <div className="relative w-40">
-                  <Select value="" onChange={(e: any) => { if (e.target.value) { const id = Number(e.target.value); setSelectedTaxIds(prev => prev.includes(id) ? prev : [...prev, id]); } }} className="!text-[10px] uppercase tracking-tight">
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">Pajak</span>
+                <div className="relative">
+                  <Select
+                    value=""
+                    onChange={(e: any) => { if (e.target.value) { const id = Number(e.target.value); setSelectedTaxIds(prev => prev.includes(id) ? prev : [...prev, id]); } }}
+                    className="!py-1.5 !px-4 text-[10px]"
+                  >
                     <option value="">+ Tambah Pajak</option>
                     {availableTaxes.filter(t => !selectedTaxIds.includes(t.id)).map(tax => (<option key={tax.id} value={tax.id}>{tax.name} ({tax.rate}%)</option>))}
                   </Select>
                 </div>
               </div>
               {selectedTaxesList.map(tax => (
-                <div key={tax.id} className="flex items-center justify-between pl-4 text-[11px]  text-gray-700">
+                <div key={tax.id} className="flex items-center justify-between pl-4 text-[11px] font-bold text-gray-700">
                   <div className="flex items-center gap-2">
-                    <Label>{tax.name} ({tax.rate}%)</Label>
-                    <Button onClick={() => setSelectedTaxIds(prev => prev.filter(id => id !== tax.id))} className="p-1 hover:bg-rose-50 text-rose-400 rounded transition-colors"><X size={12} /></Button>
+                    <span>{tax.name} ({tax.rate}%)</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedTaxIds(prev => prev.filter(id => id !== tax.id))}
+                      className="!p-1 text-gray-300 hover:text-rose-500 hover:bg-rose-50"
+                    >
+                      <X size={12} />
+                    </Button>
                   </div>
-                  <Label className="text-gray-900">{formatIDRVal(tax.calculated_value)}</Label>
+                  <span>{formatIDRVal(tax.calculated_value)}</span>
                 </div>
               ))}
             </div>
 
             <div className="pt-2 pb-6 flex items-center justify-between">
-              <Label className="text-base  text-gray-900 uppercase tracking-tight">Grand Total</Label>
-              <Label className="text-2xl  text-indigo-600">{formatIDRVal(total)}</Label>
+              <span className="text-sm font-bold text-gray-900 uppercase tracking-tight">Grand Total</span>
+              <span className="text-2xl font-bold text-blue-600">{formatIDRVal(total)}</span>
             </div>
 
             <Button
               onClick={handleSave}
-              disabled={loading || !clientId}
-              className="w-full uppercase tracking-tight"
-              leftIcon={loading ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+              isLoading={loading}
+              disabled={!clientId}
+              variant="primary"
+              className="w-full py-3 text-sm font-bold uppercase tracking-wider"
+              leftIcon={<Save size={16} />}
             >
               {editingId ? 'Update Proforma' : 'Simpan Proforma'}
             </Button>

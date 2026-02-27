@@ -16,11 +16,11 @@ import { CompanyWizard } from '../features/settings/CompanyWizard';
 
 
 export function DashboardLayoutClient({ children }: { children: React.ReactNode }) {
-  const { user, companies, activeCompany, setActiveCompany, platformSettings, logout, loading } = useDashboard();
+  const { user, companies, activeCompany, setActiveCompany, platformSettings, logout, loading, isLoggingOut } = useDashboard();
   const router = useRouter();
   const pathname = usePathname();
 
-  if (loading) {
+  if (loading || isLoggingOut) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
         <Loader2 className="animate-spin text-blue-600" size={48} />
@@ -291,3 +291,4 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
     </Layout>
   );
 }
+

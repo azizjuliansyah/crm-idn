@@ -17,6 +17,7 @@ import {
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { NotificationModal } from '@/components/shared/modals/NotificationModal';
 import { useRouter } from 'next/navigation';
+import { useDashboard } from '@/app/dashboard/DashboardContext';
 
 interface Props {
   company: Company;
@@ -27,6 +28,7 @@ type SortConfig = { key: SortKey; direction: 'asc' | 'desc' } | null;
 
 export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
   const router = useRouter();
+  const { activeCompanyMembers, user } = useDashboard();
   const [requests, setRequests] = useState<InvoiceRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -45,7 +47,7 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
     try {
       const { data, error } = await supabase
         .from('invoice_requests')
-        .select('*, profiles(*), client:clients(*, client_company:client_companies(*)), quotation:quotations(number), proforma:proformas(number)')
+        .select('*, profile:profiles(*), client:clients(*, client_company:client_companies(*)), quotation:quotations(number), proforma:proformas(number)')
         .eq('company_id', company.id)
         .order('id', { ascending: false });
 
@@ -140,6 +142,12 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
     }
   };
 
+  const hasApprovalPermission = useMemo(() => {
+    if (user?.platform_role === 'ADMIN') return true;
+    const currentMember = activeCompanyMembers.find(m => m.user_id === user?.id);
+    return currentMember?.company_roles?.permissions.includes('Persetujuan Request Invoice') || false;
+  }, [user, activeCompanyMembers]);
+
   if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4 bg-white rounded-2xl border border-gray-100 min-h-[400px]"><Loader2 className="animate-spin text-indigo-600" size={32} /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Memuat Request Invoice...</Subtext></div>;
 
   return (
@@ -172,11 +180,10 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
         <Button
           onClick={() => router.push('/dashboard/sales/invoice-requests/create')}
           variant="primary"
-          className="!px-6 py-2.5  text-[10px] uppercase tracking-tight shadow-lg shadow-indigo-100 shrink-0 ml-auto"
         >
           <div className="flex items-center gap-2">
             <Plus size={14} strokeWidth={3} />
-            <Label>Request Baru</Label>
+            Request Baru
           </div>
         </Button>
       </div>
@@ -197,14 +204,14 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
           <TableBody>
             {filteredRequests.map(r => (
               <TableRow key={r.id} className="group hover:bg-indigo-50/30 transition-colors border-b border-gray-50/50 last:border-0">
-                <TableCell className="text-[10px] text-gray-500 py-5 px-6">#{r.id}</TableCell>
-                <TableCell className="py-5 px-6">
+                <TableCell className="text-[10px] text-gray-500 py-5">#{r.id}</TableCell>
+                <TableCell className="py-5">
                   <div className="flex items-center gap-2 text-gray-400">
                     <Clock size={12} strokeWidth={2.5} />
-                    <Label className="text-[11px] ">{new Date(r.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</Label>
+                    <Label className="text-[11px] ">{new Date(r.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</Label>
                   </div>
                 </TableCell>
-                <TableCell className="py-5 px-6">
+                <TableCell className="py-5">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center  text-[10px] uppercase shadow-sm border border-indigo-100">{r.client?.name.charAt(0)}</div>
                     <div>
@@ -213,46 +220,51 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
                     </div>
                   </div>
                 </TableCell>
-                <TableCell className="py-5 px-6">
+                <TableCell className="py-5">
                   {r.quotation ? (
-                    <Badge variant="secondary" className="gap-1.5 py-1 px-2.5 rounded-lg border-indigo-100 bg-indigo-50 text-indigo-600">
+                    <Badge variant="secondary" className="gap-1.5 rounded-lg">
                       <FileText size={10} strokeWidth={2.5} />
-                      <Label className=" text-[9px] !text-blue-700 uppercase tracking-tight">{r.quotation.number}</Label>
+                      <Label className="!text-indigo-600">{r.quotation.number}</Label>
                     </Badge>
                   ) : r.proforma ? (
-                    <Badge variant="secondary" className="gap-1.5 py-1 px-2.5 rounded-lg border-gray-100 bg-gray-50 text-gray-600">
+                    <Badge variant="success" className="gap-1.5 rounded-lg">
                       <FileCheck size={10} strokeWidth={2.5} />
-                      <Label className=" text-[9px] !text-blue-700 uppercase tracking-tight">{r.proforma.number}</Label>
+                      <Label className="!text-emerald-600">{r.proforma.number}</Label>
                     </Badge>
                   ) : (
                     <Label className="text-[10px] text-gray-300 italic ">NO REF</Label>
                   )}
                 </TableCell>
-                <TableCell className="py-5 px-6">
+                <TableCell className="py-5">
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-full bg-gray-50 flex items-center justify-center border border-gray-100">
                       <User size={10} strokeWidth={2.5} className="text-gray-400" />
                     </div>
-                    <Label className="text-[11px]  text-gray-600">{r.profile?.full_name}</Label>
+                    <Label className="text-[11px]  text-gray-600">
+                      {r.profile?.full_name ||
+                        activeCompanyMembers.find(m => m.user_id === r.requester_id)?.profile?.full_name ||
+                        'Data Tidak Tersedia'}
+                    </Label>
                   </div>
                 </TableCell>
-                <TableCell className="text-center py-5 px-6">
-                  <Label className={`px-3 py-1 rounded-full text-[9px]  uppercase tracking-tight border transition-all duration-300 ${r.status === 'Approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                    r.status === 'Rejected' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-                      'bg-amber-50 text-amber-600 border-amber-100'
-                    }`}>
+                <TableCell className="text-center py-5">
+                  <Badge variant={
+                    r.status === 'Pending' ? 'neutral' :
+                      r.status === 'Approved' ? 'emerald' :
+                        'rose'
+                  }>
                     {r.status}
-                  </Label>
+                  </Badge>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-center gap-2">
-                    {r.status === 'Pending' && (
+                    {r.status === 'Pending' && hasApprovalPermission && (
                       <>
-                        <Button variant="ghost" size="sm" onClick={() => handleUpdateStatus(r.id, 'Approved')} className="!p-2 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors" title="Approve"><Check size={16} strokeWidth={3} /></Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleUpdateStatus(r.id, 'Rejected')} className="!p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors" title="Reject"><X size={16} strokeWidth={3} /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleUpdateStatus(r.id, 'Approved')} className="!p-2 !text-emerald-500 hover:!bg-emerald-50 rounded-lg transition-colors" title="Approve"><Check size={16} strokeWidth={3} /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleUpdateStatus(r.id, 'Rejected')} className="!p-2 !text-rose-500 hover:!bg-rose-50 rounded-lg transition-colors" title="Reject"><X size={16} strokeWidth={3} /></Button>
                       </>
                     )}
-                    <Button variant="ghost" size="sm" onClick={() => setConfirmDelete({ isOpen: true, id: r.id })} className="!p-2 text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg" title="Hapus"><Trash2 size={14} /></Button>
+                    <Button variant="ghost" size="sm" onClick={() => setConfirmDelete({ isOpen: true, id: r.id })} className="!p-2 !text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg" title="Hapus"><Trash2 size={14} /></Button>
                   </div>
                 </TableCell>
               </TableRow>

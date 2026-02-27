@@ -38,6 +38,7 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
 
   const selectedOption = useMemo(() =>
     options.find(opt => opt.value === value),
@@ -58,9 +59,21 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
         setIsOpen(false);
       }
     };
+
+    const handleScroll = () => {
+      if (isOpen) {
+        setIsOpen(false);
+      }
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    window.addEventListener('scroll', handleScroll, true); // true to catch scroll on any element
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScroll, true);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) setSearchTerm('');
@@ -80,7 +93,19 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
       )}
 
       <div
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        onClick={(e) => {
+          if (!disabled) {
+            if (!isOpen && containerRef.current) {
+              const rect = containerRef.current.getBoundingClientRect();
+              setDropdownPosition({
+                top: rect.bottom,
+                left: rect.left,
+                width: rect.width,
+              });
+            }
+            setIsOpen(!isOpen);
+          }
+        }}
         className={`
           flex items-center gap-3 px-5 py-3.5 bg-white border rounded-md transition-all cursor-pointer
           ${isOpen ? 'border-blue-500 ring-4 ring-blue-50/50' : 'border-gray-200 hover:border-gray-300'}
@@ -110,7 +135,14 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
       </div>
 
       {isOpen && (
-        <div className="absolute top-[calc(100%+8px)] left-0 right-0 bg-white border border-gray-100 rounded-md shadow-2xl z-[100] py-3 animate-in fade-in zoom-in duration-200 origin-top">
+        <div
+          className="fixed bg-white border border-gray-100 rounded-md shadow-2xl z-[9999] py-3 animate-in fade-in zoom-in duration-200 origin-top"
+          style={{
+            top: `${dropdownPosition.top + 8}px`,
+            left: `${dropdownPosition.left}px`,
+            width: `${dropdownPosition.width}px`
+          }}
+        >
           <div className="px-3 pb-2 border-b border-gray-50 mb-1">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" size={14} />

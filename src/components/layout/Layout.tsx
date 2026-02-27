@@ -110,6 +110,23 @@ export const Layout: React.FC<LayoutProps> = ({
     if (sopRes.data) setSopCategories(sopRes.data as any);
   }, [activeCompany]);
 
+  const activeStates = useMemo(() => ({
+    isCrmActive: ['leads', 'pengaturan_leads', 'pengaturan_sumber_leads', 'deals', 'pengaturan_deals_pipeline'].includes(activeView) || activeView.startsWith('deals_'),
+    isProjectActive: ['projects'].includes(activeView) || activeView.startsWith('projects_'),
+    isSupportActive: ['customer_support', 'complaints', 'knowledge_base', 'support_pipeline'].includes(activeView),
+    isSalesActive: ['daftar_penawaran', 'buat_penawaran', 'edit_penawaran', 'daftar_proforma', 'buat_proforma', 'edit_proforma', 'daftar_invoice', 'buat_invoice', 'edit_invoice', 'request_invoice', 'buat_request_invoice', 'edit_request_invoice'].includes(activeView),
+    isClientActive: ['data_client', 'perusahaan_client', 'pengaturan_kategori_client'].includes(activeView),
+    isSopActive: ['sop_all', 'sop_category_settings', 'sop_archive', 'sop_editor', 'sop_detail'].includes(activeView) || activeView.startsWith('sop_cat_'),
+    isSettingsActive: [
+      'pengaturan_perusahaan', 'workspace_email_config', 'anggota_tim', 'manajemen_role',
+      'pengaturan_leads', 'pengaturan_sumber_leads', 'pengaturan_deals_pipeline',
+      'pengaturan_project_pipeline', 'pengaturan_task_pipeline', 'support_pipeline',
+      'pengaturan_kategori_client', 'penomoran_otomatis', 'pengaturan_pajak',
+      'pengaturan_template_pdf', 'kategori_produk', 'satuan_produk', 'pengaturan_ai',
+      'pengaturan_ticket_topic'
+    ].includes(activeView)
+  }), [activeView]);
+
   useEffect(() => {
     const handlePipelinesUpdated = () => fetchPipelines();
     window.addEventListener('pipelinesUpdated', handlePipelinesUpdated);
@@ -202,29 +219,43 @@ export const Layout: React.FC<LayoutProps> = ({
   };
 
   const renderMenuItem = (id: string, label: string, icon: React.ReactNode, bgColorClass: string, iconColorClass: string = 'text-white') => (
-    <Button
-      onClick={() => { onNavigate(id); setIsSidebarOpen(false); }}
-      align="left" size='sm'
-      className={`w-full flex items-center gap-4 px-3 py-2 rounded-xl transition-all duration-200 cursor-pointer !normal-case !tracking-tight ${activeView === id ? 'bg-blue-50/50 text-blue-600 font-semibold shadow-sm' : 'text-gray-900 hover:bg-gray-50 font-medium'}`}
-    >
-      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-md ${activeView === id ? 'bg-blue-600 text-white' : `${bgColorClass} ${iconColorClass}`}`}>
-        {React.cloneElement(icon as React.ReactElement<any>, { size: 14 })}
-      </div>
-      <Label className={`text-[13px] !capitalize !tracking-tight ${activeView === id ? 'text-blue-600' : 'text-inherit'}`}>{label}</Label>
-    </Button>
+    <div className="relative group">
+      {activeView === id && (
+        <div className="absolute left-[-12px] top-2 bottom-2 w-1 bg-blue-600 rounded-r-full shadow-[0_0_10px_rgba(37,99,235,0.3)] z-10" />
+      )}
+      <Button
+        onClick={() => { onNavigate(id); setIsSidebarOpen(false); }}
+        align="left" size='sm'
+        className={`w-full flex items-center gap-4 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer !normal-case !tracking-tight ${activeView === id ? 'text-blue-600 font-bold' : 'text-gray-700 hover:bg-gray-50 font-medium'}`}
+      >
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-sm ${activeView === id ? 'bg-blue-600 text-white' : `${bgColorClass} ${iconColorClass}`}`}>
+          {React.cloneElement(icon as React.ReactElement<any>, { size: 14 })}
+        </div>
+        <Label className={`text-[13px] !capitalize !tracking-tight ${activeView === id ? 'text-blue-600' : 'text-inherit'}`}>{label}</Label>
+      </Button>
+    </div>
   );
 
   const renderSubMenuLevel1 = (id: string, label: string, icon: React.ReactNode, active: boolean) => (
-    <Button
-      onClick={() => { onNavigate(id); setIsSidebarOpen(false); }}
-      align="left" size='sm'
-      className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 cursor-pointer !normal-case !tracking-tight ${active ? 'text-blue-600 bg-blue-50/50 font-semibold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50 font-medium'}`}
-    >
-      <div className={`transition-colors ${active ? 'text-blue-600' : 'text-gray-300'}`}>
-        {React.cloneElement(icon as React.ReactElement<any>, { size: 14 })}
-      </div>
-      <Label className={`text-[12px] !capitalize !tracking-tight ${active ? 'text-blue-600' : 'text-inherit'}`}>{label}</Label>
-    </Button>
+    <div className="relative group">
+      <Button
+        onClick={() => { onNavigate(id); setIsSidebarOpen(false); }}
+        align="left" size='sm'
+        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer !normal-case !tracking-tight ${active ? 'text-blue-600 font-bold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50 font-medium'}`}
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-1 h-1 flex items-center justify-center">
+            {active && (
+              <div className="w-1 h-1 bg-blue-600 rounded-full" />
+            )}
+          </div>
+          <div className={`transition-colors ${active ? 'text-blue-600' : 'text-gray-400'}`}>
+            {React.cloneElement(icon as React.ReactElement<any>, { size: 14 })}
+          </div>
+          <Label className={`text-[12px] !capitalize !tracking-tight ${active ? 'text-blue-600' : 'text-inherit'}`}>{label}</Label>
+        </div>
+      </Button>
+    </div>
   );
 
   const renderSubMenuLevel2 = (id: string, label: string, active: boolean) => (
@@ -232,9 +263,16 @@ export const Layout: React.FC<LayoutProps> = ({
       key={id}
       onClick={() => { onNavigate(id); setIsSidebarOpen(false); }}
       align="left" size='sm'
-      className={`w-full px-3 py-1.5 rounded-lg text-[11px] font-medium !capitalize !tracking-tight transition-all cursor-pointer ${active ? 'text-blue-600 bg-blue-50/50 font-semibold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}
+      className={`w-full px-3 py-2 rounded-lg text-[11px] font-medium !capitalize !tracking-tight transition-all cursor-pointer ${active ? 'text-blue-600 font-bold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}
     >
-      {label}
+      <div className="flex items-center gap-3">
+        <div className="w-1 h-1 flex items-center justify-center">
+          {active && (
+            <div className="w-1 h-1 bg-blue-500 rounded-full" />
+          )}
+        </div>
+        {label}
+      </div>
     </Button>
   );
 
@@ -325,22 +363,37 @@ export const Layout: React.FC<LayoutProps> = ({
 
               {/* CRM Group */}
               {(canShow('Leads') || canShow('Deals')) && (
-                <div className="space-y-0.5">
-                  <Button onClick={() => setIsCrmOpen(!isCrmOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all font-medium cursor-pointer !normal-case !tracking-tight ${isCrmOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-400 hover:bg-gray-50'}`}>
-                    <div className="flex items-center gap-4">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-500 text-white shadow-md"><Target size={14} /></div>
-                      <Label className={`text-[13px] !capitalize !tracking-tight ${isCrmOpen ? 'text-gray-900' : 'text-inherit'}`}>CRM</Label>
+                <div className="space-y-0.5 relative group">
+                  {activeStates.isCrmActive && (
+                    <div className="absolute left-[-12px] top-2 bottom-2 w-1 bg-blue-600 rounded-r-full z-10" />
+                  )}
+                  <Button onClick={() => setIsCrmOpen(!isCrmOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case !tracking-tight ${activeStates.isCrmActive ? 'text-blue-600' : isCrmOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
+                    <div className="flex-1 flex items-center gap-4">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-md ${activeStates.isCrmActive ? 'bg-indigo-600 text-white' : 'bg-indigo-500 text-white'}`}><Target size={14} /></div>
+                      <Label className={`text-[13px] !capitalize !tracking-tight ${activeStates.isCrmActive ? 'text-blue-600 font-bold' : isCrmOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>CRM</Label>
                     </div>
-                    <ChevronRight size={14} className={`transition-transform duration-200 ${isCrmOpen ? 'rotate-90 text-indigo-500' : ''}`} />
+                    <ChevronRight size={14} className={`transition-transform duration-300 ${isCrmOpen ? 'rotate-90 text-indigo-500' : activeStates.isCrmActive ? 'text-indigo-400' : 'text-gray-300'}`} />
                   </Button>
                   {isCrmOpen && (
                     <div className="pl-4 space-y-0.5 mt-0.5 ml-6">
                       {canShow('Leads') && renderSubMenuLevel1('leads', 'Leads', <Target />, activeView === 'leads')}
                       {canShow('Deals') && (
                         <div className="space-y-0.5">
-                          <Button onClick={() => setIsDealsExpanded(!isDealsExpanded)} align="left" size='sm' className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all font-medium cursor-pointer !normal-case !tracking-tight ${isDealsExpanded ? 'text-gray-600' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}>
-                            <div className={`${isDealsExpanded ? 'text-indigo-500' : 'text-gray-300'}`}><Layers size={14} /></div>
-                            <div className="flex-1 flex items-center justify-between"><Label className="text-[12px] !capitalize !tracking-tight">Deals</Label><ChevronRight size={10} className={`transition-transform ${isDealsExpanded ? 'rotate-90' : ''}`} /></div>
+                          <Button
+                            onClick={() => setIsDealsExpanded(!isDealsExpanded)}
+                            align="left" size='sm'
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case !tracking-tight ${(activeView === 'deals' || activeView.startsWith('deals_')) ? 'text-blue-600 font-bold' : isDealsExpanded ? 'text-gray-900 font-semibold bg-gray-50/50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-1 h-1 flex items-center justify-center">
+                                {(activeView === 'deals' || activeView.startsWith('deals_')) && (
+                                  <div className="w-1 h-1 bg-blue-600 rounded-full shadow-[0_0_8px_rgba(37,99,235,0.4)]" />
+                                )}
+                              </div>
+                              <div className={`${(activeView === 'deals' || activeView.startsWith('deals_')) ? 'text-blue-600' : isDealsExpanded ? 'text-indigo-600' : 'text-gray-300'}`}><Layers size={14} /></div>
+                              <Label className="text-[12px] !capitalize !tracking-tight">Deals</Label>
+                            </div>
+                            <ChevronRight size={10} className={`transition-transform duration-300 ml-auto ${isDealsExpanded ? 'rotate-90 text-indigo-500' : 'text-gray-300'}`} />
                           </Button>
                           {isDealsExpanded && (
                             <div className="ml-[12px] !border-l !border-blue-100 pl-[14px] mt-1 space-y-0.5">
@@ -356,13 +409,16 @@ export const Layout: React.FC<LayoutProps> = ({
 
               {/* Projects Group */}
               {canShow('Projects') && (
-                <div className="space-y-0.5">
-                  <Button onClick={() => setIsProjectOpen(!isProjectOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all font-medium cursor-pointer !normal-case !tracking-tight ${isProjectOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-400 hover:bg-gray-50'}`}>
-                    <div className="flex items-center gap-4">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-600 text-white shadow-md"><Briefcase size={14} /></div>
-                      <Label className={`text-[13px] !capitalize !tracking-tight ${isProjectOpen ? 'text-gray-900' : 'text-inherit'}`}>Projects</Label>
+                <div className="space-y-0.5 relative group">
+                  {activeStates.isProjectActive && (
+                    <div className="absolute left-[-12px] top-2 bottom-2 w-1 bg-blue-600 rounded-r-full z-10 shadow-[0_0_10px_rgba(37,99,235,0.2)]" />
+                  )}
+                  <Button onClick={() => setIsProjectOpen(!isProjectOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case !tracking-tight ${activeStates.isProjectActive ? 'text-blue-600' : isProjectOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
+                    <div className="flex-1 flex items-center gap-4">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-md ${activeStates.isProjectActive ? 'bg-blue-600 text-white' : 'bg-blue-600 text-white'}`}><Briefcase size={14} /></div>
+                      <Label className={`text-[13px] !capitalize !tracking-tight ${activeStates.isProjectActive ? 'text-blue-600 font-bold' : isProjectOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>Projects</Label>
                     </div>
-                    <ChevronRight size={14} className={`transition-transform duration-200 ${isProjectOpen ? 'rotate-90 text-blue-600' : ''}`} />
+                    <ChevronRight size={14} className={`transition-transform duration-300 ${isProjectOpen ? 'rotate-90 text-blue-600' : activeStates.isProjectActive ? 'text-blue-400' : 'text-gray-300'}`} />
                   </Button>
                   {isProjectOpen && (
                     <div className="ml-[34px] border-l border-blue-100 pl-[14px] mt-1 space-y-0.5">
@@ -374,13 +430,16 @@ export const Layout: React.FC<LayoutProps> = ({
 
               {/* Customer Support Group */}
               {(canShow('Customer Support') || canShow('Knowledge Base')) && (
-                <div className="space-y-0.5">
-                  <Button onClick={() => setIsSupportOpen(!isSupportOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all font-medium cursor-pointer !normal-case !tracking-tight ${isSupportOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-400 hover:bg-gray-50'}`}>
-                    <div className="flex items-center gap-4">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-rose-500 text-white shadow-md"><Headset size={14} /></div>
-                      <Label className={`text-[13px] !capitalize !tracking-tight ${isSupportOpen ? 'text-gray-900' : 'text-inherit'}`}>Support</Label>
+                <div className="space-y-0.5 relative group">
+                  {activeStates.isSupportActive && (
+                    <div className="absolute left-[-12px] top-2 bottom-2 w-1 bg-blue-600 rounded-r-full z-10 shadow-[0_0_10px_rgba(37,99,235,0.2)]" />
+                  )}
+                  <Button onClick={() => setIsSupportOpen(!isSupportOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case !tracking-tight ${activeStates.isSupportActive ? 'text-blue-600' : isSupportOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
+                    <div className="flex-1 flex items-center gap-4">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-md ${activeStates.isSupportActive ? 'bg-rose-600 text-white' : 'bg-rose-500 text-white'}`}><Headset size={14} /></div>
+                      <Label className={`text-[13px] !capitalize !tracking-tight ${activeStates.isSupportActive ? 'text-blue-600 font-bold' : isSupportOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>Support</Label>
                     </div>
-                    <ChevronRight size={14} className={`transition-transform duration-200 ${isSupportOpen ? 'rotate-90 text-rose-500' : ''}`} />
+                    <ChevronRight size={14} className={`transition-transform duration-300 ${isSupportOpen ? 'rotate-90 text-rose-500' : activeStates.isSupportActive ? 'text-rose-400' : 'text-gray-300'}`} />
                   </Button>
                   {isSupportOpen && (
                     <div className="pl-4 space-y-0.5 mt-0.5 ml-6">
@@ -394,13 +453,16 @@ export const Layout: React.FC<LayoutProps> = ({
 
               {/* Penjualan Group */}
               {(canShow('Penawaran') || canShow('Proforma Invoice') || canShow('Invoice') || canShow('Request Invoice')) && (
-                <div className="space-y-0.5">
-                  <Button onClick={() => setIsSalesOpen(!isSalesOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all font-medium cursor-pointer !normal-case !tracking-tight ${isSalesOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-400 hover:bg-gray-50'}`}>
-                    <div className="flex items-center gap-4">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-sky-500 text-white shadow-md"><ReceiptCent size={14} /></div>
-                      <Label className={`text-[13px] !capitalize !tracking-tight ${isSalesOpen ? 'text-gray-900' : 'text-inherit'}`}>Penjualan</Label>
+                <div className="space-y-0.5 relative group">
+                  {activeStates.isSalesActive && (
+                    <div className="absolute left-[-12px] top-2 bottom-2 w-1 bg-blue-600 rounded-r-full z-10 shadow-[0_0_10px_rgba(37,99,235,0.2)]" />
+                  )}
+                  <Button onClick={() => setIsSalesOpen(!isSalesOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case !tracking-tight ${activeStates.isSalesActive ? 'text-blue-600' : isSalesOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
+                    <div className="flex-1 flex items-center gap-4">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-md ${activeStates.isSalesActive ? 'bg-sky-600 text-white' : 'bg-sky-500 text-white'}`}><ReceiptCent size={14} /></div>
+                      <Label className={`text-[13px] !capitalize !tracking-tight ${activeStates.isSalesActive ? 'text-blue-600 font-bold' : isSalesOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>Penjualan</Label>
                     </div>
-                    <ChevronRight size={14} className={`transition-transform duration-200 ${isSalesOpen ? 'rotate-90 text-sky-500' : ''}`} />
+                    <ChevronRight size={14} className={`transition-transform duration-300 ${isSalesOpen ? 'rotate-90 text-sky-500' : activeStates.isSalesActive ? 'text-sky-400' : 'text-gray-300'}`} />
                   </Button>
                   {isSalesOpen && (
                     <div className="pl-4 space-y-0.5 mt-0.5 ml-6">
@@ -417,13 +479,16 @@ export const Layout: React.FC<LayoutProps> = ({
 
               {/* Client Group */}
               {(canShow('Data Client') || canShow('Perusahaan Client')) && (
-                <div className="space-y-0.5">
-                  <Button onClick={() => setIsClientOpen(!isClientOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all font-medium cursor-pointer !normal-case !tracking-tight ${isClientOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-400 hover:bg-gray-50'}`}>
-                    <div className="flex items-center gap-4">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-violet-500 text-white shadow-md"><Users2 size={14} /></div>
-                      <Label className={`text-[13px] !capitalize !tracking-tight ${isClientOpen ? 'text-gray-900' : 'text-inherit'}`}>Client</Label>
+                <div className="space-y-0.5 relative group">
+                  {activeStates.isClientActive && (
+                    <div className="absolute left-[-12px] top-2 bottom-2 w-1 bg-blue-600 rounded-r-full z-10 shadow-[0_0_10px_rgba(37,99,235,0.2)]" />
+                  )}
+                  <Button onClick={() => setIsClientOpen(!isClientOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case !tracking-tight ${activeStates.isClientActive ? 'text-blue-600' : isClientOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
+                    <div className="flex-1 flex items-center gap-4">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-md ${activeStates.isClientActive ? 'bg-violet-600 text-white' : 'bg-violet-500 text-white'}`}><Users2 size={14} /></div>
+                      <Label className={`text-[13px] !capitalize !tracking-tight ${activeStates.isClientActive ? 'text-blue-600 font-bold' : isClientOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>Client</Label>
                     </div>
-                    <ChevronRight size={14} className={`transition-transform duration-200 ${isClientOpen ? 'rotate-90 text-violet-500' : ''}`} />
+                    <ChevronRight size={14} className={`transition-transform duration-300 ${isClientOpen ? 'rotate-90 text-violet-500' : activeStates.isClientActive ? 'text-violet-400' : 'text-gray-300'}`} />
                   </Button>
                   {isClientOpen && (
                     <div className="pl-4 space-y-0.5 mt-0.5 ml-6">
@@ -436,31 +501,37 @@ export const Layout: React.FC<LayoutProps> = ({
 
               {/* SOP Group */}
               {canShow('SOP') && (
-                <div className="space-y-0.5">
-                  <Button onClick={() => setIsSopOpen(!isSopOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all font-medium cursor-pointer !normal-case !tracking-tight ${isSopOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-400 hover:bg-gray-50'}`}>
-                    <div className="flex items-center gap-4">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-emerald-600 text-white shadow-md"><BookMarked size={14} /></div>
-                      <Label className={`text-[13px] !capitalize !tracking-tight ${isSopOpen ? 'text-gray-900' : 'text-inherit'}`}>SOP</Label>
+                <div className="space-y-0.5 relative group">
+                  {activeStates.isSopActive && (
+                    <div className="absolute left-[-12px] top-2 bottom-2 w-1 bg-blue-600 rounded-r-full z-10 shadow-[0_0_10px_rgba(37,99,235,0.2)]" />
+                  )}
+                  <Button onClick={() => setIsSopOpen(!isSopOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case !tracking-tight ${activeStates.isSopActive ? 'text-blue-600' : isSopOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
+                    <div className="flex-1 flex items-center gap-4">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-md ${activeStates.isSopActive ? 'bg-emerald-700 text-white' : 'bg-emerald-600 text-white'}`}><BookMarked size={14} /></div>
+                      <Label className={`text-[13px] !capitalize !tracking-tight ${activeStates.isSopActive ? 'text-blue-600 font-bold' : isSopOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>SOP</Label>
                     </div>
-                    <ChevronRight size={14} className={`transition-transform duration-200 ${isSopOpen ? 'rotate-90 text-emerald-600' : ''}`} />
+                    <ChevronRight size={14} className={`transition-transform duration-300 ${isSopOpen ? 'rotate-90 text-emerald-600' : activeStates.isSopActive ? 'text-emerald-400' : 'text-gray-300'}`} />
                   </Button>
                   {isSopOpen && (
                     <div className="pl-4 space-y-0.5 mt-0.5 ml-6">
                       {renderSubMenuLevel1('sop_all', 'All SOP', <Layers />, activeView === 'sop_all')}
                       {sopCategories
                         .filter(cat => !cat.parent_id) // Hanya kategori induk di Level 1
-                        .map(cat => (
-                          <div key={cat.id} className="space-y-0.5">
-                            {renderSubMenuLevel1(`sop_cat_${cat.id}`, cat.name, <Layers />, activeView === `sop_cat_${cat.id}`)}
-                            {/* Render Sub-Kategori di bawah Induk */}
-                            <div className="ml-6 border-l border-emerald-100 pl-4 space-y-0.5">
-                              {sopCategories
-                                .filter(sub => sub.parent_id === cat.id)
-                                .map(sub => renderSubMenuLevel2(`sop_cat_${sub.id}`, sub.name, activeView === `sop_cat_${sub.id}`))
-                              }
+                        .map(cat => {
+                          const isCatActive = activeView === `sop_cat_${cat.id}` || sopCategories.some(sub => sub.parent_id === cat.id && activeView === `sop_cat_${sub.id}`);
+                          return (
+                            <div key={cat.id} className="space-y-0.5">
+                              {renderSubMenuLevel1(`sop_cat_${cat.id}`, cat.name, <Layers />, isCatActive)}
+                              {/* Render Sub-Kategori di bawah Induk */}
+                              <div className="ml-6 border-l border-emerald-100 pl-4 space-y-0.5">
+                                {sopCategories
+                                  .filter(sub => sub.parent_id === cat.id)
+                                  .map(sub => renderSubMenuLevel2(`sop_cat_${sub.id}`, sub.name, activeView === `sop_cat_${sub.id}`))
+                                }
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       {renderSubMenuLevel1('sop_category_settings', 'Kategori SOP', <Tags />, activeView === 'sop_category_settings')}
                       {renderSubMenuLevel1('sop_archive', 'Archive', <Archive />, activeView === 'sop_archive')}
                     </div>
@@ -475,13 +546,16 @@ export const Layout: React.FC<LayoutProps> = ({
                 canShow('Project Pipeline') || canShow('Task Pipeline') || canShow('Support Pipeline') || canShow('Pengaturan Kategori Client') ||
                 canShow('Penomoran Otomatis') || canShow('Pengaturan Pajak') || canShow('Template Dokumen') || canShow('Kategori Produk') ||
                 canShow('Satuan') || canShow('Pengaturan AI') || canShow('Ticket Topic')) && (
-                  <div className="space-y-0.5">
-                    <Button onClick={() => setIsSettingsOpen(!isSettingsOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all font-medium cursor-pointer !normal-case !tracking-tight ${isSettingsOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-400 hover:bg-gray-50'}`}>
-                      <div className="flex items-center gap-4">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-50 text-white shadow-md"><Settings size={14} className="text-amber-500" /></div>
-                        <Label className={`text-[13px] !capitalize !tracking-tight ${isSettingsOpen ? 'text-gray-900' : 'text-inherit'}`}>Workspace Setup</Label>
+                  <div className="space-y-0.5 relative group">
+                    {activeStates.isSettingsActive && (
+                      <div className="absolute left-[-12px] top-2 bottom-2 w-1 bg-blue-600 rounded-r-full z-10 shadow-[0_0_10px_rgba(37,99,235,0.2)]" />
+                    )}
+                    <Button onClick={() => setIsSettingsOpen(!isSettingsOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case !tracking-tight ${activeStates.isSettingsActive ? 'text-blue-600' : isSettingsOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
+                      <div className="flex-1 flex items-center gap-4">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-md ${activeStates.isSettingsActive ? 'bg-amber-100 text-amber-600' : 'bg-amber-50 text-amber-500'}`}><Settings size={14} /></div>
+                        <Label className={`text-[13px] !capitalize !tracking-tight ${activeStates.isSettingsActive ? 'text-blue-600 font-bold' : isSettingsOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>Workspace Setup</Label>
                       </div>
-                      <ChevronRight size={14} className={`transition-transform duration-200 ${isSettingsOpen ? 'rotate-90 text-blue-500' : ''}`} />
+                      <ChevronRight size={14} className={`transition-transform duration-300 ${isSettingsOpen ? 'rotate-90 text-amber-500' : activeStates.isSettingsActive ? 'text-amber-400' : 'text-gray-300'}`} />
                     </Button>
                     {isSettingsOpen && (
                       <div className="pl-4 space-y-0.5 mt-0.5 ml-6 pb-4">

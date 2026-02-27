@@ -13,7 +13,7 @@ const PermissionsList: React.FC<PermissionListProps> = ({ available, selected, o
       <Button 
         key={perm}
         onClick={() => onToggle(perm)}
-        className={`px-3 py-2 rounded-lg text-xs  text-left transition-all ${selected.includes(perm) ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
+        variant={selected.includes(perm) ? 'primary' : 'ghost'}
       >
         {perm}
       </Button>
@@ -60,7 +60,7 @@ export const AdminRoleEditorModal: React.FC<AdminRoleEditorModalProps> = ({
             />
         </div>
 
-        <Button onClick={onSave} isLoading={isProcessing} className="w-full bg-indigo-600 hover:bg-indigo-700">
+        <Button onClick={onSave} isLoading={isProcessing} variant='secondary' className="w-full bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100">
             Simpan Role
         </Button>
       </div>

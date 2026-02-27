@@ -42,7 +42,7 @@ export const TableCell = React.forwardRef<HTMLTableCellElement, TableCellProps>(
       return (
         <th
           ref={ref as any}
-          className={`px-4 py-3 text-[12px] font-medium text-gray-400 uppercase tracking-tight border-b border-gray-100 ${className}`}
+          className={`px-4 py-3 text-[12px] font-bold text-gray-400 uppercase tracking-tight border-b border-gray-100 ${className}`}
           {...props}
         >
           {children}
@@ -52,7 +52,7 @@ export const TableCell = React.forwardRef<HTMLTableCellElement, TableCellProps>(
     return (
       <td
         ref={ref}
-        className={`px-4 py-3 font-medium text-[14px] ${className}`}
+        className={`px-4 py-3 uppercase font-bold text-[12px] ${className}`}
         {...props}
       >
         {children}

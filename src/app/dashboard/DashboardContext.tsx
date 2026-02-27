@@ -12,6 +12,7 @@ interface DashboardContextType {
   activeCompanyMembers: CompanyMember[];
   platformSettings: PlatformSettings;
   loading: boolean;
+  isLoggingOut: boolean;
   setActiveCompany: (company: Company | null) => void;
   refreshCompanyData: () => Promise<void>;
   logout: () => Promise<void>;
@@ -32,12 +33,34 @@ export function DashboardProvider({ children, initialData }: DashboardProviderPr
   const router = useRouter();
   const [user, setUser] = useState<Profile | null>(initialData?.user || null);
   const [companies, setCompanies] = useState<Company[]>(initialData?.companies || []);
-  const [activeCompany, setActiveCompany] = useState<Company | null>(null);
+  const [activeCompany, setActiveCompanyState] = useState<Company | null>(null);
   const [activeCompanyMembers, setActiveCompanyMembers] = useState<CompanyMember[]>([]);
   const [loading, setLoading] = useState(!initialData);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [platformSettings, setPlatformSettings] = useState<PlatformSettings>(
     initialData?.platformSettings || { name: 'CRM Platform', is_singleton: false }
   );
+
+  // Wrapper for setActiveCompany to also persist to localStorage and handle routing
+  const setActiveCompany = (company: Company | null) => {
+    // Only redirect if changing to a completely different company after initial load
+    const isExplicitChange = activeCompany && company && activeCompany.id !== company.id;
+
+    setActiveCompanyState(company);
+    if (company) {
+      localStorage.setItem('crm_active_company_id', String(company.id));
+      if (isExplicitChange) {
+        if (window.location.pathname !== '/dashboard' && !window.location.pathname.startsWith('/dashboard/settings/profile')) {
+          router.push('/dashboard');
+        }
+      }
+    } else {
+      localStorage.removeItem('crm_active_company_id');
+      if (activeCompany) {
+        router.push('/dashboard');
+      }
+    }
+  };
 
   useEffect(() => {
     if (!initialData) {
@@ -47,8 +70,21 @@ export function DashboardProvider({ children, initialData }: DashboardProviderPr
 
   // Set initial active company if none selected (Regular users only)
   useEffect(() => {
-    if (!activeCompany && companies.length > 0 && user?.platform_role !== 'ADMIN') {
-      setActiveCompany(companies[0]);
+    if (!activeCompany && companies.length > 0) {
+      // First try to restore from localStorage
+      const savedCompanyId = localStorage.getItem('crm_active_company_id');
+      if (savedCompanyId) {
+        const savedCompany = companies.find(c => String(c.id) === savedCompanyId);
+        if (savedCompany) {
+          setActiveCompany(savedCompany);
+          return;
+        }
+      }
+
+      // If not restorative and user is not admin, default to first company
+      if (user?.platform_role !== 'ADMIN') {
+        setActiveCompany(companies[0]);
+      }
     }
   }, [companies, user]);
 
@@ -65,7 +101,7 @@ export function DashboardProvider({ children, initialData }: DashboardProviderPr
         supabase.from('profiles').select('*').eq('id', authUser.id).single(),
         supabase.from('platform_settings').select('*').single()
       ]);
-      
+
       const profile = profileRes.data;
       if (!profile) {
         console.error("No profile found");
@@ -84,12 +120,12 @@ export function DashboardProvider({ children, initialData }: DashboardProviderPr
         if (allCompanies) setCompanies(allCompanies);
       } else {
         const { data: memberCompanies } = await supabase
-            .from('company_members')
-            .select('company:companies(*)')
-            .eq('user_id', authUser.id);
-        
+          .from('company_members')
+          .select('company:companies(*)')
+          .eq('user_id', authUser.id);
+
         if (memberCompanies) {
-            setCompanies(memberCompanies.map((mc: any) => mc.company));
+          setCompanies(memberCompanies.map((mc: any) => mc.company));
         }
       }
 
@@ -102,13 +138,16 @@ export function DashboardProvider({ children, initialData }: DashboardProviderPr
   };
 
   const logout = async () => {
+    setIsLoggingOut(true);
+    localStorage.removeItem('crm_active_company_id');
+    setActiveCompanyState(null);
     await supabase.auth.signOut();
     router.push('/login');
   };
 
   const refreshCompanyData = async () => {
-     // This can be used to re-fetch company specific data if needed, 
-     // but mostly activeCompany state change triggers downstream effects.
+    // This can be used to re-fetch company specific data if needed, 
+    // but mostly activeCompany state change triggers downstream effects.
   };
 
   // Fetch members when active company changes
@@ -135,6 +174,7 @@ export function DashboardProvider({ children, initialData }: DashboardProviderPr
       activeCompanyMembers,
       platformSettings,
       loading,
+      isLoggingOut,
       setActiveCompany,
       refreshCompanyData,
       logout

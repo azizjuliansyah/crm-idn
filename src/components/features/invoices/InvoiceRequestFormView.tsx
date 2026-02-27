@@ -11,7 +11,7 @@ import {
   ArrowLeft, Save, Loader2, User, FileText, FileCheck,
   FileQuestion, AlertCircle, Info, ChevronRight, CheckCircle2
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface Props {
   company: Company;
@@ -21,6 +21,8 @@ interface Props {
 
 export const InvoiceRequestFormView: React.FC<Props> = ({ company, user, onNavigate }) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialProformaId = searchParams.get('proformaId');
   const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -52,6 +54,17 @@ export const InvoiceRequestFormView: React.FC<Props> = ({ company, user, onNavig
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    if (initialProformaId && proformas.length > 0) {
+      const p = proformas.find(x => x.id.toString() === initialProformaId);
+      if (p) {
+        setClientId(String(p.client_id));
+        setRefType('proforma');
+        setDocId(String(p.id));
+      }
+    }
+  }, [initialProformaId, proformas]);
 
   const filteredDocs = useMemo(() => {
     if (!clientId) return [];
@@ -94,7 +107,7 @@ export const InvoiceRequestFormView: React.FC<Props> = ({ company, user, onNavig
   if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4 bg-white rounded-2xl border border-gray-100 min-h-[400px]"><Loader2 className="animate-spin text-indigo-600" size={32} /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Menyiapkan Form Request...</Subtext></div>;
 
   return (
-    <div className="max-w-3xl space-y-8">
+    <div className="max-w-4xl p-6 md:p-8 space-y-8">
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"
@@ -136,8 +149,8 @@ export const InvoiceRequestFormView: React.FC<Props> = ({ company, user, onNavig
                 >
                   <FileText size={20} />
                   <div className="text-left">
-                    <Subtext className="text-[10px]  uppercase">Dari Penawaran</Subtext>
-                    <Subtext className="text-[9px] font-medium opacity-60">Quotation</Subtext>
+                    <Subtext className={`text-[10px] ${refType === 'quotation' ? '!text-white' : ''}`}>Dari Penawaran</Subtext>
+                    <Subtext className={`text-[9px] font-medium ${refType === 'quotation' ? '!text-white/80' : 'opacity-60'}`}>Quotation</Subtext>
                   </div>
                 </Button>
                 <Button
@@ -146,10 +159,10 @@ export const InvoiceRequestFormView: React.FC<Props> = ({ company, user, onNavig
                   onClick={() => { setRefType('proforma'); setDocId(''); }}
                   className={`flex-1 p-6 h-auto !justify-start !items-center gap-3 border ${refType === 'proforma' ? 'border-indigo-200' : 'bg-white border-gray-100 !text-gray-400'}`}
                 >
-                  <FileCheck size={20} />
+                  <FileCheck size={20} className={refType === 'proforma' ? 'text-white' : ''} />
                   <div className="text-left">
-                    <Subtext className="text-[10px]  uppercase">Dari Proforma</Subtext>
-                    <Subtext className="text-[9px] font-medium opacity-60">Proforma Invoice</Subtext>
+                    <Subtext className={`text-[10px] ${refType === 'proforma' ? '!text-white' : ''}`}>Dari Proforma</Subtext>
+                    <Subtext className={`text-[9px] font-medium ${refType === 'proforma' ? '!text-white/80' : 'opacity-60'}`}>Proforma Invoice</Subtext>
                   </div>
                 </Button>
               </div>
