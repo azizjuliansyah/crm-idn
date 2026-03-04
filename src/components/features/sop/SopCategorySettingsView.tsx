@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Input, Select, Button, H3, Subtext, Label, Modal } from '@/components/ui';
+import { Input, Button, H3, Subtext, Label, Modal, ComboBox } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { SopCategory, Company } from '@/lib/types';
 import {
@@ -162,7 +162,7 @@ export const SopCategorySettingsView: React.FC<Props> = ({ company }) => {
           </div>
           <Button
             onClick={handleAddClick}
-            className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-[10px]  uppercase tracking-tight flex items-center gap-2 shadow-lg hover:bg-blue-700 transition-all active:scale-95"
+            variant="primary"
           >
             <Plus size={14} /> Kategori Baru
           </Button>
@@ -230,7 +230,7 @@ export const SopCategorySettingsView: React.FC<Props> = ({ company }) => {
           <Button
             onClick={() => handleSave()}
             disabled={isProcessing || !form.name?.trim()}
-            className="px-8 py-3.5 bg-blue-600 text-white rounded-xl  text-[10px] uppercase tracking-tight shadow-xl flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+            variant="primary"
           >
             {isProcessing ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
             Simpan Kategori
@@ -244,26 +244,25 @@ export const SopCategorySettingsView: React.FC<Props> = ({ company }) => {
               type="text"
               value={form.name || ''}
               onChange={e => setForm({ ...form, name: e.target.value })}
-              className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-xl  outline-none focus:bg-white focus:border-blue-500 transition-all shadow-inner"
+              className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-md  outline-none focus:bg-white focus:border-blue-500 transition-all shadow-inner"
               placeholder="Misal: Departemen Keuangan..."
             />
           </div>
 
           <div className="space-y-2">
             <Label className="text-[10px]  text-gray-400 uppercase tracking-tight ml-1">Induk Kategori (Opsional)</Label>
-            <Select
+            <ComboBox
               value={form.parent_id || ''}
-              onChange={e => setForm({ ...form, parent_id: e.target.value ? Number(e.target.value) : null })}
-              className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-xl  outline-none focus:bg-white focus:border-blue-500 transition-all shadow-inner cursor-pointer"
-            >
-              <option value="">-- Tanpa Induk (Kategori Utama) --</option>
-              {categories
-                .filter(c => !c.parent_id && c.id !== form.id) // Hindari sirkular dan nesting lebih dari 2 level
-                .map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))
-              }
-            </Select>
+              onChange={(val: string | number) => setForm({ ...form, parent_id: val ? Number(val) : null })}
+              options={[
+                { value: '', label: '-- Tanpa Induk (Kategori Utama) --' },
+                ...categories
+                  .filter(c => !c.parent_id && c.id !== form.id) // Hindari sirkular dan nesting lebih dari 2 level
+                  .map(c => ({ value: c.id.toString(), label: c.name }))
+              ]}
+              hideSearch={true}
+              className="w-full"
+            />
             <Subtext className="text-[9px] text-gray-400 italic px-1">Pilih induk jika kategori ini merupakan bagian dari divisi/departemen lain.</Subtext>
           </div>
         </div>

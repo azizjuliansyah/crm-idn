@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Input, Select, Textarea, Button, H3, Subtext, Label, SectionHeader, Modal, Avatar, Breadcrumb, Timeline, TimelineItem, TimelineIcon, TimelineContent } from '@/components/ui';
+import { Input, Textarea, Button, H3, Subtext, Label, SectionHeader, Modal, Avatar, Breadcrumb, Timeline, TimelineItem, TimelineIcon, TimelineContent, ComboBox } from '@/components/ui';
 
 import { supabase } from '@/lib/supabase';
-import { Deal, Company, CompanyMember, Pipeline, Client, ClientCompany, LeadActivity, Profile } from '@/lib/types';
+import { Deal, Company, CompanyMember, Pipeline, Client, ClientCompany, ClientCompanyCategory, LogActivity, Profile } from '@/lib/types';
 import {
   ArrowUp, MessageSquare, RefreshCw, Pencil,
-  Clock, FileText, FilePlus, UserCircle, Target, Star, Trash2, ChevronLeft, ChevronRight, X, Loader2, Save, Minus, Plus
+  Clock, FileText, FilePlus, UserCircle, Target, Star, Trash2, ChevronLeft, ChevronRight, X, Loader2, Save, Minus, Plus, Check as CheckIcon
 } from 'lucide-react';
+import { ClientFormModal } from '@/components/features/clients/components/ClientFormModal';
 
 interface Props {
   isOpen: boolean;
@@ -22,14 +23,18 @@ interface Props {
   onDelete: (id: number) => void;
   onCreateQuotation?: (clientId: number, dealId: number) => void;
   onEditQuotation?: (quotationId: number) => void;
+  categories: ClientCompanyCategory[];
+  setClientCompanies: React.Dispatch<React.SetStateAction<ClientCompany[]>>;
+  setCategories: React.Dispatch<React.SetStateAction<ClientCompanyCategory[]>>;
 }
 
 export const DealDetailModal: React.FC<Props> = ({
   isOpen, onClose, deal, company, user, members, pipeline,
-  clients, clientCompanies, onUpdate, onDelete, onCreateQuotation, onEditQuotation
+  clients, clientCompanies, categories, onUpdate, onDelete, onCreateQuotation, onEditQuotation,
+  setClientCompanies, setCategories
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [activities, setActivities] = useState<LeadActivity[]>([]);
+  const [activities, setActivities] = useState<LogActivity[]>([]);
   const [loadingActivities, setLoadingActivities] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [form, setForm] = useState<Partial<Deal>>(deal);
@@ -38,6 +43,11 @@ export const DealDetailModal: React.FC<Props> = ({
   const [followUpDate, setFollowUpDate] = useState<string>('');
   const [followUpNotes, setFollowUpNotes] = useState<string>('');
   const [followUpErrors, setFollowUpErrors] = useState<{ count?: string; date?: string }>({});
+
+  // Quick Add Client State
+  const [isAddingClient, setIsAddingClient] = useState(false);
+  const [newClient, setNewClient] = useState<Partial<Client>>({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
+  const [isProcessingQuick, setIsProcessingQuick] = useState(false);
 
   useEffect(() => {
     setManualFollowUp((form.follow_up || 0).toString());
@@ -50,7 +60,7 @@ export const DealDetailModal: React.FC<Props> = ({
     setLoadingActivities(true);
     try {
       const { data, error } = await supabase
-        .from('lead_activities').select('*, profile:profiles(*)').eq('deal_id', deal.id).order('created_at', { ascending: false });
+        .from('log_activities').select('*, profile:profiles(*)').eq('deal_id', deal.id).order('created_at', { ascending: false });
 
       if (error) {
         console.error("Fetch Activities Error:", error);
@@ -81,7 +91,7 @@ export const DealDetailModal: React.FC<Props> = ({
       const { error } = await supabase.from('deals').update({ stage_id: newStageId }).eq('id', deal.id);
       if (error) throw error;
 
-      await supabase.from('lead_activities').insert({
+      await supabase.from('log_activities').insert({
         deal_id: deal.id,
         user_id: user.id,
         content: `Tahapan diubah dari ${oldStageName} ke ${newStageName}`,
@@ -102,7 +112,7 @@ export const DealDetailModal: React.FC<Props> = ({
     if (!newComment.trim() || isProcessing) return;
     setIsProcessing(true);
     try {
-      const { error } = await supabase.from('lead_activities').insert({
+      const { error } = await supabase.from('log_activities').insert({
         deal_id: deal.id,
         user_id: user.id,
         content: newComment.trim(),
@@ -157,7 +167,7 @@ export const DealDetailModal: React.FC<Props> = ({
       if (followUpDate) activityContent += ` (Next Follow Up: ${new Date(followUpDate).toLocaleDateString('id-ID')})`;
       if (followUpNotes) activityContent += ` - Catatan: ${followUpNotes}`;
 
-      await supabase.from('lead_activities').insert({
+      await supabase.from('log_activities').insert({
         deal_id: deal.id,
         user_id: user.id,
         content: activityContent,
@@ -215,18 +225,89 @@ export const DealDetailModal: React.FC<Props> = ({
     }
   };
 
-  const handleClientChange = (val: number) => {
-    const client = clients.find(c => c.id === val);
+  const handleClientChange = (val: number | string) => {
+    const numVal = typeof val === 'string' ? Number(val) : val;
+    const client = clients.find(c => c.id === numVal);
     if (client) {
       const co = clientCompanies.find(cc => cc.id === client.client_company_id);
       setForm(prev => ({
         ...prev,
-        client_id: val,
+        client_id: numVal,
         contact_name: client.name,
         customer_company: co ? co.name : 'Perorangan',
         email: client.email,
         whatsapp: client.whatsapp
       }));
+    }
+  };
+
+
+
+  const handleQuickAddCategory = async (name: string) => {
+    const { data, error } = await supabase
+      .from('client_company_categories')
+      .insert({ name: name.trim(), company_id: company.id })
+      .select()
+      .single();
+    if (error) throw error;
+    setCategories(prev => [...prev, data as any].sort((a: any, b: any) => a.name.localeCompare(b.name)));
+    return data;
+  };
+
+  const handleQuickAddCompany = async (coData: any) => {
+    const { data, error } = await supabase
+      .from('client_companies')
+      .insert({
+        company_id: company.id,
+        ...coData
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    setClientCompanies(prev => [...prev, data as any].sort((a: any, b: any) => a.name.localeCompare(b.name)));
+    return data;
+  };
+
+  const handleQuickAddClient = async (savedForm: Partial<Client>) => {
+    if (!savedForm.name?.trim()) {
+      alert("Nama Client wajib diisi.");
+      return;
+    }
+    setIsProcessingQuick(true);
+    try {
+      const fullWa = savedForm.whatsapp ? `+62${savedForm.whatsapp.replace(/\\D/g, '')}` : null;
+      const { data, error } = await supabase
+        .from('clients')
+        .insert({
+          company_id: company.id,
+          salutation: savedForm.salutation,
+          name: savedForm.name,
+          client_company_id: savedForm.client_company_id,
+          email: savedForm.email,
+          whatsapp: fullWa
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const co = clientCompanies.find(cc => cc.id === data.client_company_id);
+      setForm(prev => ({
+        ...prev,
+        client_id: data.id,
+        contact_name: data.name,
+        customer_company: co ? co.name : 'Perorangan',
+        email: data.email,
+        whatsapp: data.whatsapp
+      }));
+
+      onUpdate(); // Trigger refresh in parent
+      setIsAddingClient(false);
+      setNewClient({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
+    } catch (err: any) {
+      alert("Gagal menambah client: " + err.message);
+    } finally {
+      setIsProcessingQuick(false);
     }
   };
 
@@ -584,14 +665,21 @@ export const DealDetailModal: React.FC<Props> = ({
                   value={form.name}
                   onChange={e => setForm({ ...form, name: e.target.value })}
                 />
-                <Select
+                <ComboBox
                   label="Hubungkan Client"
-                  value={form.client_id || ''}
-                  onChange={e => handleClientChange(Number(e.target.value))}
-                >
-                  <option value="">-- Pilih Client --</option>
-                  {clients.map(c => <option key={c.id} value={c.id}>{c.salutation ? `${c.salutation} ` : ''}{c.name}</option>)}
-                </Select>
+                  value={form.client_id?.toString() || ''}
+                  onChange={(val: string | number) => handleClientChange(val)}
+                  options={clients.map(c => ({
+                    value: c.id.toString(),
+                    label: `${c.salutation ? `${c.salutation} ` : ''}${c.name}`,
+                    sublabel: clientCompanies.find(cc => cc.id === c.client_company_id)?.name || 'Perorangan'
+                  }))}
+                  onAddNew={() => {
+                    setNewClient({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
+                    setIsAddingClient(true);
+                  }}
+                  addNewLabel="Tambah Client Baru"
+                />
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -609,26 +697,31 @@ export const DealDetailModal: React.FC<Props> = ({
                   leftIcon={<Label>RP</Label>}
                   placeholder="0"
                 />
-                <Select
+                <ComboBox
                   label="Probabilitas (%)"
-                  value={form.probability?.toString()}
-                  onChange={e => setForm({ ...form, probability: Number(e.target.value) })}
-                >
-                  <option value="0">0%</option>
-                  <option value="25">25%</option>
-                  <option value="50">50%</option>
-                  <option value="75">75%</option>
-                  <option value="100">100%</option>
-                </Select>
+                  value={form.probability?.toString() || '0'}
+                  onChange={(val: string | number) => setForm({ ...form, probability: Number(val) })}
+                  options={[
+                    { value: '0', label: '0%' },
+                    { value: '25', label: '25%' },
+                    { value: '50', label: '50%' },
+                    { value: '75', label: '75%' },
+                    { value: '100', label: '100%' },
+                  ]}
+                  hideSearch
+                />
               </div>
 
-              <Select
+              <ComboBox
                 label="PIC Sales"
-                value={form.sales_id}
-                onChange={e => setForm({ ...form, sales_id: e.target.value })}
-              >
-                {members.map(m => <option key={m.user_id} value={m.user_id}>{m.profile?.full_name || 'Tanpa Nama'}</option>)}
-              </Select>
+                value={form.sales_id || ''}
+                onChange={(val: string | number) => setForm({ ...form, sales_id: val.toString() })}
+                options={members.map(m => ({
+                  value: m.user_id.toString(),
+                  label: m.profile?.full_name || 'Tanpa Nama',
+                  sublabel: m.profile?.email
+                }))}
+              />
 
               <Textarea
                 label="Catatan Deal"
@@ -641,6 +734,19 @@ export const DealDetailModal: React.FC<Props> = ({
           </div>
         </div>
       </div>
+      <ClientFormModal
+        isOpen={isAddingClient}
+        onClose={() => setIsAddingClient(false)}
+        onSave={handleQuickAddClient}
+        form={newClient}
+        setForm={setNewClient}
+        isProcessing={isProcessingQuick}
+        clientCompanies={clientCompanies}
+        categories={categories}
+        companyId={company.id}
+        onQuickAddCompany={handleQuickAddCompany}
+        onQuickAddCategory={handleQuickAddCategory}
+      />
     </Modal>
   );
 };

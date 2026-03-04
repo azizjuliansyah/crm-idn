@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { Input, Select, Textarea, Button, Modal } from '@/components/ui';
+import React, { useState, useEffect } from 'react';
+import { Input, Textarea, Button, Modal, ComboBox, Label, H4 } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
-import { Company, CompanyMember, SupportStage, Client, SupportTicket, TicketTopic } from '@/lib/types';
-import { Loader2, Save, ChevronDown, Layers } from 'lucide-react';
+import { Company, CompanyMember, SupportStage, Client, SupportTicket, TicketTopic, ClientCompany, ClientCompanyCategory } from '@/lib/types';
+import { Loader2, Save, ChevronDown, Layers, Check, X } from 'lucide-react';
+import { ClientFormModal } from '@/components/features/clients/components/ClientFormModal';
 
 interface Props {
   isOpen: boolean;
@@ -30,6 +31,38 @@ export const SupportTicketAddModal: React.FC<Props> = ({
     type: 'ticket'
   });
 
+  // Quick Add Client State
+  const [isAddingClient, setIsAddingClient] = useState(false);
+  const [newClientForm, setNewClientForm] = useState<Partial<Client>>({
+    salutation: '',
+    name: '',
+    email: '',
+    whatsapp: '',
+    client_company_id: null
+  });
+  const [isProcessingQuick, setIsProcessingQuick] = useState(false);
+
+  // Quick Add Topic State
+  const [isAddingTopic, setIsAddingTopic] = useState(false);
+  const [newTopicName, setNewTopicName] = useState('');
+
+  const [clientCompanies, setClientCompanies] = useState<ClientCompany[]>([]);
+  const [categories, setCategories] = useState<ClientCompanyCategory[]>([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      const fetchQuickAddData = async () => {
+        const [coRes, catRes] = await Promise.all([
+          supabase.from('client_companies').select('*').eq('company_id', company.id).order('name'),
+          supabase.from('client_company_categories').select('*').eq('company_id', company.id).order('name')
+        ]);
+        if (coRes.data) setClientCompanies(coRes.data);
+        if (catRes.data) setCategories(catRes.data);
+      };
+      fetchQuickAddData();
+    }
+  }, [isOpen, company.id]);
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title || !form.client_id) {
@@ -52,6 +85,75 @@ export const SupportTicketAddModal: React.FC<Props> = ({
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleQuickAddClient = async (form: Partial<Client>) => {
+    if (!form.name?.trim()) return;
+    setIsProcessingQuick(true);
+    try {
+      const { data, error } = await supabase
+        .from('clients')
+        .insert({
+          ...form,
+          company_id: company.id,
+          whatsapp: form.whatsapp ? `+62${form.whatsapp.replace(/\\D/g, '')}` : null
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      setForm((prev: any) => ({ ...prev, client_id: data.id }));
+      setIsAddingClient(false);
+      setNewClientForm({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
+      onSuccess(); // Refresh clients in parent
+    } catch (err: any) {
+      alert("Gagal menambah client: " + err.message);
+    } finally {
+      setIsProcessingQuick(false);
+    }
+  };
+
+  const handleQuickAddCompany = async (coData: any) => {
+    const { data, error } = await supabase
+      .from('client_companies')
+      .insert({
+        company_id: company.id,
+        ...coData
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    setClientCompanies((prev: ClientCompany[]) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+    return data;
+  };
+
+  const handleQuickAddTopic = async () => {
+    if (!newTopicName.trim()) return;
+    try {
+      const { data, error } = await supabase
+        .from('ticket_topics')
+        .insert({ name: newTopicName, company_id: company.id })
+        .select()
+        .single();
+
+      if (error) throw error;
+      onSuccess(); // Refresh topics in parent
+      setForm({ ...form, topic_id: data.id });
+      setNewTopicName('');
+      setIsAddingTopic(false);
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleQuickAddCategory = async (name: string) => {
+    const { data, error } = await supabase
+      .from('client_company_categories')
+      .insert({ name: name.trim(), company_id: company.id })
+      .select()
+      .single();
+    if (error) throw error;
+    setCategories((prev: ClientCompanyCategory[]) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+    return data;
   };
 
   return (
@@ -77,15 +179,16 @@ export const SupportTicketAddModal: React.FC<Props> = ({
     >
       <div className="space-y-8 py-2">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Select
+          <ComboBox
             label="Kategori Tipe*"
             value={form.type}
-            onChange={e => setForm({ ...form, type: e.target.value as any })}
-            required
-          >
-            <option value="ticket">Standard Ticket (Support)</option>
-            <option value="complaint">Complaint (Keluhan)</option>
-          </Select>
+            onChange={val => setForm({ ...form, type: val as any })}
+            options={[
+              { value: 'ticket', label: 'Standard Ticket (Support)' },
+              { value: 'complaint', label: 'Complaint (Keluhan)' }
+            ]}
+            hideSearch
+          />
 
           <Input
             label="Masalah / Judul Ticket*"
@@ -98,61 +201,126 @@ export const SupportTicketAddModal: React.FC<Props> = ({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Select
+          <ComboBox
             label="Pilih Client Terdaftar*"
             value={form.client_id || ''}
-            onChange={e => setForm({ ...form, client_id: Number(e.target.value) })}
-            required
-          >
-            <option value="">-- Pilih Client --</option>
-            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </Select>
+            onChange={val => setForm({ ...form, client_id: Number(val) })}
+            options={clients.map(c => ({
+              value: c.id,
+              label: c.name,
+              sublabel: `${c.salutation || ''} ${c.whatsapp || c.email || ''}`.trim()
+            }))}
+            className="rounded-md"
+            onAddNew={() => setIsAddingClient(true)}
+            addNewLabel="Tambah Client Baru"
+          />
 
-          <Select
+
+
+          <ComboBox
             label="Assign ke Tim Support"
             value={form.assigned_id || ''}
-            onChange={e => setForm({ ...form, assigned_id: e.target.value })}
-          >
-            {members.map(m => <option key={m.user_id} value={m.user_id}>{m.profile?.full_name || 'Tanpa Nama'}</option>)}
-          </Select>
+            onChange={val => setForm({ ...form, assigned_id: val.toString() })}
+            options={members.map(m => ({
+              value: m.user_id,
+              label: m.profile?.full_name || 'Tanpa Nama',
+              sublabel: m.profile?.email
+            }))}
+            className="rounded-md"
+          />
 
-          <Select
-            label="Topik Tiket (Opsional)"
-            value={form.topic_id || ''}
-            onChange={e => setForm({ ...form, topic_id: e.target.value ? Number(e.target.value) : null })}
-          >
-            <option value="">-- Pilih Topik --</option>
-            {topics.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </Select>
+          <div className="space-y-1.5">
+            {isAddingTopic ? (
+              <div className="flex gap-2 items-end">
+                <div className="flex-1 space-y-1.5">
+                  <Label className="text-[9px] text-gray-400 uppercase ml-1">Topik Baru*</Label>
+                  <Input
+                    autoFocus
+                    type="text"
+                    value={newTopicName}
+                    onChange={e => setNewTopicName(e.target.value)}
+                    className="w-full px-4 py-2 bg-white border border-rose-100 rounded-lg text-xs outline-none h-[42px]"
+                    placeholder="Nama Topik..."
+                  />
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    type="button"
+                    onClick={handleQuickAddTopic}
+                    disabled={!newTopicName.trim()}
+                    className="!px-3 bg-rose-600 text-white rounded-lg h-[42px]"
+                    variant="danger"
+                  >
+                    <Check size={14} />
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => setIsAddingTopic(false)}
+                    className="!px-3 bg-gray-100 text-gray-400 rounded-lg h-[42px]"
+                    variant="secondary"
+                  >
+                    <X size={14} />
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <ComboBox
+                label={form.type === 'complaint' ? "Topik Keluhan (Opsional)" : "Topik Tiket (Opsional)"}
+                value={form.topic_id || ''}
+                onChange={val => setForm({ ...form, topic_id: val ? Number(val) : null })}
+                options={topics.map(t => ({ value: t.id, label: t.name }))}
+                onAddNew={() => setIsAddingTopic(true)}
+                addNewLabel="Tambah Topik Baru"
+                className="rounded-md"
+              />
+            )}
+          </div>
 
-          <Select
+          <ComboBox
             label="Prioritas"
             value={form.priority}
-            onChange={e => setForm({ ...form, priority: e.target.value })}
-          >
-            <option value="low">Low</option>
-            <option value="normal">Normal</option>
-            <option value="high">High</option>
-            <option value="urgent">Urgent</option>
-          </Select>
+            onChange={val => setForm({ ...form, priority: val as any })}
+            options={[
+              { value: 'low', label: 'Low' },
+              { value: 'normal', label: 'Normal' },
+              { value: 'high', label: 'High' },
+              { value: 'urgent', label: 'Urgent' }
+            ]}
+            hideSearch
+            className="rounded-md"
+          />
 
-          <Select
+          <ComboBox
             label="Status Awal"
             value={form.status}
-            onChange={e => setForm({ ...form, status: e.target.value })}
-          >
-            {stages.map(s => <option key={s.id} value={s.name.toLowerCase()}>{s.name}</option>)}
-          </Select>
+            onChange={val => setForm({ ...form, status: val.toString() })}
+            options={stages.map(s => ({ value: s.name.toLowerCase(), label: s.name }))}
+            hideSearch
+            className="rounded-md"
+          />
         </div>
 
         <Textarea
           label="Detail Deskripsi Masalah"
           value={form.description || ''}
           onChange={e => setForm({ ...form, description: e.target.value })}
-          className="h-32"
+          className="h-32 rounded-md"
           placeholder="Tuliskan kendala yang dialami client secara detail..."
         />
       </div>
+      <ClientFormModal
+        isOpen={isAddingClient}
+        onClose={() => setIsAddingClient(false)}
+        onSave={handleQuickAddClient}
+        form={newClientForm}
+        setForm={setNewClientForm}
+        isProcessing={isProcessingQuick}
+        clientCompanies={clientCompanies}
+        categories={categories}
+        companyId={company.id}
+        onQuickAddCompany={handleQuickAddCompany}
+        onQuickAddCategory={handleQuickAddCategory}
+      />
     </Modal>
   );
 };

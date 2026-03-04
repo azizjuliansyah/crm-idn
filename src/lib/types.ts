@@ -110,6 +110,7 @@ export interface Lead {
   expected_value?: number;
   source?: string;
   status: string;
+  kanban_order?: number;
   sales_id?: string;
   notes?: string;
   input_date?: string;
@@ -137,6 +138,7 @@ export interface Deal {
   company_id: number;
   pipeline_id: number;
   stage_id: string;
+  kanban_order?: number;
   client_id?: number | null;
   name: string;
   customer_company?: string;
@@ -158,7 +160,7 @@ export interface Deal {
   quotations?: Quotation | Quotation[];
 }
 
-export interface LeadActivity {
+export interface LogActivity {
   id: number;
   lead_id?: number | null;
   deal_id?: number | null;
@@ -237,7 +239,7 @@ export interface TaxSetting {
 export interface AutonumberSetting {
   id: number;
   company_id: number;
-  document_type: 'quotation' | 'proforma' | 'delivery_order' | 'invoice';
+  document_type: 'quotation' | 'proforma' | 'delivery_order' | 'invoice' | 'kwitansi';
   prefix: string;
   format_pattern: string;
   next_number: number;
@@ -355,6 +357,7 @@ export interface InvoiceRequest {
   client_id: number;
   quotation_id?: number | null;
   proforma_id?: number | null;
+  invoice_id?: number | null;
   status: 'Pending' | 'Approved' | 'Rejected';
   notes?: string;
   created_at: string;
@@ -362,12 +365,87 @@ export interface InvoiceRequest {
   client?: Client;
   quotation?: { number: string };
   proforma?: { number: string };
+  invoice?: { id: number, number: string };
+}
+
+export interface Kwitansi {
+  id: number;
+  company_id: number;
+  client_id: number;
+  invoice_id?: number | null;
+  number: string;
+  status: string;
+  date: string;
+  notes?: string;
+  subtotal: number;
+  discount_type: 'Rp' | '%';
+  discount_value: number;
+  tax_type?: string;
+  tax_value: number;
+  total: number;
+  created_at: string;
+  client?: Client;
+  kwitansi_items?: KwitansiItem[];
+}
+
+export interface KwitansiItem {
+  id: number;
+  kwitansi_id: number;
+  product_id?: number | null;
+  description?: string;
+  qty: number;
+  unit_name?: string;
+  price: number;
+  total: number;
+  products?: Product;
+}
+
+export interface KwitansiRequest {
+  id: number;
+  company_id: number;
+  requester_id: string;
+  client_id: number;
+  invoice_id?: number | null;
+  kwitansi_id?: number | null;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  notes?: string;
+  created_at: string;
+  profile?: Profile;
+  client?: Client;
+  invoice?: { id: number, number: string };
+  kwitansi?: { id: number, number: string };
+}
+
+export interface SalesRequestCategory {
+  id: number;
+  company_id: number;
+  name: string;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface SalesRequest {
+  id: number;
+  company_id: number;
+  category_id: number;
+  requester_id: string;
+  client_id: number;
+  quotation_id?: number | null;
+  proforma_id?: number | null;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  notes?: string;
+  created_at: string;
+  profile?: Profile;
+  client?: Client;
+  category?: SalesRequestCategory;
+  quotation?: { id: number, number: string };
+  proforma?: { id: number, number: string };
 }
 
 export interface DocumentTemplateSetting {
   id: number;
   company_id: number;
-  document_type: 'quotation' | 'invoice' | 'proforma';
+  document_type: 'quotation' | 'invoice' | 'proforma' | 'kwitansi';
   template_id: string;
   config: any;
   updated_at: string;
@@ -446,6 +524,7 @@ export interface SupportTicket {
   client_id: number | null;
   assigned_id?: string | null;
   topic_id?: number | null;
+  kanban_order?: number;
   title: string;
   description?: string;
   status: string;
@@ -477,6 +556,7 @@ export interface AiSetting {
   id: number;
   company_id: number;
   gemini_api_key?: string;
+  model_name?: string;
   system_instruction?: string;
   updated_at: string;
 }
@@ -504,4 +584,20 @@ export interface TicketTopic {
   name: string;
   description?: string;
   created_at: string;
+}
+
+export interface ClientForm {
+  salutation: string;
+  name: string;
+  email: string;
+  whatsapp: string;
+  client_company_id: string;
+}
+
+export interface ProductForm {
+  name: string;
+  category_id: string;
+  unit_id: string;
+  price: number;
+  description: string;
 }

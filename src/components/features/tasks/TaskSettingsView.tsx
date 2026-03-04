@@ -191,7 +191,7 @@ export const TaskSettingsView: React.FC<Props> = ({ company }) => {
             value={form.name}
             onChange={e => setForm({ ...form, name: e.target.value })}
             placeholder="Misal: Review Client..."
-            className="rounded-xl"
+            className="rounded-md"
             required
           />
         </div>

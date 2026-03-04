@@ -2,21 +2,22 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Select, Button, Table, TableHeader, TableBody, TableRow, TableCell, H3, Subtext, Label, Modal, EmptyState, SearchInput, Badge } from '@/components/ui';
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, H2, H3, Subtext, Label, Modal, EmptyState, SearchInput, Badge, ComboBox } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
-import { Company, ProformaInvoice } from '@/lib/types';
+import { Company, ProformaInvoice, SalesRequestCategory } from '@/lib/types';
 import {
   Plus, Search, Edit2, Trash2, Loader2, FileCheck,
   ChevronRight, ArrowUpDown, ChevronUp, ChevronDown,
   AlertTriangle, CheckCircle2, X, Filter,
-  FileDown, FileText,
+  FileDown, FileText, FilePlus,
   Clock
 } from 'lucide-react';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { generateTemplate1, generateTemplate5, generateTemplate6 } from '@/lib/pdf-templates';
 import { useRouter } from 'next/navigation';
 
 interface Props {
@@ -39,6 +40,7 @@ const getImgDimensions = (url: string): Promise<{ width: number, height: number,
 export const ProformasView: React.FC<Props> = ({ company }) => {
   const router = useRouter();
   const [proformas, setProformas] = useState<ProformaInvoice[]>([]);
+  const [requestCategories, setRequestCategories] = useState<SalesRequestCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClientId, setFilterClientId] = useState('all');
@@ -50,19 +52,29 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
   const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
     isOpen: false, title: '', message: '', type: 'success'
   });
+  const [requestModal, setRequestModal] = useState<{ isOpen: boolean; proformaId: number | null; proformaStatus: string }>({ isOpen: false, proformaId: null, proformaStatus: '' });
 
   const fetchData = useCallback(async () => {
     if (!company?.id) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('proformas')
-        .select('*, client:clients(*, client_company:client_companies(*)), proforma_items(*, products(*))')
-        .eq('company_id', company.id)
-        .order('id', { ascending: false });
+      const [pRes, catRes] = await Promise.all([
+        supabase
+          .from('proformas')
+          .select('*, client:clients(*, client_company:client_companies(*)), proforma_items(*, products(*))')
+          .eq('company_id', company.id)
+          .order('id', { ascending: false }),
+        supabase
+          .from('sales_request_categories')
+          .select('*')
+          .eq('company_id', company.id)
+          .order('sort_order', { ascending: false })
+      ]);
 
-      if (error) throw error;
-      if (data) setProformas(data as any);
+      if (pRes.error) throw pRes.error;
+      if (pRes.data) setProformas(pRes.data as any);
+      if (catRes.error) throw catRes.error;
+      if (catRes.data) setRequestCategories(catRes.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -165,7 +177,7 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
       .from('document_template_settings')
       .select('*')
       .eq('company_id', company.id)
-      .eq('document_type', 'proforma')
+      .eq('document_type', 'invoice')
       .maybeSingle();
 
     const templateId = templateSetting?.template_id || 'template1';
@@ -275,6 +287,10 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
       doc.setFont('helvetica', 'bold');
       safeText('Grand Total', 130, grandTotalY + 6.5);
       safeText(formatIDR(p.total), pageWidth - padX, grandTotalY + 6.5, { align: 'right' });
+    } else if (templateId === 'template6') {
+      config.document_type = 'proforma';
+      const qData = { ...p };
+      await generateTemplate6(doc, qData, config, company, pageWidth, padX);
     } else {
       doc.setFillColor('#4F46E5');
       safeRect(0, 0, pageWidth, 40, 'F');
@@ -297,43 +313,52 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
   if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4"><Loader2 className="animate-spin text-blue-600" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Sinkronisasi Proforma...</Subtext></div>;
 
   return (
-    <div className="flex flex-col gap-6 h-full text-gray-900">
-      <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0 overflow-x-auto custom-scrollbar">
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="w-[400px]">
+    <div className="flex flex-col gap-6 text-gray-900">
+      <div className="flex flex-col gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+        <div className="flex items-center justify-between">
+          <div>
+            <H2 className="text-xl ">Daftar Proforma Invoice</H2>
+            <Subtext className="text-[10px]  uppercase tracking-tight">Kelola dan pantau seluruh proforma pelanggan.</Subtext>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => router.push('/dashboard/sales/proformas/create')}
+              leftIcon={<Plus size={14} strokeWidth={3} />}
+              className="!px-6 py-2.5 text-[10px] uppercase tracking-tight shadow-lg shadow-blue-100"
+              variant="primary"
+              size="sm"
+            >
+              Buat Proforma
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-gray-50">
+          <div className="w-[400px] shrink-0">
             <SearchInput
               placeholder="Cari nomor, client..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="rounded-xl border-gray-100 shadow-none bg-gray-50/30"
             />
           </div>
 
-          <div className="w-[200px]">
-            <Select
+          <div className="flex items-center gap-3 shrink-0 ml-auto">
+            <ComboBox
               value={filterClientId}
-              onChange={e => setFilterClientId(e.target.value)}
-              className="!text-[10px] ! uppercase tracking-tight text-gray-400 w-full"
-            >
-              <option value="all">SEMUA PELANGGAN</option>
-              {uniqueClients.map(([id, name]) => (<option key={id} value={id}>{name.toUpperCase()}</option>))}
-            </Select>
+              onChange={(val: string | number) => setFilterClientId(val as string)}
+              options={[
+                { value: 'all', label: 'SEMUA PELANGGAN' },
+                ...uniqueClients.map(([id, name]) => ({ value: id.toString(), label: name.toUpperCase() }))
+              ]}
+              className="w-40"
+              placeholderSize="text-[10px] font-bold text-gray-900 uppercase tracking-tight"
+            />
           </div>
         </div>
-
-        <Button
-          onClick={() => router.push('/dashboard/sales/proformas/create')}
-          variant="primary"
-        >
-          <div className="flex items-center gap-2">
-            <Plus size={14} strokeWidth={3} />
-            Buat Proforma
-          </div>
-        </Button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm flex-1">
-        <div className="overflow-x-auto h-full custom-scrollbar">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm h-[80vh] mb-4 flex flex-col overflow-hidden">
+        <div className="overflow-x-auto overflow-y-auto h-full custom-scrollbar">
           <Table>
             <TableHeader className="sticky top-0 z-10 bg-gray-50/80 backdrop-blur-md border-b border-gray-100">
               <TableRow className="hover:bg-transparent">
@@ -380,17 +405,15 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
                   <TableCell>
                     <div className="flex items-center justify-center gap-2">
                       <Button variant="ghost" size="sm" onClick={() => handleDownloadPDF(p)} className="!p-2 !text-emerald-500 hover:!bg-emerald-50 rounded-lg transition-colors" title="Unduh PDF"><FileDown size={14} /></Button>
-                      {p.status !== 'Draft' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => router.push(`/dashboard/sales/invoice-requests/create?proformaId=${p.id}`)}
-                          className="!p-2 !text-amber-500 hover:!bg-amber-50 rounded-lg transition-colors"
-                          title="Request Invoice"
-                        >
-                          <FileText size={14} />
-                        </Button>
-                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setRequestModal({ isOpen: true, proformaId: p.id, proformaStatus: p.status })}
+                        className="!p-2 !text-indigo-500 hover:!bg-indigo-50 rounded-lg transition-colors"
+                        title="Buat Request Berdasarkan Proforma"
+                      >
+                        <FilePlus size={14} />
+                      </Button>
                       <Button variant="ghost" size="sm" onClick={() => router.push(`/dashboard/sales/proformas/${p.id}`)} className="!p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" title="Edit"><Edit2 size={14} /></Button>
                       <Button variant="ghost" size="sm" onClick={() => setConfirmDelete({ isOpen: true, id: p.id, number: p.number })} className="!p-2 !text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg" title="Hapus"><Trash2 size={14} /></Button>
                     </div>
@@ -428,6 +451,40 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
           <H3 className="mb-2 !normal-case">{notification.title}</H3>
           <Subtext className="mb-8">{notification.message}</Subtext>
           <Button onClick={() => setNotification({ ...notification, isOpen: false })} className="w-full">Tutup</Button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={requestModal.isOpen}
+        onClose={() => setRequestModal({ isOpen: false, proformaId: null, proformaStatus: '' })}
+        title="Buat Request untuk Proforma Ini"
+        size="md"
+      >
+        <div className="flex flex-col gap-3 py-4">
+          <Subtext className="text-sm text-gray-500 mb-2">Silakan pilih jenis request yang ingin Anda ajukan berdasarkan proforma ini:</Subtext>
+
+          {requestModal.proformaStatus !== 'Draft' && (
+            <Button
+              variant="ghost"
+              className="w-full justify-start !py-4 text-left border border-amber-200 bg-amber-50/50 hover:bg-amber-50"
+              leftIcon={<FileText className="text-amber-500" size={18} />}
+              onClick={() => router.push(`/dashboard/sales/invoice-requests/create?proformaId=${requestModal.proformaId}`)}
+            >
+              Request Invoice
+            </Button>
+          )}
+
+          {requestCategories.map(cat => (
+            <Button
+              key={cat.id}
+              variant="ghost"
+              className="w-full justify-start !py-4 text-left border border-gray-200 uppercase"
+              leftIcon={<FilePlus className="text-gray-400" size={18} />}
+              onClick={() => router.push(`/dashboard/sales/requests/${cat.id}/create?proformaId=${requestModal.proformaId}`)}
+            >
+              {cat.name}
+            </Button>
+          ))}
         </div>
       </Modal>
     </div>

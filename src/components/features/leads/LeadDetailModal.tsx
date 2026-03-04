@@ -1,8 +1,9 @@
-import { ArrowUp, Trash2, Save, X, Target, Star, Clock, ArrowRightLeft, MessageSquare, RefreshCw, Pencil, ChevronLeft } from 'lucide-react';
-import { Company, Profile, LeadActivity, ClientCompany, Lead, LeadStage, LeadSource, CompanyMember } from '@/lib/types';
+import { ArrowUp, Trash2, Save, X, Target, Star, Clock, ArrowRightLeft, MessageSquare, RefreshCw, Pencil, ChevronLeft, Building, Contact2, Check as CheckIcon, Plus, User } from 'lucide-react';
+import { Company, Profile, LogActivity, ClientCompany, Lead, LeadStage, LeadSource, CompanyMember, ClientCompanyCategory, Client } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import React, { useState, useEffect } from 'react';
-import { Input, Select, Textarea, Button, Subtext, Label, SectionHeader, Modal, Avatar, Badge, Breadcrumb, EmptyState, Timeline, TimelineItem, TimelineIcon, TimelineContent } from '@/components/ui';
+import { Input, Textarea, Button, Subtext, Label, SectionHeader, Modal, Avatar, Badge, Breadcrumb, EmptyState, Timeline, TimelineItem, TimelineIcon, TimelineContent, ComboBox } from '@/components/ui';
+import { ClientFormModal } from '@/components/features/clients/components/ClientFormModal';
 
 
 
@@ -16,20 +17,88 @@ interface LeadDetailModalProps {
   stages: LeadStage[];
   sources: LeadSource[];
   clientCompanies: ClientCompany[];
+  categories: ClientCompanyCategory[];
   onUpdate: () => void;
   onDelete: (id: number) => void;
   onConvertToDeal: () => void;
+  setClientCompanies: React.Dispatch<React.SetStateAction<ClientCompany[]>>;
+  setCategories: React.Dispatch<React.SetStateAction<ClientCompanyCategory[]>>;
 }
 
 export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
-  isOpen, onClose, lead, company, user, members, stages, sources, clientCompanies, onUpdate, onDelete, onConvertToDeal
+  isOpen, onClose, lead, company, user, members, stages, sources, clientCompanies, categories, onUpdate, onDelete, onConvertToDeal,
+  setClientCompanies, setCategories
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [activities, setActivities] = useState<LeadActivity[]>([]);
+  const [activities, setActivities] = useState<LogActivity[]>([]);
   const [loadingActivities, setLoadingActivities] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [form, setForm] = useState<Partial<Lead>>(lead);
   const [waNumber, setWaNumber] = useState('');
+
+  const [clients, setClients] = useState<Client[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
+
+  // ClientFormModal State
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [clientForm, setClientForm] = useState<Partial<Client>>({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
+  const [isProcessingQuick, setIsProcessingQuick] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadClients();
+    }
+  }, [isOpen]);
+
+  const loadClients = async () => {
+    try {
+      const { data } = await supabase.from('clients').select('*, client_company:client_companies(*)').eq('company_id', company.id).order('name');
+      if (data) {
+        setClients(data);
+        if (lead) {
+          // Find if there is a client matching lead name and company
+          const currentClient = data.find((c: Client) =>
+            c.name === lead.name &&
+            c.email === lead.email &&
+            c.client_company_id === lead.client_company_id
+          );
+          if (currentClient) {
+            setSelectedClientId(currentClient.id.toString());
+          }
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleClientSelect = (clientId: string) => {
+    setSelectedClientId(clientId);
+    const client = clients.find(c => c.id.toString() === clientId);
+    if (client) {
+      setForm(prev => ({
+        ...prev,
+        salutation: client.salutation || '',
+        name: client.name || '',
+        email: client.email || '',
+        client_company_id: client.client_company_id,
+      }));
+      if (client.whatsapp) {
+        setWaNumber(client.whatsapp.startsWith('+62') ? client.whatsapp.replace('+62', '') : client.whatsapp);
+      } else {
+        setWaNumber('');
+      }
+    } else {
+      setForm(prev => ({
+        ...prev,
+        salutation: '',
+        name: '',
+        email: '',
+        client_company_id: null,
+      }));
+      setWaNumber('');
+    }
+  };
 
   useEffect(() => {
     if (isOpen && lead) {
@@ -44,7 +113,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
     setLoadingActivities(true);
     try {
       const { data } = await supabase
-        .from('lead_activities')
+        .from('log_activities')
         .select('*, profile:profiles(*)')
         .eq('lead_id', lead.id)
         .order('created_at', { ascending: false });
@@ -64,7 +133,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
       const { error } = await supabase.from('leads').update({ status: newStatus.toLowerCase() }).eq('id', lead.id);
       if (error) throw error;
 
-      await supabase.from('lead_activities').insert({
+      await supabase.from('log_activities').insert({
         lead_id: lead.id,
         user_id: user.id,
         content: `Status changed from ${oldStatus} to ${newStatus.toLowerCase()}`,
@@ -72,7 +141,6 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
       });
 
       setForm(prev => ({ ...prev, status: newStatus.toLowerCase() }));
-      onUpdate();
       await fetchActivities();
     } catch (err: any) {
       alert(err.message);
@@ -85,7 +153,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
     if (!newComment.trim() || isProcessing) return;
     setIsProcessing(true);
     try {
-      const { error } = await supabase.from('lead_activities').insert({
+      const { error } = await supabase.from('log_activities').insert({
         lead_id: lead.id,
         user_id: user.id,
         content: newComment,
@@ -129,6 +197,46 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleQuickAddCategory = async (name: string) => {
+    const { data, error } = await supabase.from('client_company_categories').insert({ company_id: company.id, name: name.trim() }).select().single();
+    if (error) throw error;
+    setCategories(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+    return data;
+  };
+
+  const handleQuickAddCompany = async (coData: any) => {
+    const { data, error } = await supabase.from('client_companies').insert({
+      company_id: company.id,
+      ...coData
+    }).select().single();
+    if (error) throw error;
+    setClientCompanies(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+    return data;
+  };
+
+  const handleSaveClient = async (formData: Partial<Client>) => {
+    if (!formData.name?.trim()) return;
+    setIsProcessingQuick(true);
+    try {
+      const { data, error } = await supabase.from('clients').insert({
+        company_id: company.id,
+        salutation: formData.salutation,
+        name: formData.name.trim(),
+        client_company_id: formData.client_company_id,
+        email: formData.email,
+        whatsapp: formData.whatsapp ? `+62${formData.whatsapp.replace(/\D/g, '')}` : null
+      }).select().single();
+      if (error) throw error;
+
+      const freshRes = await supabase.from('clients').select('*, client_company:client_companies(*)').eq('company_id', company.id).order('name');
+      if (freshRes.data) setClients(freshRes.data);
+
+      handleClientSelect(String(data.id));
+      setIsClientModalOpen(false);
+      setClientForm({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
+    } catch (err: any) { alert(err.message); } finally { setIsProcessingQuick(false); }
   };
 
   const handleWaNumberChange = (val: string) => {
@@ -282,7 +390,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                     placeholder="Tulis update progres..."
                     className="w-full min-h-[80px] bg-gray-50 border border-gray-200 rounded-sm p-3 text-xs font-medium outline-none focus:bg-white focus:border-blue-400 transition-all resize-none"
                   />
-                  <div className="absolute right-2 bottom-2">
+                  <div className="absolute right-2 bottom-3">
                     <Button
                       variant="primary"
                       size="sm"
@@ -336,23 +444,44 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
             />
 
             <div className="flex-1 overflow-y-auto custom-scrollbar pr-4 space-y-6">
-              <div className="grid grid-cols-3 gap-4">
-                <Select
-                  label="Sapaan"
-                  value={form.salutation}
-                  onChange={e => setForm({ ...form, salutation: e.target.value })}
-                  className="!py-2"
-                >
-                  <option value="-">-</option>
-                  <option value="Bapak">Bapak</option>
-                  <option value="Ibu">Ibu</option>
-                </Select>
-                <div className="col-span-2">
+              <div className="grid grid-cols-4 gap-4">
+                <div className="col-span-4">
+                  <ComboBox
+                    label="Pilih Client (Atau Tambah Baru)"
+                    placeholder="Pilih Pelanggan"
+                    value={selectedClientId}
+                    onChange={(val: string | number) => handleClientSelect(val.toString())}
+                    options={[
+                      { value: '', label: '-- Input Manual / Pilih Client --' },
+                      ...clients.map(c => ({
+                        value: c.id.toString(),
+                        label: c.name,
+                        sublabel: c.client_company?.name || 'PERSONAL'
+                      }))
+                    ]}
+                    onAddNew={() => setIsClientModalOpen(true)}
+                    addNewLabel="Tambah Pelanggan Baru"
+                    leftIcon={<User size={16} />}
+                  />
+                </div>
+                <div className="col-span-1">
+                  <ComboBox
+                    label="Sapaan"
+                    value={form.salutation}
+                    onChange={(val: string | number) => setForm({ ...form, salutation: val.toString() })}
+                    options={[
+                      { value: '-', label: '-' },
+                      { value: 'Bapak', label: 'Bapak' },
+                      { value: 'Ibu', label: 'Ibu' },
+                    ]}
+                    hideSearch
+                  />
+                </div>
+                <div className="col-span-3">
                   <Input
                     label="Nama Lengkap"
                     value={form.name}
                     onChange={e => setForm({ ...form, name: e.target.value })}
-                    className="!py-2"
                   />
                 </div>
               </div>
@@ -375,7 +504,6 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                   type="email"
                   value={form.email}
                   onChange={e => setForm({ ...form, email: e.target.value })}
-                  className="!py-2"
                 />
               </div>
 
@@ -393,15 +521,17 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                 </div>
               </div>
 
-              <Select
-                label="Instansi / Perusahaan"
-                value={form.client_company_id || ''}
-                onChange={e => setForm({ ...form, client_company_id: e.target.value ? Number(e.target.value) : null })}
-                className="!py-2"
-              >
-                <option value="">Personal / Individual</option>
-                {clientCompanies.map(co => <option key={co.id} value={co.id}>{co.name}</option>)}
-              </Select>
+              <div className="space-y-3">
+                <ComboBox
+                  value={form.client_company_id?.toString() || ''}
+                  label="Pilih Perusahaan"
+                  onChange={(val: string | number) => setForm({ ...form, client_company_id: val ? Number(val) : null })}
+                  options={[
+                    { value: '', label: 'Personal / Individual' },
+                    ...clientCompanies.map(co => ({ value: co.id.toString(), label: co.name }))
+                  ]}
+                />
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <Input
@@ -409,26 +539,21 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                   type="date"
                   value={form.input_date || ''}
                   onChange={e => setForm({ ...form, input_date: e.target.value })}
-                  className="!py-2"
                 />
-                <Select
+                <ComboBox
                   label="Sumber Lead"
                   value={form.source}
-                  onChange={e => setForm({ ...form, source: e.target.value })}
-                  className="!py-2"
-                >
-                  {sources.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-                </Select>
+                  onChange={(val: string | number) => setForm({ ...form, source: val.toString() })}
+                  options={sources.map(s => ({ value: s.name, label: s.name }))}
+                />
               </div>
 
-              <Select
+              <ComboBox
                 label="PIC Sales"
                 value={form.sales_id}
-                onChange={e => setForm({ ...form, sales_id: e.target.value })}
-                className="!py-2"
-              >
-                {members.map(m => <option key={m.user_id} value={m.user_id}>{m.profile?.full_name || 'Tanpa Nama'}</option>)}
-              </Select>
+                onChange={(val: string | number) => setForm({ ...form, sales_id: val.toString() })}
+                options={members.map(m => ({ value: m.user_id, label: m.profile?.full_name || 'Tanpa Nama' }))}
+              />
 
               <div className="space-y-1.5">
                 <Label className="text-[9px]  text-gray-400 uppercase tracking-wider ml-0.5">Alamat / Lokasi</Label>
@@ -447,6 +572,20 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
       `}</style>
+
+      <ClientFormModal
+        isOpen={isClientModalOpen}
+        onClose={() => setIsClientModalOpen(false)}
+        form={clientForm}
+        setForm={setClientForm}
+        isProcessing={isProcessingQuick}
+        onSave={handleSaveClient}
+        clientCompanies={clientCompanies}
+        categories={categories}
+        companyId={company.id}
+        onQuickAddCompany={handleQuickAddCompany}
+        onQuickAddCategory={handleQuickAddCategory}
+      />
     </Modal>
   );
 };

@@ -156,7 +156,7 @@ export function DashboardProvider({ children, initialData }: DashboardProviderPr
       const fetchMembers = async () => {
         const { data } = await supabase
           .from('company_members')
-          .select('*, profile:profiles(*)')
+          .select('*, profile:profiles(*), company_roles(*)')
           .eq('company_id', activeCompany.id);
         if (data) setActiveCompanyMembers(data);
       };

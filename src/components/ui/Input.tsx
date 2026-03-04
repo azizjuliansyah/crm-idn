@@ -14,7 +14,7 @@ export const Input: React.FC<InputProps> = ({
   ...props
 }) => {
   return (
-    <div className="space-y-2 w-full">
+    <div className="space-y-2">
       {label && (
         <label className="text-[10px] font-medium text-gray-400 uppercase tracking-tight ml-1">
           {label}
@@ -36,32 +36,4 @@ export const Input: React.FC<InputProps> = ({
   );
 };
 
-interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
-  label?: string;
-  error?: string;
-}
 
-export const Select: React.FC<SelectProps> = ({
-  label,
-  error,
-  children,
-  className = '',
-  ...props
-}) => {
-  return (
-    <div className="space-y-2">
-      {label && (
-        <label className="text-[10px] font-medium text-gray-400 uppercase tracking-tight ml-1">
-          {label}
-        </label>
-      )}
-      <select
-        className={`w-full px-5 py-3.5 bg-white border border-gray-200 rounded-md font-medium text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all cursor-pointer  hover:border-gray-300 ${error ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-50/50' : ''} ${className}`}
-        {...props}
-      >
-        {children}
-      </select>
-      {error && <p className="text-[9px] text-rose-500  uppercase ml-1">{error}</p>}
-    </div>
-  );
-};

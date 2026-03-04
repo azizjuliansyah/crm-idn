@@ -10,6 +10,9 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "CRM Pintar",
   description: "Platform Manajemen Hubungan Pelanggan",
+  icons: {
+    icon: "/logo_idn.svg",
+  },
 };
 
 export default function RootLayout({

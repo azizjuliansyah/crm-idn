@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 
-import { Input, Select, Button, H3, Subtext, Label, Modal } from '@/components/ui';
+import { Input, Button, H3, Subtext, Label, Modal, ComboBox } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -55,7 +55,7 @@ export const SalesAutonumberView: React.FC<Props> = ({ company }) => {
       const { data, error } = await supabase.from('autonumber_settings').select('*').eq('company_id', company.id).order('document_type');
       if (error) throw error;
 
-      const expectedTypes = ['quotation', 'proforma', 'delivery_order', 'invoice'];
+      const expectedTypes = ['quotation', 'proforma', 'delivery_order', 'invoice', 'kwitansi'];
       const missingTypes = expectedTypes.filter(type => !data?.some(s => s.document_type === type));
 
       if (missingTypes.length > 0) {
@@ -64,7 +64,8 @@ export const SalesAutonumberView: React.FC<Props> = ({ company }) => {
           if (type === 'quotation') prefix = 'QT';
           else if (type === 'proforma') prefix = 'PI';
           else if (type === 'delivery_order') prefix = 'DO';
-          else prefix = 'INV';
+          else if (type === 'invoice') prefix = 'INV';
+          else prefix = 'KWT';
 
           return {
             company_id: company.id,
@@ -178,7 +179,7 @@ export const SalesAutonumberView: React.FC<Props> = ({ company }) => {
       case 'proforma':
         return {
           icon: <FileCheck size={24} />,
-          label: 'Pro Forma Invoice',
+          label: 'Proforma Invoice',
           gradient: 'from-indigo-500 to-purple-600',
           shadow: 'shadow-indigo-100',
           bg: 'bg-indigo-50'
@@ -190,6 +191,14 @@ export const SalesAutonumberView: React.FC<Props> = ({ company }) => {
           gradient: 'from-amber-500 to-orange-600',
           shadow: 'shadow-amber-100',
           bg: 'bg-amber-50'
+        };
+      case 'kwitansi':
+        return {
+          icon: <FileText size={24} />,
+          label: 'Kwitansi',
+          gradient: 'from-fuchsia-500 to-pink-600',
+          shadow: 'shadow-fuchsia-100',
+          bg: 'bg-fuchsia-50'
         };
       default:
         return {
@@ -371,25 +380,25 @@ export const SalesAutonumberView: React.FC<Props> = ({ company }) => {
                     {form.reset_period === 'yearly' && (
                       <div className="space-y-1.5">
                         <Label className="ml-1">Bulan</Label>
-                        <Select
+                        <ComboBox
                           value={form.reset_month || 1}
-                          onChange={(e: any) => setForm({ ...form, reset_month: Number(e.target.value) })}
-                          className="!h-10 text-xs shadow-sm"
-                        >
-                          {MONTHS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                        </Select>
+                          onChange={(val: string | number) => setForm({ ...form, reset_month: Number(val) })}
+                          options={MONTHS.map(m => ({ value: m.id, label: m.name }))}
+                          hideSearch={true}
+                          className="w-full"
+                        />
                       </div>
                     )}
 
                     <div className="space-y-1.5">
                       <Label className="ml-1">Tanggal</Label>
-                      <Select
+                      <ComboBox
                         value={form.reset_day || 1}
-                        onChange={(e: any) => setForm({ ...form, reset_day: Number(e.target.value) })}
-                        className="!h-10 text-xs shadow-sm"
-                      >
-                        {Array.from({ length: 31 }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
-                      </Select>
+                        onChange={(val: string | number) => setForm({ ...form, reset_day: Number(val) })}
+                        options={Array.from({ length: 31 }, (_, i) => i + 1).map(d => ({ value: d, label: d.toString() }))}
+                        hideSearch={true}
+                        className="w-full"
+                      />
                     </div>
                   </div>
                 )}

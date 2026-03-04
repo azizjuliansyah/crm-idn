@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Input, Select, Button, H2, Subtext, Label, SearchInput, DateFilterDropdown } from '@/components/ui';
+import { Input, Button, H2, Subtext, Label, SearchInput, DateFilterDropdown, ComboBox } from '@/components/ui';
 
 import { supabase } from '@/lib/supabase';
 import { Company, CompanyMember, LeadStage, Lead, ClientCompany, ClientCompanyCategory, LeadSource } from '@/lib/types';
@@ -25,10 +25,6 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean, id: number | null }>({ isOpen: false, id: null });
-
-  // Drag & Drop State
-  const [draggedId, setDraggedId] = useState<number | null>(null);
-  const [dropTarget, setDropTarget] = useState<string | null>(null);
 
   // Auxiliary Data
   const [sources, setSources] = useState<LeadSource[]>([]);
@@ -80,7 +76,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
           *,
           client_company:client_companies(name),
           sales_profile:profiles!leads_sales_id_fkey(full_name, avatar_url, email)
-        `).eq('company_id', activeCompany.id).order('created_at', { ascending: false })
+        `).eq('company_id', activeCompany.id).order('kanban_order', { ascending: true }).order('created_at', { ascending: false })
       ]);
 
       if (stagesRes.data) setStages(stagesRes.data);
@@ -167,7 +163,9 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
 
     return matchesSearch && matchesStatus && matchesAssignee && matchesDate;
   }).sort((a, b) => {
-    if (!sortConfig) return 0;
+    if (!sortConfig) {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
     const valA = (a as any)[sortConfig.key];
     const valB = (b as any)[sortConfig.key];
 
@@ -182,40 +180,63 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
 
   // Group by status for Kanban
   const leadsByStatus = stages.reduce((acc, stage) => {
-    acc[stage.name.toLowerCase()] = filteredLeads.filter(l => l.status === stage.name.toLowerCase());
+    acc[stage.name.toLowerCase()] = filteredLeads
+      .filter(l => l.status === stage.name.toLowerCase())
+      .sort((a, b) => {
+        const orderA = a.kanban_order || 0;
+        const orderB = b.kanban_order || 0;
+        if (orderA !== orderB) return orderA - orderB;
+        // Fallback to newest first if orders are same (e.g. 0)
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
     return acc;
   }, {} as Record<string, Lead[]>);
 
-  // Drag and Drop handlers
-  const handleDrop = async (leadId: number, newStatus: string) => {
+  // Network update based on the generic KanbanBoard's onReorder payload
+  const handleDrop = async (leadId: number, newStatus: string, index?: number) => {
     try {
-      await supabase.from('leads').update({ status: newStatus.toLowerCase() }).eq('id', leadId);
-      fetchData(); // Refresh to update UI
+      // Find the cards currently in that status to calculate the new kanban_order
+      const targetColumnCards = leadsByStatus[newStatus.toLowerCase()] || [];
+      const draggedCard = leads.find(l => l.id === leadId);
+      if (!draggedCard) return;
+
+      // Filter out the dragged card itself from the target column if it's already there
+      const cardsWithoutDragged = targetColumnCards.filter(l => l.id !== leadId);
+
+      let newOrder = 0;
+
+      if (cardsWithoutDragged.length === 0) {
+        // If it's the first and only card in the column
+        newOrder = 1000;
+      } else if (index === undefined || index >= cardsWithoutDragged.length) {
+        // Dropped at the very bottom
+        const lastCard = cardsWithoutDragged[cardsWithoutDragged.length - 1];
+        newOrder = (lastCard.kanban_order || 0) + 1000;
+      } else if (index <= 0) {
+        // Dropped at the very top
+        const firstCard = cardsWithoutDragged[0];
+        newOrder = (firstCard.kanban_order || 0) - 1000;
+      } else {
+        // Dropped exactly between two existing cards
+        const cardBefore = cardsWithoutDragged[index - 1];
+        const cardAfter = cardsWithoutDragged[index];
+        newOrder = ((cardBefore.kanban_order || 0) + (cardAfter.kanban_order || 0)) / 2;
+      }
+
+      // Optimistic UI update
+      setLeads(prev => prev.map(l =>
+        l.id === leadId ? { ...l, status: newStatus.toLowerCase(), kanban_order: newOrder } : l
+      ));
+
+      // Network update
+      await supabase.from('leads').update({ status: newStatus.toLowerCase(), kanban_order: newOrder }).eq('id', leadId);
     } catch (err) { console.error(err); }
-  };
-
-  const handleDragStart = (e: React.DragEvent, id: number) => {
-    setDraggedId(id);
-  };
-
-  const handleDragOver = (e: React.DragEvent, stageName: string) => {
-    e.preventDefault();
-    setDropTarget(stageName);
-  };
-
-  const handleDropEvent = (e: React.DragEvent, stageName: string) => {
-    e.preventDefault();
-    setDropTarget(null);
-    if (draggedId) {
-      handleDrop(draggedId, stageName);
-      setDraggedId(null);
-    }
   };
 
   if (!activeCompany) return <div className="p-8 text-center text-gray-400">Pilih workspace terlebih dahulu.</div>;
 
   return (
-    <div className="h-full flex flex-col space-y-6">
+    <div className="flex flex-col space-y-6">
       <div className="flex flex-col gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
         <div className="flex items-center justify-between">
           <div>
@@ -270,29 +291,35 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
               onStartDateChange={setStartDateFilter}
               onEndDateChange={setEndDateFilter}
             />
-            <Select
+            <ComboBox
               value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
-              className="!text-[10px] uppercase tracking-tight text-gray-400 w-36"
-            >
-              <option value="all">SEMUA STATUS</option>
-              {stages.map(s => <option key={s.id} value={s.name.toLowerCase()}>{s.name.toUpperCase()}</option>)}
-            </Select>
-            <Select
+              onChange={(val: string | number) => setStatusFilter(val.toString())}
+              options={[
+                { value: 'all', label: 'SEMUA STATUS' },
+                ...stages.map(s => ({ value: s.name.toLowerCase(), label: s.name.toUpperCase() }))
+              ]}
+              className="w-40"
+              hideSearch
+              placeholderSize="text-[10px] font-bold text-gray-900 uppercase tracking-tight"
+            />
+            <ComboBox
               value={assigneeFilter}
-              onChange={e => setAssigneeFilter(e.target.value)}
-              className="!text-[10px] uppercase tracking-tight text-gray-400 w-36"
-            >
-              <option value="all">SEMUA STAFF</option>
-              {members.map(m => (
-                <option key={m.id} value={m.user_id}>{(m.profile?.full_name || m.user_id).toUpperCase()}</option>
-              ))}
-            </Select>
+              onChange={(val: string | number) => setAssigneeFilter(val.toString())}
+              options={[
+                { value: 'all', label: 'SEMUA STAFF' },
+                ...members.map(m => ({
+                  value: m.user_id,
+                  label: (m.profile?.full_name || m.user_id).toUpperCase()
+                }))
+              ]}
+              className="w-40"
+              placeholderSize="text-[10px] font-bold text-gray-900 uppercase tracking-tight"
+            />
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden min-h-[400px]">
+      <div className="h-[80vh] overflow-hidden">
         {loading ? (
           <div className="w-full h-full flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -303,10 +330,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
             leadsByStatus={leadsByStatus}
             onEdit={setSelectedLead}
             onDelete={handleDelete}
-            onDragStart={handleDragStart}
-            onDragOver={handleDragOver}
-            onDrop={handleDropEvent}
-            dropTarget={dropTarget}
+            onReorder={handleDrop}
             formatIDR={formatIDR}
           />
         ) : (
@@ -350,10 +374,86 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
           onClose={() => setSelectedLead(null)}
           onUpdate={handleUpdate}
           onDelete={() => handleDelete(selectedLead.id)}
-          onConvertToDeal={() => {/* Implement conversion logic */ }}
+          onConvertToDeal={async () => {
+            try {
+              // 1. Get first Pipeline and its first Stage
+              const { data: pipelines } = await supabase.from('pipelines')
+                .select('id, stages:pipeline_stages(id)')
+                .eq('company_id', activeCompany.id)
+                .order('id')
+                .limit(1);
+
+              if (!pipelines || pipelines.length === 0) {
+                throw new Error("Tidak ada Pipeline Deal yang tersedia untuk workspace ini.");
+              }
+              const firstPipelineId = pipelines[0].id;
+              const firstStageId = pipelines[0].stages?.[0]?.id;
+
+              if (!firstStageId) {
+                throw new Error("Tidak ada Stage Deal yang tersedia di Pipeline ini.");
+              }
+
+              // 2. Find if Client exists by name and email (to prevent exact duplicates)
+              let clientId = null;
+              const { data: existingClients } = await supabase.from('clients')
+                .select('id')
+                .eq('company_id', activeCompany.id)
+                .eq('name', selectedLead.name)
+                .limit(1);
+
+              if (existingClients && existingClients.length > 0) {
+                clientId = existingClients[0].id;
+              } else {
+                // Create new client from Lead data
+                const { data: newClient, error: clientError } = await supabase.from('clients')
+                  .insert({
+                    company_id: activeCompany.id,
+                    name: selectedLead.name,
+                    salutation: selectedLead.salutation || '-',
+                    email: selectedLead.email || null,
+                    whatsapp: selectedLead.whatsapp || null,
+                    client_company_id: selectedLead.client_company_id,
+                  }).select('id').single();
+
+                if (clientError) throw clientError;
+                clientId = newClient.id;
+              }
+
+              // 3. Create the Deal
+              const { error: dealError } = await supabase.from('deals').insert({
+                company_id: activeCompany.id,
+                pipeline_id: firstPipelineId,
+                stage_id: firstStageId,
+                name: `Deal: ${selectedLead.name}`,
+                expected_value: selectedLead.expected_value || 0,
+                sales_id: selectedLead.sales_id,
+                client_id: clientId,
+                contact_name: selectedLead.name,
+                customer_company: selectedLead.client_company?.name || 'Perorangan',
+                email: selectedLead.email,
+                whatsapp: selectedLead.whatsapp,
+                source: selectedLead.source,
+                input_date: new Date().toISOString().split('T')[0]
+              });
+
+              if (dealError) throw dealError;
+
+              // 4. Delete the lead
+              await supabase.from('leads').delete().eq('id', selectedLead.id);
+
+              alert('Berhasil mengonversi Lead menjadi Deal!');
+              setSelectedLead(null);
+              fetchData();
+            } catch (err: any) {
+              alert('Gagal mengonversi ke Deal: ' + err.message);
+            }
+          }}
           user={members.find(m => m.user_id === selectedLead.sales_id)?.profile as any}
           sources={sources}
           clientCompanies={clientCompanies}
+          categories={categories}
+          setClientCompanies={setClientCompanies}
+          setCategories={setCategories}
         />
       )}
 

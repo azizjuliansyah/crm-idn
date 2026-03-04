@@ -9,10 +9,14 @@ import {
   Building, Mail, Phone, Search, FileDown, Layers, Check as CheckIcon,
   DollarSign, FileCheck
 } from 'lucide-react';
-import { Modal, Button, Input, Select, Breadcrumb, SectionHeader, Card, Label, Textarea, Table, TableHeader, TableBody, TableRow, TableCell, ComboBox, Subtext } from '@/components/ui';
+import { Modal, Button, Input, Breadcrumb, SectionHeader, Card, Label, Textarea, Table, TableHeader, TableBody, TableRow, TableCell, ComboBox, Subtext, H2 } from '@/components/ui';
+import { ClientFormModal } from '@/components/features/clients/components/ClientFormModal';
+import { ProductFormModal } from '@/components/features/products/components/ProductFormModal';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { generateTemplate1, generateTemplate5, generateTemplate6 } from '@/lib/pdf-templates';
 import { useRouter } from 'next/navigation';
+import { useDashboard } from '@/app/dashboard/DashboardContext';
 
 interface Props {
   company: Company;
@@ -32,15 +36,7 @@ interface ItemRow {
   total: number;
 }
 
-const getImgDimensions = (url: string): Promise<{ width: number, height: number, element: HTMLImageElement }> => {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = "Anonymous";
-    img.onload = () => resolve({ width: img.width, height: img.height, element: img });
-    img.onerror = reject;
-    img.src = url;
-  });
-};
+
 
 const romanize = (num: number): string => {
   if (num <= 0) return String(num);
@@ -84,6 +80,7 @@ const generateFormattedNumber = (pattern: string, nextNum: number, digitCount: n
 
 export const QuotationFormView: React.FC<Props> = ({ company, editingId, initialClientId, initialDealId, onSaveSuccess }) => {
   const router = useRouter();
+  const { user } = useDashboard();
   const [loading, setLoading] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
@@ -113,23 +110,12 @@ export const QuotationFormView: React.FC<Props> = ({ company, editingId, initial
   const [selectedTaxIds, setSelectedTaxIds] = useState<number[]>([]);
   const [items, setItems] = useState<ItemRow[]>([{ productId: '', description: '', qty: 1, unit: 'pcs', price: 0, total: 0 }]);
 
-  // Modal States for Quick Add
-  const [isQuickClientModalOpen, setIsQuickClientModalOpen] = useState(false);
-  const [isQuickProductModalOpen, setIsQuickProductModalOpen] = useState(false);
+  // Quick Add State (Modals)
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [clientForm, setClientForm] = useState<Partial<Client>>({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [productForm, setProductForm] = useState<Partial<Product>>({ name: '', category_id: null, unit_id: null, price: 0, description: '' });
   const [isProcessingQuick, setIsProcessingQuick] = useState(false);
-  const [quickClientForm, setQuickClientForm] = useState({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: '' });
-  const [quickProductForm, setQuickProductForm] = useState({ name: '', category_id: '', unit_id: '', price: 0, description: '' });
-
-  // Quick Company Add inside Quick Client
-  const [isAddingCo, setIsAddingCo] = useState(false);
-  const [newCo, setNewCo] = useState({ name: '', category_id: '', address: '' });
-  const [coProcessing, setCoProcessing] = useState(false);
-
-  // Quick Category/Unit inside Quick Product
-  const [isAddingCat, setIsAddingCat] = useState(false);
-  const [newCatName, setNewCatName] = useState('');
-  const [isAddingUnit, setIsAddingUnit] = useState(false);
-  const [newUnitName, setNewUnitName] = useState('');
 
   const handleCheckReset = async (setting: AutonumberSetting) => {
     if (!setting || setting.reset_period === 'never') return setting.next_number;
@@ -230,7 +216,7 @@ export const QuotationFormView: React.FC<Props> = ({ company, editingId, initial
     } else {
       if (tRes.data && existingQuotation) {
         const taxNames = existingQuotation.tax_type?.split(', ').map((s: string) => s.trim()) || [];
-        const taxIds = tRes.data.filter(t => taxNames.includes(t.name)).map(t => t.id);
+        const taxIds = tRes.data.filter(t => taxNames.includes(t.name) || taxNames.includes(`${t.name} ${t.rate}%`)).map(t => t.id);
         setSelectedTaxIds(taxIds);
       }
     }
@@ -289,7 +275,7 @@ export const QuotationFormView: React.FC<Props> = ({ company, editingId, initial
     if (!clientId || !quotationNumber) return;
     setLoading(true);
     try {
-      const taxLabels = selectedTaxesList.map(t => t.name).join(', ') || 'Non Pajak';
+      const taxLabels = selectedTaxesList.map(t => `${t.name} ${t.rate}%`).join(', ') || 'Non Pajak';
       const payload = {
         company_id: company.id,
         client_id: parseInt(clientId),
@@ -326,6 +312,23 @@ export const QuotationFormView: React.FC<Props> = ({ company, editingId, initial
         if (nSet) await supabase.from('autonumber_settings').update({ next_number: nSet.next_number + 1 }).eq('company_id', company.id).eq('document_type', 'quotation');
       }
 
+      // Add actitivity log if user is logged in
+      if (user) {
+        try {
+          await supabase.from('log_activities').insert({
+            user_id: user.id,
+            deal_id: dealId || null,
+            lead_id: null,
+            content: editingId
+              ? `Memperbarui penawaran dengan nomor: ${quotationNumber}`
+              : `Membuat penawaran baru dengan nomor: ${quotationNumber}`,
+            activity_type: 'system'
+          });
+        } catch (logErr) {
+          console.error('Failed to log activity', logErr);
+        }
+      }
+
       if (qId) {
         onSaveSuccess?.(qId);
         setShowSuccessToast(true);
@@ -356,122 +359,37 @@ export const QuotationFormView: React.FC<Props> = ({ company, editingId, initial
 
     const templateId = templateSetting?.template_id || 'template1';
     const config = templateSetting?.config || {};
+    config.document_type = 'quotation';
 
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
     const padX = 18;
 
-    const safeNum = (val: any, fallback: number = 0) => {
-      const n = Number(val);
-      return Number.isFinite(n) ? n : fallback;
-    };
-
-    const safeText = (text: any, x: number, y: number, options?: any) => {
-      doc.text(String(text || ''), safeNum(x), safeNum(y), options);
-    };
-
-    const safeRect = (x: number, y: number, w: number, h: number, style?: string) => {
-      doc.rect(safeNum(x), safeNum(y), safeNum(w), safeNum(h), style);
-    };
-
-    if (templateId === 'template5') {
-      const tealColor = '#55C7C7';
-      const rowTealColor = '#2596BE';
-      const rowLightColor = '#F2F9FB';
-      const gray2Color = '#9B9B9B';
-
-      doc.setFontSize(8.5);
-      doc.setTextColor(17, 17, 17);
-      safeText(config.top_contact || '', pageWidth - padX, 10, { align: 'right' });
-
-      const bannerHeight = 22;
-      const startY = 18;
-
-      const logoUrl = config.logo_url || company.logo_url;
-      if (logoUrl) {
-        try {
-          const { width, height, element } = await getImgDimensions(logoUrl);
-          const maxWidth = 60;
-          const maxHeight = bannerHeight;
-          const ratio = Math.min(maxWidth / width, maxHeight / height);
-          const finalWidth = width * ratio;
-          const finalHeight = height * ratio;
-          doc.addImage(element, 'PNG', safeNum(padX), safeNum(startY + (maxHeight - finalHeight) / 2), finalWidth, finalHeight, undefined, 'FAST');
-        } catch (e) {
-          doc.setFontSize(14); doc.setFont('helvetica', 'bold'); safeText(company.name, padX, startY + 12);
-        }
-      } else {
-        doc.setFontSize(14); doc.setFont('helvetica', 'bold'); safeText(company.name, padX, startY + 12);
-      }
-
-      doc.setFillColor(tealColor);
-      safeRect(pageWidth - 110, startY, 110, bannerHeight, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(38);
-      doc.setFont('helvetica', 'bold');
-      safeText('PENAWARAN', pageWidth - 100, startY + 15);
-
-      doc.setTextColor(17, 17, 17);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      safeText('INVOICE TO:', padX, 55);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      safeText(q.client?.client_company?.name || 'PERORANGAN', padX, 62);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      safeText(`${q.client?.salutation || ''} ${q.client?.name || ''}`.trim(), padX, 68);
-
-      const metaX = 130;
-      safeText('QUOTATION NO', metaX, 55);
-      safeText(':', metaX + 30, 55);
-      safeText(q.number, metaX + 35, 55);
-      safeText('DATE', metaX, 61);
-      safeText(':', metaX + 30, 61);
-      safeText(formatDateString(q.date), metaX + 35, 61);
-
-      autoTable(doc, {
-        startY: 95,
-        head: [['Item / Description', 'Price', 'Qty', 'Total']],
-        body: q.quotation_items?.map((it: any) => [
-          `${it.products?.name || ''}\n${it.description || ''}`,
-          formatIDRVal(it.price),
-          `${it.qty} ${it.unit_name || ''}`,
-          formatIDRVal(it.total)
-        ]) || [],
-        theme: 'plain',
-        headStyles: { fillColor: tealColor, textColor: '#FFFFFF', fontSize: 11, fontStyle: 'bold', minCellHeight: 12, valign: 'middle', halign: 'left' },
-        bodyStyles: { fillColor: '#FFFFFF', fontSize: 10, textColor: '#111111', minCellHeight: 14, valign: 'middle', halign: 'left' },
-        alternateRowStyles: { fillColor: rowLightColor },
-        columnStyles: { 0: { cellWidth: 100, cellPadding: { left: padX, top: 4, right: 4, bottom: 4 } }, 3: { cellPadding: { left: 4, top: 4, right: padX, bottom: 4 } } },
-        margin: { left: 0, right: 0 },
-        tableWidth: pageWidth
-      });
-
-      const finalY = safeNum((doc as any).lastAutoTable?.finalY, 150);
-      safeText('Sub Total', 130, finalY + 10.5);
-      safeText(formatIDRVal(q.subtotal), pageWidth - padX, finalY + 10.5, { align: 'right' });
-
-      const grandTotalY = finalY + 18.5;
-      doc.setFillColor(tealColor);
-      safeRect(120, grandTotalY, 90, 10, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      safeText('Grand Total', 130, grandTotalY + 6.5);
-      safeText(formatIDRVal(q.total), pageWidth - padX, grandTotalY + 6.5, { align: 'right' });
+    if (templateId === 'template1') {
+      await generateTemplate1(doc, q, config, company, pageWidth, padX);
+    } else if (templateId === 'template5') {
+      await generateTemplate5(doc, q, config, company, pageWidth, padX);
+    } else if (templateId === 'template6') {
+      await generateTemplate6(doc, q, config, company, pageWidth, padX);
     } else {
+      // Fallback for other templates
       doc.setFillColor('#4F46E5');
-      safeRect(0, 0, pageWidth, 40, 'F');
+      doc.rect(0, 0, pageWidth, 40, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(24);
       doc.setFont('helvetica', 'bold');
-      safeText('PENAWARAN HARGA', 20, 25);
+      doc.text('PENAWARAN HARGA', 20, 25);
+
       autoTable(doc, {
         startY: 50,
         head: [['Produk', 'Deskripsi', 'Qty', 'Harga', 'Total']],
-        body: q.quotation_items?.map((it: any) => [String(it.products?.name || ''), String(it.description || ''), `${it.qty} ${it.unit_name || ''}`, formatIDRVal(it.price), formatIDRVal(it.total)]) || [],
+        body: q.quotation_items?.map((it: any) => [
+          String(it.products?.name || ''),
+          String(it.description || ''),
+          `${it.qty} ${it.unit_name || ''}`,
+          formatIDRVal(it.price),
+          formatIDRVal(it.total)
+        ]) || [],
         theme: 'striped',
         headStyles: { fillColor: '#4F46E5' }
       });
@@ -482,83 +400,77 @@ export const QuotationFormView: React.FC<Props> = ({ company, editingId, initial
 
   // --- Quick Add Handlers ---
 
-  const handleQuickAddClient = async () => {
-    if (!quickClientForm.name.trim()) return;
+  const handleSaveClient = async (formData: Partial<Client>) => {
+    if (!formData.name?.trim()) return;
     setIsProcessingQuick(true);
     try {
       const { data, error } = await supabase.from('clients').insert({
         company_id: company.id,
-        salutation: quickClientForm.salutation,
-        name: quickClientForm.name.trim(),
-        client_company_id: quickClientForm.client_company_id ? parseInt(quickClientForm.client_company_id) : null,
-        email: quickClientForm.email,
-        whatsapp: quickClientForm.whatsapp
+        salutation: formData.salutation,
+        name: formData.name.trim(),
+        client_company_id: formData.client_company_id,
+        email: formData.email,
+        whatsapp: formData.whatsapp ? `+62${formData.whatsapp.replace(/\D/g, '')}` : null
       }).select().single();
       if (error) throw error;
       const freshRes = await supabase.from('clients').select('*, client_company:client_companies(*)').eq('company_id', company.id).order('name');
       if (freshRes.data) setClients(freshRes.data);
       setClientId(String(data.id));
-      setIsQuickClientModalOpen(false);
+      setIsClientModalOpen(false);
+      setClientForm({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
     } catch (err: any) { alert(err.message); } finally { setIsProcessingQuick(false); }
   };
 
-  const handleQuickAddProduct = async () => {
-    if (!quickProductForm.name.trim() || !quickProductForm.price) return;
+  const handleSaveProduct = async (formData: Partial<Product>) => {
+    if (!formData.name?.trim() || !formData.price) return;
     setIsProcessingQuick(true);
     try {
       const { data, error } = await supabase.from('products').insert({
         company_id: company.id,
-        name: quickProductForm.name.trim(),
-        category_id: quickProductForm.category_id ? parseInt(quickProductForm.category_id) : null,
-        unit_id: quickProductForm.unit_id ? parseInt(quickProductForm.unit_id) : null,
-        price: quickProductForm.price,
-        description: quickProductForm.description
+        name: formData.name.trim(),
+        category_id: formData.category_id,
+        unit_id: formData.unit_id,
+        price: formData.price,
+        description: formData.description
       }).select().single();
       if (error) throw error;
       const freshRes = await supabase.from('products').select('*, product_units(*)').eq('company_id', company.id).order('name');
       if (freshRes.data) setProducts(freshRes.data);
-      setIsQuickProductModalOpen(false);
+      setIsProductModalOpen(false);
+      setProductForm({ name: '', category_id: null, unit_id: null, price: 0, description: '' });
     } catch (err: any) { alert(err.message); } finally { setIsProcessingQuick(false); }
   };
 
-  const handleQuickAddCo = async () => {
-    if (!newCo.name.trim() || !newCo.category_id) return;
-    setCoProcessing(true);
-    try {
-      const { data, error } = await supabase.from('client_companies').insert({
-        company_id: company.id,
-        name: newCo.name.trim(),
-        category_id: parseInt(newCo.category_id),
-        address: newCo.address
-      }).select().single();
-      if (error) throw error;
-      const freshRes = await supabase.from('client_companies').select('*').eq('company_id', company.id).order('name');
-      if (freshRes.data) setClientCompanies(freshRes.data);
-      setQuickClientForm(prev => ({ ...prev, client_company_id: String(data.id) }));
-      setIsAddingCo(false);
-    } catch (err: any) { alert(err.message); } finally { setCoProcessing(false); }
+  const handleQuickAddCo = async (coData: any) => {
+    const { data, error } = await supabase.from('client_companies').insert({
+      company_id: company.id,
+      ...coData
+    }).select().single();
+    if (error) throw error;
+    const freshRes = await supabase.from('client_companies').select('*').eq('company_id', company.id).order('name');
+    if (freshRes.data) setClientCompanies(freshRes.data);
+    return data;
   };
 
-  const handleQuickAddCat = async () => {
-    if (!newCatName.trim()) return;
-    try {
-      const { data, error } = await supabase.from('product_categories').insert({ company_id: company.id, name: newCatName.trim() }).select().single();
-      if (error) throw error;
-      setCategories(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
-      setQuickProductForm(prev => ({ ...prev, category_id: String(data.id) }));
-      setIsAddingCat(false);
-    } catch (err: any) { alert(err.message); }
+  const handleQuickAddCoCat = async (name: string) => {
+    const { data, error } = await supabase.from('client_company_categories').insert({ company_id: company.id, name: name.trim() }).select().single();
+    if (error) throw error;
+    setClientCategories(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+    return data;
   };
 
-  const handleQuickAddUnit = async () => {
-    if (!newUnitName.trim()) return;
-    try {
-      const { data, error } = await supabase.from('product_units').insert({ company_id: company.id, name: newUnitName.trim() }).select().single();
-      if (error) throw error;
-      setUnits(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
-      setQuickProductForm(prev => ({ ...prev, unit_id: String(data.id) }));
-      setIsAddingUnit(false);
-    } catch (err: any) { alert(err.message); }
+  const handleQuickAddProdCat = async (name: string) => {
+    const { data, error } = await supabase.from('product_categories').insert({ company_id: company.id, name: name.trim() }).select().single();
+    if (error) throw error;
+    setCategories(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+    return data;
+  };
+
+  const handleQuickAddUnit = async (name: string) => {
+    const { data, error } = await supabase.from('product_units').insert({ company_id: company.id, name: name.trim() }).select().single();
+    if (error) throw error;
+    setUnits(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+    return data;
   };
 
 
@@ -614,6 +526,7 @@ export const QuotationFormView: React.FC<Props> = ({ company, editingId, initial
             <Button
               onClick={handleSave}
               isLoading={loading}
+              disabled={!clientId}
               leftIcon={<Save size={16} />}
               variant='primary'>
               {editingId ? 'Update Penawaran' : 'Simpan Penawaran'}
@@ -630,24 +543,48 @@ export const QuotationFormView: React.FC<Props> = ({ company, editingId, initial
             className="mb-8"
           />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
+            <div className="space-y-4">
+              <ComboBox
+                label="Pelanggan"
+                placeholder="Pilih Pelanggan"
+                value={clientId}
+                onChange={(val: string | number) => setClientId(val.toString())}
+                options={clients.map(c => ({
+                  value: c.id.toString(),
+                  label: c.name,
+                  sublabel: c.client_company?.name || 'PERSONAL'
+                }))}
+                onAddNew={() => setIsClientModalOpen(true)}
+                addNewLabel="Tambah Pelanggan Baru"
+                leftIcon={<User size={16} />}
+              />
+            </div>
+            <div className="space-y-1.5"><Label className="ml-1 tracking-wider">Nomor Penawaran</Label><Input type="text" value={quotationNumber} onChange={(e: any) => setQuotationNumber(e.target.value)} className="!py-3" /></div>
             <ComboBox
-              label="Pelanggan"
-              placeholder="Pilih Pelanggan"
-              value={clientId}
-              onChange={(val: string | number) => setClientId(val.toString())}
-              options={clients.map(c => ({
-                value: c.id.toString(),
-                label: c.name,
-                sublabel: c.client_company?.name || 'PERSONAL'
-              }))}
-              onAddNew={() => setIsQuickClientModalOpen(true)}
-              leftIcon={<User size={16} />}
+              label="Status"
+              value={status}
+              onChange={(val: string | number) => setStatus(val.toString())}
+              options={[
+                { value: 'Draft', label: 'Draft' },
+                { value: 'Sent', label: 'Sent' },
+                { value: 'Accepted', label: 'Accepted' },
+                { value: 'Declined', label: 'Declined' },
+              ]}
             />
-            <div className="space-y-1.5"><Label className="ml-1 tracking-wider">Nomor Penawaran</Label><Input type="text" value={quotationNumber} onChange={(e: any) => setQuotationNumber(e.target.value)} className="shadow-sm !py-3" /></div>
-            <div className="space-y-1.5"><Label className="ml-1 tracking-wider">Status</Label><Select value={status} onChange={(e: any) => setStatus(e.target.value)} className="shadow-sm !py-3"><option value="Draft">Draft</option><option value="Sent">Sent</option><option value="Accepted">Accepted</option><option value="Declined">Declined</option></Select></div>
-            <div className="space-y-1.5"><Label className="ml-1 tracking-wider">Tanggal</Label><Input type="date" value={date} onChange={(e: any) => setDate(e.target.value)} className="shadow-sm !py-3" /></div>
-            <div className="space-y-1.5"><Label className="ml-1 tracking-wider">Berlaku Sampai</Label><Input type="date" value={expiryDate} onChange={(e: any) => setExpiryDate(e.target.value)} className="shadow-sm !py-3" /></div>
-            <div className="space-y-1.5"><Label className="ml-1 tracking-wider">Hubungkan Deal (Optional)</Label><Select value={dealId || ''} onChange={(e: any) => setDealId(e.target.value ? Number(e.target.value) : null)} className="shadow-sm !py-3"><option value="">-- Tidak Terhubung Deal --</option>{deals.map(d => (<option key={d.id} value={d.id}>#{String(d.id).padStart(4, '0')} - {d.name}</option>))}</Select></div>
+            <div className="space-y-1.5"><Label className="ml-1 tracking-wider">Tanggal</Label><Input type="date" value={date} onChange={(e: any) => setDate(e.target.value)} className="!py-3" /></div>
+            <div className="space-y-1.5"><Label className="ml-1 tracking-wider">Berlaku Sampai</Label><Input type="date" value={expiryDate} onChange={(e: any) => setExpiryDate(e.target.value)} className="!py-3" /></div>
+            <ComboBox
+              label="Hubungkan Deal (Optional)"
+              value={dealId?.toString() || ''}
+              onChange={(val: string | number) => setDealId(val ? Number(val) : null)}
+              options={[
+                { value: '', label: '-- Tidak Terhubung Deal --' },
+                ...deals.map(d => ({
+                  value: d.id.toString(),
+                  label: `#${String(d.id).padStart(4, '0')} - ${d.name}`
+                }))
+              ]}
+            />
           </div>
         </Card>
 
@@ -683,7 +620,7 @@ export const QuotationFormView: React.FC<Props> = ({ company, editingId, initial
                           label: p.name,
                           sublabel: formatIDRVal(p.price)
                         }))}
-                        onAddNew={() => setIsQuickProductModalOpen(true)}
+                        onAddNew={() => setIsProductModalOpen(true)}
                         addNewLabel="Daftar Produk Baru"
                       />
                     </TableCell>
@@ -730,9 +667,11 @@ export const QuotationFormView: React.FC<Props> = ({ company, editingId, initial
               </TableBody>
             </Table>
           </div>
-          <Button onClick={handleAddItem} variant="ghost" size="sm" leftIcon={<Plus size={14} />} className="mt-4 !text-[#4F46E5] hover:bg-indigo-50 font-bold tracking-tight uppercase text-[10px]">
-            Tambah Baris
-          </Button>
+          <div className="flex items-center gap-3 mt-4">
+            <Button onClick={handleAddItem} variant="ghost" size="sm" leftIcon={<Plus size={14} />} className="!text-[#4F46E5] hover:bg-indigo-50 font-bold tracking-tight uppercase text-[10px]">
+              Tambah Baris
+            </Button>
+          </div>
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
@@ -759,20 +698,25 @@ export const QuotationFormView: React.FC<Props> = ({ company, editingId, initial
             <div className="flex items-center justify-between border-b border-gray-50 pb-4">
               <div className="flex items-center gap-4">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">Diskon</span>
-                <div className="flex bg-white rounded border border-gray-200 overflow-hidden shadow-sm h-11">
-                  <Select
+                <div className="flex bg-white rounded border border-gray-200 overflow-hidden h-11">
+                  <ComboBox
                     value={discountType}
-                    onChange={(e: any) => setDiscountType(e.target.value as any)}
-                    className="!bg-gray-50 !px-2 !border-0 !border-r !rounded-none !h-full text-[10px] font-bold uppercase cursor-pointer"
-                  >
-                    <option value="Rp">Rp</option>
-                    <option value="%">%</option>
-                  </Select>
+                    onChange={(val: string | number) => setDiscountType(val as any)}
+                    options={[
+                      { value: 'Rp', label: 'Rp' },
+                      { value: '%', label: '%' },
+                    ]}
+                    hideSearch={true}
+                    className="!w-24"
+                    size="sm"
+                    triggerClassName="!border-0 !h-full !rounded-none !ring-0"
+                  />
+                  <div className="w-px bg-gray-200 h-6 my-auto" />
                   <Input
                     type="number"
                     value={discountValue}
                     onChange={(e: any) => setDiscountValue(Number(e.target.value))}
-                    className="!w-20 !px-3 font-bold !border-0 !h-full !rounded-none"
+                    className="!w-32 font-bold !border-0 !h-full !rounded-none !ring-0 text-base"
                   />
                 </div>
               </div>
@@ -783,14 +727,16 @@ export const QuotationFormView: React.FC<Props> = ({ company, editingId, initial
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">Pajak</span>
                 <div className="relative">
-                  <Select
+                  <ComboBox
                     value=""
-                    onChange={(e: any) => { if (e.target.value) { const id = Number(e.target.value); setSelectedTaxIds(prev => prev.includes(id) ? prev : [...prev, id]); } }}
-                    className="!py-1.5 !px-4 text-[10px]"
-                  >
-                    <option value="">+ Tambah Pajak</option>
-                    {availableTaxes.filter(t => !selectedTaxIds.includes(t.id)).map(tax => (<option key={tax.id} value={tax.id}>{tax.name} ({tax.rate}%)</option>))}
-                  </Select>
+                    onChange={(val: string | number) => { if (val) { const id = Number(val); setSelectedTaxIds(prev => prev.includes(id) ? prev : [...prev, id]); } }}
+                    options={[
+                      { value: '', label: '+ Tambah Pajak' },
+                      ...availableTaxes.filter(t => !selectedTaxIds.includes(t.id)).map(tax => ({ value: tax.id.toString(), label: `${tax.name} (${tax.rate}%)` }))
+                    ]}
+                    hideSearch={true}
+                    className="w-40"
+                  />
                 </div>
               </div>
               {selectedTaxesList.map(tax => (
@@ -830,152 +776,47 @@ export const QuotationFormView: React.FC<Props> = ({ company, editingId, initial
         </div>
       </div>
 
-      {/* QUICK ADD MODALS */}
-
-      <Modal
-        isOpen={isQuickClientModalOpen}
-        onClose={() => setIsQuickClientModalOpen(false)}
-        title="Daftarkan Pelanggan Baru"
-        size="lg"
-        footer={
-          <Button
-            onClick={handleQuickAddClient}
-            isLoading={isProcessingQuick}
-            variant="success"
-            className="w-full !py-4"
-          >
-            Simpan & Pilih
-          </Button>
-        }
-      >
-        <div className="space-y-8 py-2">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-2">
-              <Label className="ml-1 tracking-tight">Sapaan</Label>
-              <Select value={quickClientForm.salutation} onChange={(e: any) => setQuickClientForm({ ...quickClientForm, salutation: e.target.value })} className="!py-3.5">
-                <option value="">Pilih</option>
-                <option value="Mr">Mr.</option>
-                <option value="Mrs">Mrs.</option>
-              </Select>
-            </div>
-            <div className="col-span-2 space-y-2">
-              <Label className="ml-1 tracking-tight">Nama Lengkap</Label>
-              <Input type="text" value={quickClientForm.name} onChange={(e: any) => setQuickClientForm({ ...quickClientForm, name: e.target.value })} className="!py-3.5" placeholder="Nama pelanggan..." />
-            </div>
-            <div className="space-y-2">
-              <Label className="ml-1 tracking-tight">Email</Label>
-              <Input type="email" value={quickClientForm.email} onChange={(e: any) => setQuickClientForm({ ...quickClientForm, email: e.target.value })} className="!py-3.5" placeholder="Email..." />
-            </div>
-            <div className="space-y-2">
-              <Label className="ml-1 tracking-tight">WhatsApp</Label>
-              <Input type="text" value={quickClientForm.whatsapp} onChange={(e: any) => setQuickClientForm({ ...quickClientForm, whatsapp: e.target.value })} className="!py-3.5" placeholder="08..." />
-            </div>
-          </div>
-
-          <div className="space-y-3 pt-4 border-t border-gray-50">
-            <div className="flex items-center justify-between">
-              <Label className="ml-1 tracking-tight">Perusahaan (Opsional)</Label>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsAddingCo(true)}
-                className="!p-0 text-blue-600 hover:underline text-[10px]"
-              >
-                + Daftar Baru
-              </Button>
-            </div>
-            {!isAddingCo ? (
-              <Select value={quickClientForm.client_company_id} onChange={(e: any) => setQuickClientForm({ ...quickClientForm, client_company_id: e.target.value })} className="!py-3.5">
-                <option value="">-- Personal (Tanpa Perusahaan) --</option>
-                {clientCompanies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </Select>
-            ) : (
-              <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100 space-y-3">
-                <div className="flex justify-between items-center bg-blue-50/50 p-4 rounded-t-xl border-x border-t border-blue-100 italic">
-                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-tight">Tambah Perusahaan</span>
-                  <Button variant="ghost" size="sm" onClick={() => setIsAddingCo(false)} className="!p-1 text-gray-400 hover:text-rose-500">
-                    <X size={14} />
-                  </Button>
-                </div>
-                <Input type="text" placeholder="Nama Perusahaan" value={newCo.name} onChange={(e: any) => setNewCo({ ...newCo, name: e.target.value })} className="!py-2 text-xs" />
-                <div className="flex gap-2">
-                  <Select value={newCo.category_id} onChange={(e: any) => setNewCo({ ...newCo, category_id: e.target.value })} className="flex-1 !py-2 text-xs"><option value="">Kategori...</option>{clientCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>
-                  <Button onClick={handleQuickAddCo} isLoading={coProcessing} className="!py-2 text-xs">Simpan</Button>
-                </div>
-              </div>
-            )}
+      {showSuccessToast && (
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] fade-in duration-500">
+          <div className="bg-emerald-600 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border border-emerald-500">
+            <CheckCircle2 size={20} />
+            <Label className="text-sm uppercase tracking-tight">Data Penawaran Berhasil Disimpan</Label>
           </div>
         </div>
-      </Modal>
+      )}
 
-      <Modal
-        isOpen={isQuickProductModalOpen}
-        onClose={() => setIsQuickProductModalOpen(false)}
-        title="Daftar Produk Baru"
-        size="lg"
-        footer={
-          <Button
-            onClick={handleQuickAddProduct}
-            isLoading={isProcessingQuick}
-            variant="success"
-            className="w-full !py-4"
-          >
-            Simpan Produk
-          </Button>
-        }
-      >
-        <div className="space-y-6 py-2">
-          <div className="space-y-2">
-            <Label className="ml-1 tracking-tight">Nama Produk</Label>
-            <Input type="text" value={quickProductForm.name} onChange={(e: any) => setQuickProductForm({ ...quickProductForm, name: e.target.value })} className="!py-4 text-sm" placeholder="Nama produk..." />
-          </div>
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+      `}</style>
 
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <Label className="ml-1 tracking-tight">Kategori</Label>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsAddingCat(!isAddingCat)}
-                  className="!p-0 text-blue-600 hover:underline text-[10px]"
-                >
-                  + Baru
-                </Button>
-              </div>
-              {!isAddingCat ? (
-                <Select value={quickProductForm.category_id} onChange={(e: any) => setQuickProductForm({ ...quickProductForm, category_id: e.target.value })} className="!py-3.5"><option value="">Pilih</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>
-              ) : (
-                <div className="flex gap-2"><Input type="text" value={newCatName} onChange={(e: any) => setNewCatName(e.target.value)} className="flex-1 !py-2 text-xs" placeholder="Nama Kategori" /><Button onClick={handleQuickAddCat} className="!py-2 px-3 text-xs" variant="primary"><CheckIcon size={14} /></Button></div>
-              )}
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <Label className="ml-1 tracking-tight">Satuan</Label>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsAddingUnit(!isAddingUnit)}
-                  className="!p-0 text-blue-600 hover:underline text-[10px]"
-                >
-                  + Baru
-                </Button>
-              </div>
-              {!isAddingUnit ? (
-                <Select value={quickProductForm.unit_id} onChange={(e: any) => setQuickProductForm({ ...quickProductForm, unit_id: e.target.value })} className="!py-3.5"><option value="">Pilih</option>{units.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}</Select>
-              ) : (
-                <div className="flex gap-2"><Input type="text" value={newUnitName} onChange={(e: any) => setNewUnitName(e.target.value)} className="flex-1 !py-2 text-xs" placeholder="Nama Unit" /><Button onClick={handleQuickAddUnit} className="!py-2 px-3 text-xs" variant="primary"><CheckIcon size={14} /></Button></div>
-              )}
-            </div>
-          </div>
+      <ClientFormModal
+        isOpen={isClientModalOpen}
+        onClose={() => setIsClientModalOpen(false)}
+        onSave={handleSaveClient}
+        form={clientForm}
+        setForm={setClientForm}
+        isProcessing={isProcessingQuick}
+        clientCompanies={clientCompanies}
+        categories={clientCategories}
+        companyId={company.id}
+        onQuickAddCompany={handleQuickAddCo}
+        onQuickAddCategory={handleQuickAddCoCat}
+      />
 
-          <div className="space-y-2">
-            <Label className="ml-1 tracking-tight">Harga Satuan (Rp)</Label>
-            <Input type="number" value={quickProductForm.price} onChange={(e: any) => setQuickProductForm({ ...quickProductForm, price: Number(e.target.value) })} className="!py-4 text-lg text-blue-600 font-bold" />
-          </div>
-        </div>
-      </Modal>
-
+      <ProductFormModal
+        isOpen={isProductModalOpen}
+        onClose={() => setIsProductModalOpen(false)}
+        onSave={handleSaveProduct}
+        form={productForm}
+        setForm={setProductForm}
+        isProcessing={isProcessingQuick}
+        categories={categories}
+        units={units}
+        onQuickAddCategory={handleQuickAddProdCat}
+        onQuickAddUnit={handleQuickAddUnit}
+      />
     </div>
   );
 };

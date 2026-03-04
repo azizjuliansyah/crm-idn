@@ -2,18 +2,19 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Input, Select, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, H4, Subtext, Label, Modal, Avatar, Badge, Card, SearchInput } from '@/components/ui';
+import { Input, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, H4, Subtext, Label, Modal, Avatar, Badge, Card, SearchInput, ComboBox } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
-import { Project, ProjectPipeline, Company, CompanyMember, Profile, Client } from '@/lib/types';
+import { Project, ProjectPipeline, Company, CompanyMember, Profile, Client, ClientCompany, ClientCompanyCategory } from '@/lib/types';
 import {
   Plus, Search, Trello, Table as TableIcon, Loader2, Briefcase,
   AlertTriangle, CheckCircle2, X, Trash2, Calendar, Clock,
-  Edit2, Save, FileText, ListTodo
+  Edit2, Save, FileText, ListTodo, Check
 } from 'lucide-react';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { NotificationModal } from '@/components/shared/modals/NotificationModal';
+import { ClientFormModal } from '@/components/features/clients/components/ClientFormModal';
 import { useRouter } from 'next/navigation';
 
 interface Props {
@@ -40,6 +41,8 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
   const [projects, setProjects] = useState<Project[]>([]);
   const [pipeline, setPipeline] = useState<ProjectPipeline | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
+  const [clientCompanies, setClientCompanies] = useState<ClientCompany[]>([]);
+  const [categories, setCategories] = useState<ClientCompanyCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
@@ -57,6 +60,17 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
   const [draggingId, setDraggingId] = useState<number | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
 
+  // Quick Add Client State
+  const [isAddingClient, setIsAddingClient] = useState(false);
+  const [newClientForm, setNewClientForm] = useState<Partial<Client>>({
+    salutation: '',
+    name: '',
+    email: '',
+    whatsapp: '',
+    client_company_id: null
+  });
+  const [isProcessingQuick, setIsProcessingQuick] = useState(false);
+
   const [form, setForm] = useState<any>({
     name: '', client_id: '', lead_id: '', team_ids: [] as string[],
     start_date: '', end_date: '', notes: '', stage_id: '',
@@ -69,7 +83,9 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
       const [
         pDataRes,
         projectsDataRes,
-        clientsDataRes
+        clientsDataRes,
+        companiesDataRes,
+        categoriesDataRes
       ] = await Promise.all([
         supabase.from('project_pipelines').select('*, stages:project_pipeline_stages(*)').eq('id', pipelineId).maybeSingle(),
         supabase.from('projects').select(`
@@ -78,7 +94,9 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
           lead_profile:profiles!projects_lead_id_fkey(*),
           team_members:project_team_members(user_id, profile:profiles(*))
         `).eq('pipeline_id', pipelineId).order('id', { ascending: false }),
-        supabase.from('clients').select('*').eq('company_id', company.id).order('name')
+        supabase.from('clients').select('*').eq('company_id', company.id).order('name'),
+        supabase.from('client_companies').select('*').eq('company_id', company.id).order('name'),
+        supabase.from('client_company_categories').select('*').eq('company_id', company.id).order('name')
       ]);
 
       if (pDataRes.data) {
@@ -89,6 +107,8 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
       }
       if (projectsDataRes.data) setProjects(projectsDataRes.data);
       if (clientsDataRes.data) setClients(clientsDataRes.data);
+      if (companiesDataRes.data) setClientCompanies(companiesDataRes.data);
+      if (categoriesDataRes.data) setCategories(categoriesDataRes.data);
 
     } finally {
       if (showLoading) setLoading(false);
@@ -198,6 +218,60 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
     }
   };
 
+  const handleQuickAddCategory = async (name: string) => {
+    const { data, error } = await supabase
+      .from('client_company_categories')
+      .insert({ name: name.trim(), company_id: company.id })
+      .select()
+      .single();
+    if (error) throw error;
+    setCategories((prev: ClientCompanyCategory[]) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+    return data;
+  };
+
+  const handleQuickAddClient = async (form: Partial<Client>) => {
+    if (!form.name?.trim()) return;
+    setIsProcessingQuick(true);
+    try {
+      const { data, error } = await supabase
+        .from('clients')
+        .insert({
+          company_id: company.id,
+          salutation: form.salutation,
+          name: form.name.trim(),
+          email: form.email,
+          whatsapp: form.whatsapp ? `+62${form.whatsapp.replace(/\\D/g, '')}` : null,
+          client_company_id: form.client_company_id
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      const freshRes = await supabase.from('clients').select('*').eq('company_id', company.id).order('name');
+      if (freshRes.data) setClients(freshRes.data);
+      setForm((prev: any) => ({ ...prev, client_id: data.id }));
+      setIsAddingClient(false);
+      setNewClientForm({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
+    } catch (err: any) {
+      setNotification({ isOpen: true, title: 'Gagal', message: err.message, type: 'error' });
+    } finally {
+      setIsProcessingQuick(false);
+    }
+  };
+
+  const handleQuickAddCompany = async (coData: any) => {
+    const { data, error } = await supabase
+      .from('client_companies')
+      .insert({
+        company_id: company.id,
+        ...coData
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    setClientCompanies((prev: ClientCompany[]) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+    return data;
+  };
+
   const processedProjects = useMemo(() => {
     return projects.filter(p =>
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -234,34 +308,56 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
   );
 
   return (
-    <div className="flex flex-col gap-5 h-full overflow-hidden text-gray-900">
-      <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0 overflow-x-auto custom-scrollbar">
-        <div className="w-[400px] shrink-0">
-          <SearchInput
-            placeholder="Cari proyek atau klien..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="rounded-xl border-gray-100 shadow-none bg-gray-50/30"
-          />
+    <div className="flex flex-col gap-6 text-gray-900">
+      <div className="flex flex-col gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+        <div className="flex items-center justify-between">
+          <div>
+            <H2 className="text-xl">Daftar Proyek</H2>
+            <Subtext className="text-[10px] uppercase tracking-tight">Kelola dan pantau seluruh proyek klien.</Subtext>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex bg-gray-50 border border-gray-100 p-1 rounded-xl">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setViewMode('table')}
+                className={`!p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-white shadow-sm ring-1 ring-gray-100 text-emerald-600' : 'text-gray-400'}`}
+              >
+                <TableIcon size={14} strokeWidth={2.5} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setViewMode('kanban')}
+                className={`!p-2 rounded-lg transition-all ${viewMode === 'kanban' ? 'bg-white shadow-sm ring-1 ring-gray-100 text-emerald-600' : 'text-gray-400'}`}
+              >
+                <Trello size={14} strokeWidth={2.5} />
+              </Button>
+            </div>
+            <Button
+              onClick={handleOpenAdd}
+              leftIcon={<Plus size={14} strokeWidth={3} />}
+              className="!px-6 py-2.5 text-[10px] uppercase tracking-tight shadow-lg shadow-emerald-100"
+              variant="success"
+              size="sm"
+            >
+              Project Baru
+            </Button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0 ml-auto">
-          <div className="flex items-center gap-1 bg-gray-50 border border-gray-100 rounded-xl p-1">
-            <Button variant="ghost" size="sm" onClick={() => setViewMode('table')} className={`!p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-white text-emerald-600 shadow-sm ring-1 ring-gray-100' : '!text-gray-400'}`}><TableIcon size={14} /></Button>
-            <Button variant="ghost" size="sm" onClick={() => setViewMode('kanban')} className={`!p-2 rounded-lg transition-all ${viewMode === 'kanban' ? 'bg-white text-emerald-600 shadow-sm ring-1 ring-gray-100' : '!text-gray-400'}`}><Trello size={14} /></Button>
+        <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-gray-50">
+          <div className="w-[400px] shrink-0">
+            <SearchInput
+              placeholder="Cari proyek atau klien..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
           </div>
-          <Button
-            onClick={handleOpenAdd}
-            leftIcon={<Plus size={14} />}
-            variant="success"
-            size='sm'
-          >
-            Project Baru
-          </Button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden">
+      <div className="h-[80vh] mb-4 overflow-hidden flex flex-col">
         {viewMode === 'table' ? (
           <Card className="!p-0 h-full flex flex-col overflow-hidden">
             <div className="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
@@ -454,59 +550,85 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
             value={form.name}
             onChange={(e: any) => setForm({ ...form, name: e.target.value })}
             placeholder="Misal: Website Company Profile..."
-            className="rounded-xl"
+            className="rounded-md"
             required
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <Select
+            <ComboBox
               label="Klien Terkait"
               value={form.client_id}
-              onChange={(e: any) => setForm({ ...form, client_id: e.target.value })}
-              className="rounded-xl"
-            >
-              <option value="">-- Pilih Klien --</option>
-              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </Select>
-            <Select
+              onChange={(val: string | number) => setForm({ ...form, client_id: val })}
+              options={clients.map(c => ({
+                value: c.id,
+                label: c.name,
+                sublabel: `${c.salutation || ''} ${c.whatsapp || c.email || ''}`.trim()
+              }))}
+              className="rounded-md"
+              onAddNew={() => {
+                setNewClientForm({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
+                setIsAddingClient(true);
+              }}
+              addNewLabel="Tambah Client Baru"
+            />
+
+
+            <ComboBox
               label="Tahapan Saat Ini"
               value={form.stage_id}
-              onChange={(e: any) => setForm({ ...form, stage_id: e.target.value })}
-              className="rounded-xl"
-            >
-              {pipeline?.stages?.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </Select>
-            <Select
+              onChange={(val: string | number) => setForm({ ...form, stage_id: val.toString() })}
+              options={pipeline?.stages?.map(s => ({ value: s.id, label: s.name })) || []}
+              className="rounded-md"
+              hideSearch
+            />
+            <ComboBox
               label="Project Lead"
               value={form.lead_id}
-              onChange={(e: any) => setForm({ ...form, lead_id: e.target.value })}
-              className="rounded-xl"
-            >
-              <option value="">Pilih Lead</option>
-              {members.map(m => <option key={m.profile?.id} value={m.profile?.id}>{m.profile?.full_name}</option>)}
-            </Select>
-            <Input type="date" label="Tanggal Mulai" value={form.start_date} onChange={(e: any) => setForm({ ...form, start_date: e.target.value })} className="rounded-xl" />
-            <Input type="date" label="Estimasi Selesai" value={form.end_date} onChange={(e: any) => setForm({ ...form, end_date: e.target.value })} className="rounded-xl" />
-            <div className="space-y-2">
-              <Label className="ml-1 text-[10px]  uppercase tracking-tight text-gray-400">Project Team</Label>
-              <div className="p-3 bg-gray-50/50 border border-gray-100 rounded-2xl max-h-32 overflow-y-auto scrollbar-hide">
-                {members.map(m => (
-                  <Label key={m.user_id} className="flex items-center gap-3 py-1 cursor-pointer hover:bg-gray-100 rounded px-2 transition-colors">
-                    <Input
-                      type="checkbox"
-                      checked={form.team_ids.includes(m.user_id)}
-                      onChange={(e) => {
-                        const ids = e.target.checked
-                          ? [...form.team_ids, m.user_id]
-                          : form.team_ids.filter((id: string) => id !== m.user_id);
-                        setForm({ ...form, team_ids: ids });
-                      }}
-                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <Label className="text-[11px]  text-gray-700">{m.profile?.full_name}</Label>
-                  </Label>
-                ))}
-              </div>
+              onChange={(val: string | number) => setForm({ ...form, lead_id: val.toString() })}
+              options={members.map(m => ({
+                value: m.profile?.id || '',
+                label: m.profile?.full_name || '',
+                sublabel: m.profile?.email
+              }))}
+              className="rounded-md"
+            />
+            <Input type="date" label="Tanggal Mulai" value={form.start_date} onChange={(e: any) => setForm({ ...form, start_date: e.target.value })} className="rounded-md" />
+            <Input type="date" label="Estimasi Selesai" value={form.end_date} onChange={(e: any) => setForm({ ...form, end_date: e.target.value })} className="rounded-md" />
+            <div className="space-y-1.5 relative">
+              <Label className="ml-1 text-[9px] uppercase tracking-tight text-gray-400">Project Team</Label>
+              <details className="group relative">
+                <summary className="flex items-center justify-between w-full px-4 py-3.5 border border-gray-200 rounded-md text-sm font-medium cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500 list-none">
+                  <span className={form.team_ids.length ? 'text-gray-900' : 'text-gray-400'}>
+                    {form.team_ids.length > 0
+                      ? `${form.team_ids.length} Orang Dipilih`
+                      : 'Pilih Project Team'}
+                  </span>
+                  <div className="flex-shrink-0 ml-2">
+                    <svg className="w-4 h-4 text-gray-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  </div>
+                </summary>
+                <div className="absolute z-50 w-full bg-white mt-1 border border-gray-100 rounded-2xl shadow-lg max-h-48 overflow-y-auto custom-scrollbar p-2">
+                  {members.map(m => (
+                    <Label key={m.user_id} className="flex items-center gap-3 py-2 px-3 cursor-pointer hover:bg-gray-50 rounded-xl transition-colors">
+                      <Input
+                        type="checkbox"
+                        checked={form.team_ids.includes(m.user_id)}
+                        onChange={(e: any) => {
+                          const ids = e.target.checked
+                            ? [...form.team_ids, m.user_id]
+                            : form.team_ids.filter((id: string) => id !== m.user_id);
+                          setForm({ ...form, team_ids: ids });
+                        }}
+                        className="w-4 h-4 rounded border-gray-300"
+                      />
+                      <span className="text-xs text-gray-700 font-medium uppercase tracking-tight">{m.profile?.full_name}</span>
+                    </Label>
+                  ))}
+                  {members.length === 0 && (
+                    <div className="text-xs text-gray-400 text-center py-4">Belum ada member.</div>
+                  )}
+                </div>
+              </details>
             </div>
           </div>
 
@@ -557,6 +679,19 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
       />
 
 
+      <ClientFormModal
+        isOpen={isAddingClient}
+        onClose={() => setIsAddingClient(false)}
+        onSave={handleQuickAddClient}
+        form={newClientForm}
+        setForm={setNewClientForm}
+        isProcessing={isProcessingQuick}
+        clientCompanies={clientCompanies}
+        categories={categories}
+        companyId={company.id}
+        onQuickAddCompany={handleQuickAddCompany}
+        onQuickAddCategory={handleQuickAddCategory}
+      />
     </div>
   );
 };

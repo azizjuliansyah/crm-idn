@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Input, Select, Button, H1, Subtext, Label, SearchInput, DateFilterDropdown } from '@/components/ui';
+import { Input, Button, H1, Subtext, Label, SearchInput, DateFilterDropdown, ComboBox } from '@/components/ui';
 
 import { supabase } from '@/lib/supabase';
 import { Company, CompanyMember, PipelineStage, Deal, Pipeline, Client, ClientCompany, ClientCompanyCategory, Profile } from '@/lib/types';
@@ -25,10 +25,6 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>('table');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
-
-  // Drag & Drop State
-  const [draggedId, setDraggedId] = useState<number | null>(null);
-  const [dropTarget, setDropTarget] = useState<string | null>(null);
 
   // Auxiliary Data
   const [clients, setClients] = useState<Client[]>([]);
@@ -113,6 +109,7 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
             quotations(id, number)
             `)
           .eq('pipeline_id', pipelinesData.id)
+          .order('kanban_order', { ascending: true })
           .order('created_at', { ascending: false });
 
         if (dealsData) setDeals(dealsData as any);
@@ -213,40 +210,56 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
 
   // Group by status for Kanban
   const dealsByStage = (pipeline?.stages || []).reduce((acc, stage) => {
-    acc[stage.id] = filteredDeals.filter(l => l.stage_id === stage.id);
+    acc[stage.id] = filteredDeals
+      .filter(l => l.stage_id === stage.id)
+      .sort((a, b) => {
+        const orderA = a.kanban_order || 0;
+        const orderB = b.kanban_order || 0;
+        if (orderA !== orderB) return orderA - orderB;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
     return acc;
   }, {} as Record<string, Deal[]>);
 
-  // Drag and Drop handlers
-  const handleDrop = async (dealId: number, newStageId: string) => {
+  // Network update based on the generic KanbanBoard's onReorder payload
+  const handleDrop = async (dealId: number, newStageId: string, index?: number) => {
     try {
-      await supabase.from('deals').update({ stage_id: newStageId }).eq('id', dealId);
-      fetchData(); // Refresh to update UI
+      const targetColumnCards = dealsByStage[newStageId] || [];
+      const draggedCard = deals.find(d => d.id === dealId);
+      if (!draggedCard) return;
+
+      const cardsWithoutDragged = targetColumnCards.filter(d => d.id !== dealId);
+
+      let newOrder = 0;
+
+      if (cardsWithoutDragged.length === 0) {
+        newOrder = 1000;
+      } else if (index === undefined || index >= cardsWithoutDragged.length) {
+        const lastCard = cardsWithoutDragged[cardsWithoutDragged.length - 1];
+        newOrder = (lastCard.kanban_order || 0) + 1000;
+      } else if (index <= 0) {
+        const firstCard = cardsWithoutDragged[0];
+        newOrder = (firstCard.kanban_order || 0) - 1000;
+      } else {
+        const cardBefore = cardsWithoutDragged[index - 1];
+        const cardAfter = cardsWithoutDragged[index];
+        newOrder = ((cardBefore.kanban_order || 0) + (cardAfter.kanban_order || 0)) / 2;
+      }
+
+      // Optimistic Update
+      setDeals(prev => prev.map(d =>
+        d.id === dealId ? { ...d, stage_id: newStageId, kanban_order: newOrder } : d
+      ));
+
+      // Network Update
+      await supabase.from('deals').update({ stage_id: newStageId, kanban_order: newOrder }).eq('id', dealId);
     } catch (err) { console.error(err); }
-  };
-
-  const handleDragStart = (e: React.DragEvent, id: number) => {
-    setDraggedId(id);
-  };
-
-  const handleDragOver = (e: React.DragEvent, stageId: string) => {
-    e.preventDefault();
-    setDropTarget(stageId);
-  };
-
-  const handleDropEvent = (e: React.DragEvent, stageId: string) => {
-    e.preventDefault();
-    setDropTarget(null);
-    if (draggedId) {
-      handleDrop(draggedId, stageId);
-      setDraggedId(null);
-    }
   };
 
   if (!activeCompany) return <div className="p-8 text-center text-gray-400">Pilih workspace terlebih dahulu.</div>;
 
   return (
-    <div className="h-full flex flex-col space-y-6">
+    <div className="flex flex-col space-y-6">
       <div className="flex flex-col gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
         <div className="flex items-center justify-between">
           <div>
@@ -301,41 +314,48 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
               onStartDateChange={setStartDateFilter}
               onEndDateChange={setEndDateFilter}
             />
-            <Select
+            <ComboBox
               value={followUpFilter}
-              onChange={e => setFollowUpFilter(e.target.value)}
-              className="!text-[10px] uppercase tracking-tight text-gray-400 w-36"
-            >
-              <option value="all">SEMUA FOLLOW UP</option>
-              {Array.from(new Set(deals.map(d => d.follow_up || 0))).sort((a, b) => a - b).map(fu => (
-                <option key={`fu-${fu}`} value={fu.toString()}>
-                  {fu === 0 ? 'BELUM FU' : `FU ${fu} KALI`}
-                </option>
-              ))}
-            </Select>
-            <Select
+              onChange={(val: string | number) => setFollowUpFilter(val.toString())}
+              options={[
+                { value: 'all', label: 'SEMUA FOLLOW UP' },
+                ...Array.from(new Set(deals.map(d => d.follow_up || 0))).sort((a, b) => a - b).map(fu => ({
+                  value: fu.toString(),
+                  label: fu === 0 ? 'BELUM FU' : `FU ${fu} KALI`
+                }))
+              ]}
+              className="w-40"
+              hideSearch
+              placeholderSize="text-[10px] font-bold text-gray-900 uppercase tracking-tight"
+            />
+            <ComboBox
               value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
-              className="!text-[10px] uppercase tracking-tight text-gray-400 w-36"
-            >
-              <option value="all">SEMUA STATUS</option>
-              {pipeline?.stages?.map(s => <option key={s.id} value={s.id}>{s.name.toUpperCase()}</option>)}
-            </Select>
-            <Select
+              onChange={(val: string | number) => setStatusFilter(val.toString())}
+              options={[
+                { value: 'all', label: 'SEMUA STATUS' },
+                ...(pipeline?.stages?.map(s => ({ value: s.id, label: s.name.toUpperCase() })) || [])
+              ]}
+              className="w-40"
+              placeholderSize="text-[10px] font-bold text-gray-900 uppercase tracking-tight"
+            />
+            <ComboBox
               value={assigneeFilter}
-              onChange={e => setAssigneeFilter(e.target.value)}
-              className="!text-[10px] uppercase tracking-tight text-gray-400 w-36"
-            >
-              <option value="all">SEMUA STAFF</option>
-              {members.map(m => (
-                <option key={m.id} value={m.user_id}>{(m.profile?.full_name || m.user_id).toUpperCase()}</option>
-              ))}
-            </Select>
+              onChange={(val: string | number) => setAssigneeFilter(val.toString())}
+              options={[
+                { value: 'all', label: 'SEMUA STAFF' },
+                ...members.map(m => ({
+                  value: m.user_id,
+                  label: (m.profile?.full_name || m.user_id).toUpperCase()
+                }))
+              ]}
+              className="w-40"
+              placeholderSize="text-[10px] font-bold text-gray-900 uppercase tracking-tight"
+            />
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden min-h-[400px]">
+      <div className="h-[80vh] mb-4 overflow-hidden">
         {loading ? (
           <div className="w-full h-full flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -346,10 +366,7 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
             dealsByStage={dealsByStage}
             onEdit={setSelectedDeal}
             onDelete={handleDelete}
-            onDragStart={handleDragStart}
-            onDragOver={handleDragOver}
-            onDrop={handleDropEvent}
-            dropTarget={dropTarget}
+            onReorder={handleDrop}
             formatIDR={formatIDR}
             onCreateQuotation={handleCreateQuotation}
             onEditQuotation={handleEditQuotation}
@@ -405,6 +422,9 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
           user={user as any}
           onCreateQuotation={handleCreateQuotation}
           onEditQuotation={handleEditQuotation}
+          categories={categories}
+          setClientCompanies={setClientCompanies}
+          setCategories={setCategories}
         />
       )}
     </div>

@@ -4,11 +4,10 @@ import React, { useState, useEffect, useRef } from 'react';
 
 import { Input, Button, Subtext, Label } from '@/components/ui';
 
-import { GoogleGenAI } from '@google/genai';
 import { AiSetting, KbArticle } from '@/lib/types';
 import {
   Sparkles, Bot, X, Send, SearchCode, ShieldCheck,
-  ArrowRight, Link as LinkIcon, BookOpen, User
+  ArrowRight, Link as LinkIcon, BookOpen, User, Loader2
 } from 'lucide-react';
 
 interface Props {
@@ -141,28 +140,33 @@ export const KnowledgeBaseChat: React.FC<Props> = ({
 
       setRetrievalStatus(`Menganalisis ${relevantArticles.length} artikel relevan...`);
 
-      // Note: Using standard fetch or GoogleGenAI SDK depending on environment
-      // Here we assume GoogleGenAI is available as imported
-      const ai = new GoogleGenAI({ apiKey: effectiveApiKey });
       const context = relevantArticles.map(a => `JUDUL: ${a.title}\nKONTEN: ${a.content.substring(0, 1500)}`).join('\n\n---\n\n');
-
+      const systemInstruction = aiSetting?.system_instruction || 'Anda adalah AI Customer Support yang cerdas dan efisien.';
       const prompt = `BERIKUT ADALAH KONTEKS DARI BASIS PENGETAHUAN KAMI:\n${context}\n\nTUGAS ANDA:\n1. Jawab pertanyaan pengguna HANYA berdasarkan konteks di atas.\n2. Jika jawaban tidak ada di konteks, katakan dengan jujur bahwa info tersebut tidak tersedia.\n3. Jawab dengan format markdown sederhana (gunakan ** untuk menebalkan poin penting dan gunakan list * untuk rincian).\n4. Jawab dengan singkat dan padat.\n5. Gunakan bahasa Indonesia yang profesional.\n\nPERTANYAAN PENGGUNA: "${userMsg}"`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-1.5-flash', // Updated to a more standard model name if available, or keep gemini-1.5-flash
-        contents: [{
-          role: 'user',
-          parts: [{ text: prompt }]
-        }],
-        config: {
-          systemInstruction: aiSetting?.system_instruction || 'Anda adalah AI Customer Support yang cerdas dan efisien.',
-          temperature: 0.2,
-          topP: 0.8,
-          maxOutputTokens: 800
-        }
+      const model = aiSetting?.model_name || 'gemini-1.5-flash';
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${effectiveApiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: `System Instruction: ${systemInstruction}\n\n${prompt}` }]
+            }
+          ]
+        })
       });
 
-      const botMsg = response?.text || 'Maaf, saya tidak dapat memproses jawaban saat ini.';
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error?.message || 'Failed to fetch AI response');
+      }
+
+      const botMsg = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Maaf, saya tidak dapat memproses jawaban saat ini.';
       setChatMessages(prev => [...prev, { role: 'bot', text: botMsg, references: relevantArticles }]);
     } catch (err: any) {
       console.error("AI Error:", err);
@@ -177,7 +181,8 @@ export const KnowledgeBaseChat: React.FC<Props> = ({
     return (
       <Button
         onClick={onClose} // acts as open when closed
-        className="fixed bottom-8 right-8 z-[60] w-16 h-16 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-2xl hover:scale-105 active:scale-95 transition-all group"
+        variant='primary'
+        className="fixed bottom-8 right-8 z-[60] w-16 h-16 active:scale-95 transition-all group"
       >
         <Sparkles size={28} className="group-hover:rotate-12 transition-transform" />
       </Button>
@@ -280,22 +285,24 @@ export const KnowledgeBaseChat: React.FC<Props> = ({
             )}
           </div>
         ) : (
-          <form onSubmit={handleChatSubmit} className="flex gap-3">
-            <Input
-              type="text"
-              value={currentInput}
-              onChange={e => setCurrentInput(e.target.value)}
-              placeholder="Ketik pertanyaan Anda..."
-              disabled={isThinking}
-              className="flex-1 bg-gray-50 px-6 py-4 rounded-2xl text-sm  outline-none focus:bg-white focus:border-indigo-300 transition-all border border-transparent shadow-inner"
-            />
-            <Button
+          <form onSubmit={handleChatSubmit} className="flex gap-3 items-center">
+            <div className="flex-1">
+              <Input
+                type="text"
+                value={currentInput}
+                onChange={e => setCurrentInput(e.target.value)}
+                placeholder="Ketik pertanyaan Anda..."
+                disabled={isThinking}
+                className="w-full bg-gray-50 px-6 py-4 rounded-2xl text-sm outline-none focus:bg-white focus:border-indigo-300 transition-all border border-transparent shadow-inner"
+              />
+            </div>
+            <button
               type="submit"
               disabled={isThinking || !currentInput.trim()}
-              className="w-14 h-14 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 disabled:opacity-30 active:scale-90 transition-all shadow-xl shadow-indigo-100 shrink-0 flex items-center justify-center"
+              className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shrink-0 hover:bg-indigo-700 active:scale-95 transition-all shadow-xl shadow-indigo-100 disabled:opacity-50 disabled:pointer-events-none p-0"
             >
-              <Send size={22} />
-            </Button>
+              {isThinking ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
+            </button>
           </form>
         )}
       </div>

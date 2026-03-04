@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Input, Select, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Label, Modal, Card, EmptyState, SearchInput } from '@/components/ui';
+import { Input, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Label, Modal, Card, EmptyState, SearchInput, ComboBox, H2 } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -145,30 +145,39 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
   if (!company) return <div className="text-center p-8 text-gray-500">Pilih workspace terlebih dahulu</div>;
 
   return (
-    <div className="space-y-6 h-full flex flex-col text-gray-900">
-      <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0 overflow-x-auto custom-scrollbar">
-        <div className="w-[400px] shrink-0">
-          <SearchInput
-            placeholder="Cari nama produk atau kategori..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="rounded-xl border-gray-100 shadow-none bg-gray-50/30"
-          />
-        </div>
-        <Button
-          onClick={() => { setForm({ name: '', category_id: categories[0]?.id || null, unit_id: units[0]?.id || null, price: 0, description: '' }); setIsModalOpen(true); }}
-          variant="success"
-          className="!px-6 py-2.5  text-[10px] uppercase tracking-tight shadow-lg shadow-emerald-100 shrink-0"
-        >
-          <div className="flex items-center gap-2">
-            <Plus size={14} strokeWidth={3} />
-            <Label>Produk Baru</Label>
+    <div className="flex flex-col gap-6 text-gray-900">
+      <div className="flex flex-col gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+        <div className="flex items-center justify-between">
+          <div>
+            <H2 className="text-xl">Katalog Produk</H2>
+            <Subtext className="text-[10px] uppercase tracking-tight">Kelola daftar produk dan jasa untuk penawaran.</Subtext>
           </div>
-        </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => { setForm({ name: '', category_id: categories[0]?.id || null, unit_id: units[0]?.id || null, price: 0, description: '' }); setIsModalOpen(true); }}
+              leftIcon={<Plus size={14} strokeWidth={3} />}
+              className="!px-6 py-2.5 text-[10px] uppercase tracking-tight shadow-lg shadow-emerald-100"
+              variant="success"
+              size="sm"
+            >
+              Produk Baru
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-gray-50">
+          <div className="w-[400px] shrink-0">
+            <SearchInput
+              placeholder="Cari nama produk atau kategori..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
       </div>
 
-      <Card className="!p-0 overflow-hidden flex-1 flex flex-col">
-        <div className="overflow-x-auto h-full custom-scrollbar">
+      <Card className="!p-0 overflow-hidden h-[80vh] mb-4 flex flex-col">
+        <div className="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
           <Table>
             <TableHeader className="sticky top-0 z-10 bg-gray-50/80 backdrop-blur-md border-b border-gray-100">
               <TableRow className="hover:bg-transparent">
@@ -230,7 +239,13 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
 
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setIsAddingCat(false);
+          setIsAddingUnit(false);
+          setNewCatName('');
+          setNewUnitName('');
+        }}
         title={form.id ? "Edit Data Produk" : "Daftarkan Produk Baru"}
         size="lg"
         footer={
@@ -251,60 +266,72 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
               label="Nama Produk / Jasa*"
               value={form.name}
               onChange={e => setForm({ ...form, name: e.target.value })}
-              placeholder="Misal: Laptop ASUS..."
+              placeholder="Misal: Training..."
               className="!py-3"
             />
           </div>
 
           <div className="space-y-2 text-left">
-            <div className="flex items-center justify-between">
-              <Label className="text-[10px]  text-gray-400 uppercase tracking-tight ml-1">Kategori Produk</Label>
-              <Button variant="ghost" size="sm" onClick={() => setIsAddingCat(!isAddingCat)} className="!text-[9px] ! text-emerald-600 uppercase hover:underline !p-0 !h-auto">
-                {isAddingCat ? 'Batal' : '+ Baru'}
-              </Button>
-            </div>
+            <Label className="text-[10px] text-gray-400 uppercase tracking-tight ml-1">Kategori Produk</Label>
             {isAddingCat ? (
-              <div className="flex gap-2">
-                <Input autoFocus value={newCatName} onChange={e => setNewCatName(e.target.value)} className="flex-1 !py-2.5 !text-[11px]" />
-                <Button onClick={handleQuickAddCategory} className="px-3" variant="success"><Check size={14} /></Button>
+              <div className="animate-in slide-in-from-left-2 duration-200">
+                <div className="flex gap-2">
+                  <Input
+                    autoFocus
+                    value={newCatName}
+                    onChange={e => setNewCatName(e.target.value)}
+                    className="flex-1"
+                    placeholder="Nama kategori..."
+                  />
+                  <Button onClick={handleQuickAddCategory} className="!px-3" size="sm" variant="success">
+                    <Check size={14} />
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => setIsAddingCat(false)} className="!px-3 text-gray-400">
+                    <X size={14} />
+                  </Button>
+                </div>
               </div>
             ) : (
-              <div className="relative">
-                <Select
-                  value={form.category_id || ''}
-                  onChange={e => setForm({ ...form, category_id: Number(e.target.value) })}
-                  className="!py-3"
-                >
-                  <option value="">Pilih Kategori</option>
-                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </Select>
-              </div>
+              <ComboBox
+                value={form.category_id || ''}
+                onChange={(val: string | number) => setForm({ ...form, category_id: Number(val) })}
+                options={categories.map(c => ({ value: c.id, label: c.name }))}
+                onAddNew={() => setIsAddingCat(true)}
+                addNewLabel="Tambah Kategori Baru"
+                className="w-full"
+              />
             )}
           </div>
 
           <div className="space-y-2 text-left">
-            <div className="flex items-center justify-between">
-              <Label className="text-[10px]  text-gray-400 uppercase tracking-tight ml-1">Satuan Produk</Label>
-              <Button variant="ghost" size="sm" onClick={() => setIsAddingUnit(!isAddingUnit)} className="!text-[9px] ! text-emerald-600 uppercase hover:underline !p-0 !h-auto">
-                {isAddingUnit ? 'Batal' : '+ Baru'}
-              </Button>
-            </div>
+            <Label className="text-[10px] text-gray-400 uppercase tracking-tight ml-1">Satuan Produk</Label>
             {isAddingUnit ? (
-              <div className="flex gap-2">
-                <Input autoFocus value={newUnitName} onChange={e => setNewUnitName(e.target.value)} className="flex-1 !py-2.5 !text-[11px]" />
-                <Button onClick={handleQuickAddUnit} className="px-3" variant="success"><Check size={14} /></Button>
+              <div className="animate-in slide-in-from-left-2 duration-200">
+                <div className="flex gap-2">
+                  <Input
+                    autoFocus
+                    value={newUnitName}
+                    onChange={e => setNewUnitName(e.target.value)}
+                    className="flex-1"
+                    placeholder="Nama satuan..."
+                  />
+                  <Button onClick={handleQuickAddUnit} className="!px-3" size="sm" variant="success">
+                    <Check size={14} />
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => setIsAddingUnit(false)} className="!px-3 text-gray-400">
+                    <X size={14} />
+                  </Button>
+                </div>
               </div>
             ) : (
-              <div className="relative">
-                <Select
-                  value={form.unit_id || ''}
-                  onChange={e => setForm({ ...form, unit_id: Number(e.target.value) })}
-                  className="!py-3"
-                >
-                  <option value="">Pilih Satuan</option>
-                  {units.map(u => <option key={u.id} value={u.id}>{u.name.toUpperCase()}</option>)}
-                </Select>
-              </div>
+              <ComboBox
+                value={form.unit_id || ''}
+                onChange={(val: string | number) => setForm({ ...form, unit_id: Number(val) })}
+                options={units.map(u => ({ value: u.id, label: u.name.toUpperCase() }))}
+                onAddNew={() => setIsAddingUnit(true)}
+                addNewLabel="Tambah Satuan Baru"
+                className="w-full"
+              />
             )}
           </div>
 

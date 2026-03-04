@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Button, H1, H3, Subtext, Modal, SearchInput } from '@/components/ui';
+import { Button, H2, H3, Subtext, Modal, SearchInput } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -44,14 +44,11 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
     isOpen: false, title: '', message: '', type: 'success'
   });
 
-  const [draggingId, setDraggingId] = useState<number | null>(null);
-  const [dropTarget, setDropTarget] = useState<string | null>(null);
-
   const fetchData = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
       const [ticketsRes, stagesRes, clientsRes, membersRes, topicsRes] = await Promise.all([
-        supabase.from('support_tickets').select('*, assigned_profile:profiles(*), client:clients(*), ticket_topics(*)').eq('company_id', company.id).order('id', { ascending: false }),
+        supabase.from('support_tickets').select('*, assigned_profile:profiles(*), client:clients(*), ticket_topics(*)').eq('company_id', company.id).order('kanban_order', { ascending: true }).order('id', { ascending: false }),
         supabase.from('support_stages').select('*').eq('company_id', company.id).order('sort_order', { ascending: true }),
         supabase.from('clients').select('*').eq('company_id', company.id).order('name'),
         supabase.from('company_members').select('*, profile:profiles(*)').eq('company_id', company.id),
@@ -98,19 +95,42 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
     }
   };
 
-  const handleStatusChange = async (newStatus: string, ticketId?: number) => {
-    const targetId = ticketId || draggingId;
-    if (!targetId || isProcessing) return;
+  // Network update based on the generic KanbanBoard's onReorder payload
+  const handleDrop = async (ticketId: number, newStatus: string, index?: number) => {
+    if (isProcessing) return;
 
-    setIsProcessing(true);
     try {
-      const { error } = await supabase.from('support_tickets').update({ status: newStatus.toLowerCase() }).eq('id', targetId);
-      if (error) throw error;
-      await fetchData(false);
-    } finally {
-      setIsProcessing(false);
-      setDraggingId(null);
-      setDropTarget(null);
+      const targetColumnCards = ticketsByStatus[newStatus.toLowerCase()] || [];
+      const draggedCard = tickets.find(t => t.id === ticketId);
+      if (!draggedCard) return;
+
+      const cardsWithoutDragged = targetColumnCards.filter(t => t.id !== ticketId);
+
+      let newOrder = 0;
+
+      if (cardsWithoutDragged.length === 0) {
+        newOrder = 1000;
+      } else if (index === undefined || index >= cardsWithoutDragged.length) {
+        const lastCard = cardsWithoutDragged[cardsWithoutDragged.length - 1];
+        newOrder = (lastCard.kanban_order || 0) + 1000;
+      } else if (index <= 0) {
+        const firstCard = cardsWithoutDragged[0];
+        newOrder = (firstCard.kanban_order || 0) - 1000;
+      } else {
+        const cardBefore = cardsWithoutDragged[index - 1];
+        const cardAfter = cardsWithoutDragged[index];
+        newOrder = ((cardBefore.kanban_order || 0) + (cardAfter.kanban_order || 0)) / 2;
+      }
+
+      // Optimistic Update
+      setTickets(prev => prev.map(t =>
+        t.id === ticketId ? { ...t, status: newStatus.toLowerCase(), kanban_order: newOrder } : t
+      ));
+
+      // Network Update
+      await supabase.from('support_tickets').update({ status: newStatus.toLowerCase(), kanban_order: newOrder }).eq('id', ticketId);
+    } catch (err: any) {
+      showNotification('Gagal', err.message, 'error');
     }
   };
 
@@ -128,6 +148,17 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
       const sKey = (t.status || '').toLowerCase();
       if (groups[sKey]) groups[sKey].push(t);
     });
+
+    // Sort tickets inside grouping mathematically correctly
+    Object.keys(groups).forEach(key => {
+      groups[key].sort((a, b) => {
+        const orderA = a.kanban_order || 0;
+        const orderB = b.kanban_order || 0;
+        if (orderA !== orderB) return orderA - orderB;
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      });
+    });
+
     return groups;
   }, [filteredTickets, stages]);
 
@@ -139,54 +170,56 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
   );
 
   return (
-    <div className="flex flex-col gap-6 h-full text-gray-900">
-      <div className="flex items-center justify-between">
-        <div>
-          <H1>Customer Support</H1>
-          <Subtext>Kelola bantuan dan tiket masalah pelanggan.</Subtext>
+    <div className="flex flex-col gap-6 text-gray-900">
+      <div className="flex flex-col gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+        <div className="flex items-center justify-between">
+          <div>
+            <H2 className="text-xl">Customer Support</H2>
+            <Subtext className="text-[10px] uppercase tracking-tight">Kelola bantuan dan tiket masalah pelanggan.</Subtext>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex bg-gray-50 border border-gray-100 p-1 rounded-xl">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setViewMode('table')}
+                className={`!p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-white shadow-sm ring-1 ring-gray-100 text-rose-600' : 'text-gray-400'}`}
+              >
+                <TableIcon size={14} strokeWidth={2.5} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setViewMode('kanban')}
+                className={`!p-2 rounded-lg transition-all ${viewMode === 'kanban' ? 'bg-white shadow-sm ring-1 ring-gray-100 text-rose-600' : 'text-gray-400'}`}
+              >
+                <Trello size={14} strokeWidth={2.5} />
+              </Button>
+            </div>
+            <Button
+              onClick={() => setIsAddModalOpen(true)}
+              leftIcon={<Plus size={14} strokeWidth={3} />}
+              className="!px-6 py-2.5 text-[10px] uppercase tracking-tight shadow-lg shadow-rose-100"
+              variant="danger"
+              size="sm"
+            >
+              Tiket Baru
+            </Button>
+          </div>
         </div>
-        <Button
-          onClick={() => setIsAddModalOpen(true)}
-          leftIcon={<Plus size={14} />}
-          variant="danger"
-          size='sm'
-        >
-          Tiket Baru
-        </Button>
-      </div>
 
-      <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0 overflow-x-auto custom-scrollbar">
-        <div className="w-[400px] shrink-0">
-          <SearchInput
-            placeholder="Cari ticket bantuan..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="rounded-xl border-gray-100 shadow-none bg-gray-50/30"
-          />
-        </div>
-        <div className="flex items-center gap-3 shrink-0 ml-auto">
-          <div className="flex items-center p-1 bg-gray-50 border border-gray-100 rounded-xl">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setViewMode('table')}
-              className={`!p-2.5 transition-all ${viewMode === 'table' ? 'bg-white text-rose-600 shadow-sm ring-1 ring-gray-100' : '!text-gray-400 opacity-50 hover:opacity-100'}`}
-            >
-              <TableIcon size={14} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setViewMode('kanban')}
-              className={`!p-2.5 transition-all ${viewMode === 'kanban' ? 'bg-white text-rose-600 shadow-sm ring-1 ring-gray-100' : '!text-gray-400 opacity-50 hover:opacity-100'}`}
-            >
-              <Trello size={14} />
-            </Button>
+        <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-gray-50">
+          <div className="w-[400px] shrink-0">
+            <SearchInput
+              placeholder="Cari ticket bantuan..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden">
+      <div className="h-[80vh] mb-4 overflow-hidden flex flex-col">
         {viewMode === 'table' ? (
           <SupportTicketsTableView
             tickets={filteredTickets}
@@ -199,10 +232,7 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
             ticketsByStatus={ticketsByStatus}
             onEdit={(t) => { setSelectedTicket(t); setIsDetailModalOpen(true); }}
             onDelete={handleDeleteClick}
-            onDragStart={(e, id) => { setDraggingId(id); e.dataTransfer.setData('text/plain', id.toString()); }}
-            onDragOver={(e, s) => { e.preventDefault(); if (dropTarget !== s) setDropTarget(s); }}
-            onDrop={(e, s) => { e.preventDefault(); const id = parseInt(e.dataTransfer.getData('text/plain')); if (id) handleStatusChange(s, id); }}
-            dropTarget={dropTarget}
+            onReorder={handleDrop}
           />
         )}
       </div>

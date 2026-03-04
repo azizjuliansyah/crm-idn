@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Select, Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, Subtext, Label, Badge, SearchInput } from '@/components/ui';
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, Badge, SearchInput, ComboBox } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -12,7 +12,7 @@ import {
   ChevronRight, ArrowUpDown, ChevronUp, ChevronDown,
   AlertTriangle, CheckCircle2, X, Filter,
   FileText, Clock, User, Building,
-  FileCheck, Check, Trash2
+  FileCheck, Check, Trash2, FilePlus, ExternalLink
 } from 'lucide-react';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { NotificationModal } from '@/components/shared/modals/NotificationModal';
@@ -47,7 +47,7 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
     try {
       const { data, error } = await supabase
         .from('invoice_requests')
-        .select('*, profile:profiles(*), client:clients(*, client_company:client_companies(*)), quotation:quotations(number), proforma:proformas(number)')
+        .select('*, profile:profiles(*), client:clients(*, client_company:client_companies(*)), quotation:quotations(number), proforma:proformas(number), invoice:invoices(id, number)')
         .eq('company_id', company.id)
         .order('id', { ascending: false });
 
@@ -151,44 +151,55 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
   if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4 bg-white rounded-2xl border border-gray-100 min-h-[400px]"><Loader2 className="animate-spin text-indigo-600" size={32} /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Memuat Request Invoice...</Subtext></div>;
 
   return (
-    <div className="flex flex-col gap-6 h-full text-gray-900">
-      <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0 overflow-x-auto custom-scrollbar">
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="w-[400px]">
+    <div className="flex flex-col gap-6 text-gray-900">
+      <div className="flex flex-col gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+        <div className="flex items-center justify-between">
+          <div>
+            <H2 className="text-xl ">Daftar Request Invoice</H2>
+            <Subtext className="text-[10px]  uppercase tracking-tight">Kelola dan pantau seluruh permintaan pembuatan tagihan pelanggan.</Subtext>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => router.push('/dashboard/sales/invoice-requests/create')}
+              leftIcon={<Plus size={14} strokeWidth={3} />}
+              className="!px-6 py-2.5 text-[10px] uppercase tracking-tight shadow-lg shadow-blue-100"
+              variant="primary"
+              size="sm"
+            >
+              Request Baru
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-gray-50">
+          <div className="w-[400px] shrink-0">
             <SearchInput
               placeholder="Cari client atau nomor..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="rounded-xl border-gray-100 shadow-none bg-gray-50/30"
             />
           </div>
 
-          <div className="w-[200px]">
-            <Select
+          <div className="flex items-center gap-3 shrink-0 ml-auto">
+            <ComboBox
               value={filterStatus}
-              onChange={e => setFilterStatus(e.target.value)}
-              className="!text-[10px] ! uppercase tracking-tight text-gray-400 w-full"
-            >
-              <option value="all">SEMUA STATUS</option>
-              <option value="Pending">PENDING</option>
-              <option value="Approved">APPROVED</option>
-              <option value="Rejected">REJECTED</option>
-            </Select>
+              onChange={(val: string | number) => setFilterStatus(val.toString())}
+              placeholder="Status"
+              options={[
+                { value: 'all', label: 'SEMUA STATUS' },
+                { value: 'Pending', label: 'PENDING' },
+                { value: 'Approved', label: 'APPROVED' },
+                { value: 'Rejected', label: 'REJECTED' },
+              ]}
+              className="w-40"
+              hideSearch={true}
+              placeholderSize="text-[10px] font-bold text-gray-900 uppercase tracking-tight"
+            />
           </div>
         </div>
-
-        <Button
-          onClick={() => router.push('/dashboard/sales/invoice-requests/create')}
-          variant="primary"
-        >
-          <div className="flex items-center gap-2">
-            <Plus size={14} strokeWidth={3} />
-            Request Baru
-          </div>
-        </Button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm flex-1">
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm h-[80vh] mb-4">
         <Table>
           <TableHeader className="sticky top-0 z-10 bg-gray-50/80 backdrop-blur-md border-b border-gray-100">
             <TableRow className="hover:bg-transparent">
@@ -263,6 +274,19 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
                         <Button variant="ghost" size="sm" onClick={() => handleUpdateStatus(r.id, 'Approved')} className="!p-2 !text-emerald-500 hover:!bg-emerald-50 rounded-lg transition-colors" title="Approve"><Check size={16} strokeWidth={3} /></Button>
                         <Button variant="ghost" size="sm" onClick={() => handleUpdateStatus(r.id, 'Rejected')} className="!p-2 !text-rose-500 hover:!bg-rose-50 rounded-lg transition-colors" title="Reject"><X size={16} strokeWidth={3} /></Button>
                       </>
+                    )}
+                    {r.status === 'Approved' && !r.invoice_id && (
+                      <Button variant="ghost" size="sm" onClick={() => {
+                        const params = new URLSearchParams();
+                        params.set('requestId', r.id.toString());
+                        params.set('clientId', r.client_id.toString());
+                        if (r.proforma_id) params.set('proformaId', r.proforma_id.toString());
+                        if (r.quotation_id) params.set('quotationId', r.quotation_id.toString());
+                        router.push(`/dashboard/sales/invoices/create?${params.toString()}`);
+                      }} className="!p-2 !text-indigo-500 hover:!bg-indigo-50 rounded-lg transition-colors" title="Buat Invoice"><FilePlus size={16} strokeWidth={3} /></Button>
+                    )}
+                    {r.status === 'Approved' && r.invoice_id && (
+                      <Button variant="ghost" size="sm" onClick={() => router.push(`/dashboard/sales/invoices/${r.invoice_id}`)} className="!p-2 !text-emerald-600 hover:!bg-emerald-50 rounded-lg transition-colors" title={`Sudah di convert ke Invoice ${r.invoice?.number || ''}`}><ExternalLink size={16} strokeWidth={3} /></Button>
                     )}
                     <Button variant="ghost" size="sm" onClick={() => setConfirmDelete({ isOpen: true, id: r.id })} className="!p-2 !text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg" title="Hapus"><Trash2 size={14} /></Button>
                   </div>

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Select, Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, Subtext, Label, SearchInput } from '@/components/ui';
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, SearchInput, ComboBox } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -11,12 +11,13 @@ import {
   Plus, Search, Edit2, Trash2, Loader2, FileBadge,
   ChevronRight, ArrowUpDown, ChevronUp, ChevronDown,
   AlertTriangle, CheckCircle2, X, Filter,
-  FileDown, Download
+  FileDown, Download, FileText
 } from 'lucide-react';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { NotificationModal } from '@/components/shared/modals/NotificationModal';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { generateTemplate1, generateTemplate5, generateTemplate6 } from '@/lib/pdf-templates';
 import { useRouter } from 'next/navigation';
 
 interface Props {
@@ -277,6 +278,10 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
       doc.setFont('helvetica', 'bold');
       safeText('Grand Total', 130, grandTotalY + 6.5);
       safeText(formatIDR(inv.total), pageWidth - padX, grandTotalY + 6.5, { align: 'right' });
+    } else if (templateId === 'template6') {
+      config.document_type = 'invoice';
+      const qData = { ...inv };
+      await generateTemplate6(doc, qData, config, company, pageWidth, padX);
     } else {
       doc.setFillColor('#4F46E5');
       safeRect(0, 0, pageWidth, 40, 'F');
@@ -299,120 +304,143 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
   if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4"><Loader2 className="animate-spin text-blue-600" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Sinkronisasi Invoice...</Subtext></div>;
 
   return (
-    <div className="flex flex-col gap-6 h-full text-gray-900">
-      <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0 overflow-x-auto custom-scrollbar">
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="w-[400px]">
+    <div className="flex flex-col gap-6 text-gray-900">
+      <div className="flex flex-col gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+        <div className="flex items-center justify-between">
+          <div>
+            <H2 className="text-xl ">Daftar Invoice</H2>
+            <Subtext className="text-[10px]  uppercase tracking-tight">Kelola dan pantau seluruh tagihan pelanggan.</Subtext>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => router.push('/dashboard/sales/invoices/create')}
+              leftIcon={<Plus size={14} strokeWidth={3} />}
+              className="!px-6 py-2.5 text-[10px] uppercase tracking-tight shadow-lg shadow-blue-100"
+              variant="primary"
+              size="sm"
+            >
+              Buat Invoice
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-gray-50">
+          <div className="w-[400px] shrink-0">
             <SearchInput
               placeholder="Cari nomor, client..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="rounded-xl border-gray-100 shadow-none bg-gray-50/30"
             />
           </div>
 
-          <div className="w-[200px]">
-            <Select
+          <div className="flex items-center gap-3 shrink-0 ml-auto">
+            <ComboBox
               value={filterClientId}
-              onChange={e => setFilterClientId(e.target.value)}
-              className="!text-[10px] ! uppercase tracking-tight text-gray-400 w-full"
-            >
-              <option value="all">SEMUA PELANGGAN</option>
-              {uniqueClients.map(([id, name]) => (<option key={id} value={id}>{name.toUpperCase()}</option>))}
-            </Select>
-          </div>
+              onChange={(val: string | number) => setFilterClientId(val as string)}
+              options={[
+                { value: 'all', label: 'SEMUA PELANGGAN' },
+                ...uniqueClients.map(([id, name]) => ({ value: id.toString(), label: name.toUpperCase() }))
+              ]}
+              className="w-40"
+              placeholderSize="text-[10px] font-bold text-gray-900 uppercase tracking-tight"
+            />
 
-          <div className="w-[150px]">
-            <Select
+            <ComboBox
               value={filterStatus}
-              onChange={e => setFilterStatus(e.target.value)}
-              className="!text-[10px] ! uppercase tracking-tight text-gray-400 w-full"
-            >
-              <option value="all">SEMUA STATUS</option>
-              <option value="Unpaid">UNPAID</option>
-              <option value="Partial">PARTIAL</option>
-              <option value="Paid">PAID</option>
-            </Select>
+              onChange={(val: string | number) => setFilterStatus(val as string)}
+              options={[
+                { value: 'all', label: 'SEMUA STATUS' },
+                { value: 'Unpaid', label: 'UNPAID' },
+                { value: 'Partial', label: 'PARTIAL' },
+                { value: 'Paid', label: 'PAID' },
+              ]}
+              className="w-40"
+              hideSearch={true}
+              placeholderSize="text-[10px] font-bold text-gray-900 uppercase tracking-tight"
+            />
           </div>
         </div>
-
-        <Button
-          onClick={() => router.push('/dashboard/sales/invoices/create')}
-          variant="primary"
-        >
-          <div className="flex items-center gap-2">
-            <Plus size={14} strokeWidth={3} />
-            Buat Invoice
-          </div>
-        </Button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm flex-1">
-        <Table>
-          <TableHeader className="sticky top-0 z-10 bg-gray-50/80 backdrop-blur-md border-b border-gray-100">
-            <TableRow className="hover:bg-transparent">
-              <TableCell onClick={() => handleSort('date')} isHeader className="cursor-pointer">Tanggal</TableCell>
-              <TableCell onClick={() => handleSort('number')} isHeader className="cursor-pointer">Nomor</TableCell>
-              <TableCell onClick={() => handleSort('client')} isHeader className="cursor-pointer">Pelanggan</TableCell>
-              <TableCell onClick={() => handleSort('total')} isHeader className="cursor-pointer text-center">Total</TableCell>
-              <TableCell onClick={() => handleSort('status')} isHeader className="cursor-pointer text-center">Status</TableCell>
-              <TableCell isHeader className="text-center">Aksi</TableCell>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredInvoices.map(inv => (
-              <TableRow key={inv.id} className="group hover:bg-indigo-50/30 transition-colors border-b border-gray-50/50 last:border-0">
-                <TableCell className="py-5 px-6">
-                  <Label className="text-[11px] text-gray-500">{formatDateString(inv.date)}</Label>
-                </TableCell>
-                <TableCell className="py-5 px-6">
-                  <Button
-                    onClick={() => router.push(`/dashboard/sales/invoices/${inv.id}`)}
-                    className=" text-indigo-600 text-xs tracking-tight hover:underline flex items-center gap-1.5"
-                  >
-                    <FileBadge size={12} className="text-indigo-400" />
-                    {inv.number}
-                  </Button>
-                </TableCell>
-                <TableCell className="py-5 px-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center  text-[10px] uppercase shadow-sm border border-indigo-100">{inv.client?.name.charAt(0)}</div>
-                    <div>
-                      <Subtext className="text-xs text-gray-900 tracking-tight">{inv.client?.name}</Subtext>
-                      <Subtext className="text-[10px] !text-gray-400 mt-1 uppercase tracking-tight italic">{inv.client?.client_company?.name || 'Personal'}</Subtext>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell className="text-right  text-indigo-600 text-xs py-5 px-6 bg-indigo-50/5 group-hover:bg-indigo-50/20">{formatIDR(inv.total)}</TableCell>
-                <TableCell className="text-center py-5 px-6">
-                  <Label className={`px-3 py-1 rounded-full text-[9px]  uppercase tracking-tight border transition-all duration-300 ${inv.status === 'Paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                    inv.status === 'Partial' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                      inv.status === 'Unpaid' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-                        'bg-gray-50 text-gray-400 border-gray-200'
-                    }`}>
-                    {inv.status}
-                  </Label>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center justify-center gap-2">
-                    <Button variant="ghost" size="sm" onClick={() => handleDownloadPDF(inv)} className="!p-2 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors" title="Unduh PDF">
-                      <FileDown size={14} />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => router.push(`/dashboard/sales/invoices/${inv.id}`)} className="!p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
-                      <Edit2 size={14} />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setConfirmDelete({ isOpen: true, id: inv.id, number: inv.number })} className="!p-2 text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg" title="Hapus">
-                      <Trash2 size={14} />
-                    </Button>
-                  </div>
-                </TableCell>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm h-[80vh] mb-4 flex flex-col overflow-hidden">
+        <div className="overflow-x-auto overflow-y-auto h-full custom-scrollbar">
+          <Table>
+            <TableHeader className="sticky top-0 z-10 bg-gray-50/80 backdrop-blur-md border-b border-gray-100">
+              <TableRow className="hover:bg-transparent">
+                <TableCell onClick={() => handleSort('date')} isHeader className="cursor-pointer">Tanggal</TableCell>
+                <TableCell onClick={() => handleSort('number')} isHeader className="cursor-pointer">Nomor</TableCell>
+                <TableCell onClick={() => handleSort('client')} isHeader className="cursor-pointer">Pelanggan</TableCell>
+                <TableCell onClick={() => handleSort('total')} isHeader className="cursor-pointer text-center">Total</TableCell>
+                <TableCell onClick={() => handleSort('status')} isHeader className="cursor-pointer text-center">Status</TableCell>
+                <TableCell isHeader className="text-center">Aksi</TableCell>
               </TableRow>
-            ))}
-            {filteredInvoices.length === 0 && (
-              <TableEmpty colSpan={6} message="Belum ada invoice tercatat" icon={<FileBadge size={48} />} />
-            )}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {filteredInvoices.map(inv => (
+                <TableRow key={inv.id} className="group hover:bg-indigo-50/30 transition-colors border-b border-gray-50/50 last:border-0">
+                  <TableCell className="py-5 px-6">
+                    <Label className="text-[11px] text-gray-500">{formatDateString(inv.date)}</Label>
+                  </TableCell>
+                  <TableCell className="py-5 px-6">
+                    <Button
+                      onClick={() => router.push(`/dashboard/sales/invoices/${inv.id}`)}
+                      className=" text-indigo-600 text-xs tracking-tight hover:underline flex items-center gap-1.5"
+                    >
+                      <FileBadge size={12} className="text-indigo-400" />
+                      {inv.number}
+                    </Button>
+                  </TableCell>
+                  <TableCell className="py-5 px-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center  text-[10px] uppercase shadow-sm border border-indigo-100">{inv.client?.name.charAt(0)}</div>
+                      <div>
+                        <Subtext className="text-xs text-gray-900 tracking-tight">{inv.client?.name}</Subtext>
+                        <Subtext className="text-[10px] !text-gray-400 mt-1 uppercase tracking-tight italic">{inv.client?.client_company?.name || 'Personal'}</Subtext>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right  text-indigo-600 text-xs py-5 px-6 bg-indigo-50/5 group-hover:bg-indigo-50/20">{formatIDR(inv.total)}</TableCell>
+                  <TableCell className="text-center py-5 px-6">
+                    <Label className={`px-3 py-1 rounded-full text-[9px]  uppercase tracking-tight border transition-all duration-300 ${inv.status === 'Paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                      inv.status === 'Partial' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                        inv.status === 'Unpaid' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                          'bg-gray-50 text-gray-400 border-gray-200'
+                      }`}>
+                      {inv.status}
+                    </Label>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center justify-center gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => handleDownloadPDF(inv)} className="!p-2 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors" title="Unduh PDF">
+                        <FileDown size={14} />
+                      </Button>
+                      {inv.status === 'Paid' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => router.push(`/dashboard/sales/kwitansi-requests/create?invoiceId=${inv.id}`)}
+                          className="!p-2 !text-amber-500 hover:!bg-amber-50 rounded-lg transition-colors"
+                          title="Request Kwitansi"
+                        >
+                          <FileText size={14} />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="sm" onClick={() => router.push(`/dashboard/sales/invoices/${inv.id}`)} className="!p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
+                        <Edit2 size={14} />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setConfirmDelete({ isOpen: true, id: inv.id, number: inv.number })} className="!p-2 text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg" title="Hapus">
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {filteredInvoices.length === 0 && (
+                <TableEmpty colSpan={6} message="Belum ada invoice tercatat" icon={<FileBadge size={48} />} />
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
 

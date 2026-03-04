@@ -2,20 +2,21 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Select, Button, Table, TableHeader, TableBody, TableRow, TableCell, H3, Subtext, Label, Modal, EmptyState, SearchInput, Badge } from '@/components/ui';
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, H2, H3, Subtext, Label, Modal, EmptyState, SearchInput, Badge, ComboBox } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
-import { Company, Quotation } from '@/lib/types';
+import { Company, Quotation, SalesRequestCategory } from '@/lib/types';
 import {
   Plus, Search, Edit2, Trash2, Loader2, FileText,
   ChevronRight, ArrowUpDown, ChevronUp, ChevronDown,
   AlertTriangle, CheckCircle2, MoreVertical, X, Filter,
-  FileDown, FileCheck,
+  FileDown, FileCheck, FilePlus,
   Clock
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { generateTemplate1, generateTemplate5, generateTemplate6 } from '@/lib/pdf-templates';
 import { useRouter } from 'next/navigation';
 
 interface Props {
@@ -39,6 +40,7 @@ const getImgDimensions = (url: string): Promise<{ width: number, height: number,
 export const QuotationsView: React.FC<Props> = ({ company }) => {
   const router = useRouter();
   const [quotations, setQuotations] = useState<Quotation[]>([]);
+  const [requestCategories, setRequestCategories] = useState<SalesRequestCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClientId, setFilterClientId] = useState('all');
@@ -50,19 +52,29 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
   const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
     isOpen: false, title: '', message: '', type: 'success'
   });
+  const [requestModal, setRequestModal] = useState<{ isOpen: boolean; quotationId: number | null; quotationStatus: string }>({ isOpen: false, quotationId: null, quotationStatus: '' });
 
   const fetchData = useCallback(async () => {
     if (!company?.id) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('quotations')
-        .select('*, client:clients(*, client_company:client_companies(*)), quotation_items(*, products(*))')
-        .eq('company_id', company.id)
-        .order('id', { ascending: false });
+      const [qRes, catRes] = await Promise.all([
+        supabase
+          .from('quotations')
+          .select('*, client:clients(*, client_company:client_companies(*)), quotation_items(*, products(*))')
+          .eq('company_id', company.id)
+          .order('id', { ascending: false }),
+        supabase
+          .from('sales_request_categories')
+          .select('*')
+          .eq('company_id', company.id)
+          .order('sort_order', { ascending: false })
+      ]);
 
-      if (error) throw error;
-      if (data) setQuotations(data);
+      if (qRes.error) throw qRes.error;
+      if (qRes.data) setQuotations(qRes.data);
+      if (catRes.error) throw catRes.error;
+      if (catRes.data) setRequestCategories(catRes.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -441,6 +453,10 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
       safeText(config.footer_text || '', pageWidth / 2, pageHeight - 5, { align: 'center' });
+    } else if (templateId === 'template6') {
+      config.document_type = 'quotation';
+      const qData = { ...q };
+      await generateTemplate6(doc, qData, config, company, pageWidth, padX);
     } else {
       doc.setFillColor('#4F46E5');
       safeRect(0, 0, pageWidth, 40, 'F');
@@ -471,43 +487,53 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
   if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4"><Loader2 className="animate-spin text-blue-600" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Sinkronisasi Penawaran...</Subtext></div>;
 
   return (
-    <div className="flex flex-col gap-6 h-full text-gray-900">
-      <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0 overflow-x-auto custom-scrollbar">
-        <div className="flex items-center gap-3 shrink-0">
+    <div className="flex flex-col gap-6 text-gray-900">
+      <div className="flex flex-col gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+        <div className="flex items-center justify-between">
+          <div>
+            <H2 className="text-xl ">Daftar Penawaran</H2>
+            <Subtext className="text-[10px]  uppercase tracking-tight">Kelola dan pantau seluruh penawaran pelanggan.</Subtext>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => router.push('/dashboard/sales/quotations/create')}
+              leftIcon={<Plus size={14} strokeWidth={3} />}
+              className="!px-6 py-2.5 text-[10px] uppercase tracking-tight shadow-lg shadow-blue-100"
+              variant="primary"
+              size="sm"
+            >
+              Buat Penawaran
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-gray-50">
           <div className="w-[400px] shrink-0">
             <SearchInput
               placeholder="Cari nomor, client..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="rounded-xl border-gray-100 shadow-none bg-gray-50/30"
             />
           </div>
 
-          <div className="w-[200px] shrink-0">
-            <Select
+          <div className="flex items-center gap-3 shrink-0 ml-auto">
+            <ComboBox
               value={filterStatus}
-              onChange={e => setFilterStatus(e.target.value)}
-              className="!text-[10px] !uppercase tracking-tight text-gray-400 w-full"
-            >
-              <option value="all">SEMUA STATUS</option>
-              {['Draft', 'Sent', 'Accepted', 'Declined'].map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}
-            </Select>
+              onChange={(val: string | number) => setFilterStatus(val as string)}
+              options={[
+                { value: 'all', label: 'SEMUA STATUS' },
+                ...['Draft', 'Sent', 'Accepted', 'Declined'].map(s => ({ value: s, label: s.toUpperCase() }))
+              ]}
+              className="w-40"
+              hideSearch={true}
+              placeholderSize="text-[10px] font-bold text-gray-900 uppercase tracking-tight"
+            />
           </div>
         </div>
-
-        <Button
-          onClick={() => router.push('/dashboard/sales/quotations/create')}
-          variant="primary"
-        >
-          <div className="flex items-center gap-2">
-            <Plus size={14} strokeWidth={3} />
-            Buat Penawaran
-          </div>
-        </Button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm flex-1">
-        <div className="overflow-x-auto h-full scrollbar-hide">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm h-[80vh] mb-4 flex flex-col overflow-hidden">
+        <div className="overflow-x-auto overflow-y-auto h-full scrollbar-hide">
           <Table>
             <TableHeader className="sticky top-0 z-10 bg-gray-50/80 backdrop-blur-md border-b border-gray-100">
               <TableRow className="hover:bg-transparent">
@@ -567,17 +593,15 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
                       >
                         <FileDown size={14} />
                       </Button>
-                      {q.status === 'Accepted' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => router.push(`/dashboard/sales/proformas/create?quotationId=${q.id}`)}
-                          className="!p-2 !text-amber-500 hover:!bg-amber-50 rounded-lg transition-colors"
-                          title="Jadikan Proforma"
-                        >
-                          <FileCheck size={14} />
-                        </Button>
-                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setRequestModal({ isOpen: true, quotationId: q.id, quotationStatus: q.status })}
+                        className="!p-2 !text-indigo-500 hover:!bg-indigo-50 rounded-lg transition-colors"
+                        title="Buat Request Tambahan"
+                      >
+                        <FilePlus size={14} />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -669,6 +693,40 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
           >
             Tutup
           </Button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={requestModal.isOpen}
+        onClose={() => setRequestModal({ isOpen: false, quotationId: null, quotationStatus: '' })}
+        title="Buat Request untuk Penawaran Ini"
+        size="md"
+      >
+        <div className="flex flex-col gap-3 py-4">
+          <Subtext className="text-sm text-gray-500 mb-2">Silakan pilih jenis request yang ingin Anda ajukan berdasarkan penawaran ini:</Subtext>
+
+          {requestModal.quotationStatus === 'Accepted' && (
+            <Button
+              variant="ghost"
+              className="w-full justify-start !py-4 text-left border border-amber-200 bg-amber-50/50 hover:bg-amber-50"
+              leftIcon={<FileCheck className="text-amber-500" size={18} />}
+              onClick={() => router.push(`/dashboard/sales/proformas/create?quotationId=${requestModal.quotationId}`)}
+            >
+              Jadikan Proforma
+            </Button>
+          )}
+
+          {requestCategories.map(cat => (
+            <Button
+              key={cat.id}
+              variant="ghost"
+              className="w-full justify-start !py-4 text-left border border-gray-200 uppercase"
+              leftIcon={<FilePlus className="text-gray-400" size={18} />}
+              onClick={() => router.push(`/dashboard/sales/requests/${cat.id}/create?quotationId=${requestModal.quotationId}`)}
+            >
+              {cat.name}
+            </Button>
+          ))}
         </div>
       </Modal>
     </div>

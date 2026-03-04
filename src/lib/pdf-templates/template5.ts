@@ -44,9 +44,19 @@ export const generateTemplate5 = async (
   doc.setFillColor(tealColor);
   safeRect(doc, pageWidth - 110, bannerY, 110, bannerHeight, 'F');
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(38);
+  let labelTitle = 'PENAWARAN';
+  let titleSize = 38;
+  if ((config as any).document_type === 'invoice') {
+    labelTitle = 'INVOICE';
+  } else if ((config as any).document_type === 'proforma') {
+    labelTitle = 'PROFORMA INVOICE';
+    titleSize = 22; // shrink to fit 'PROFORMA INVOICE'
+  } else if ((config as any).document_type === 'kwitansi') {
+    labelTitle = 'KWITANSI';
+  }
+  doc.setFontSize(titleSize);
   doc.setFont('helvetica', 'bold');
-  safeText(doc, 'PENAWARAN', pageWidth - 100, bannerY + 15);
+  safeText(doc, labelTitle, pageWidth - 100, bannerY + 15);
   
   doc.setTextColor(17, 17, 17);
   doc.setFontSize(10);
@@ -54,31 +64,51 @@ export const generateTemplate5 = async (
   safeText(doc, 'INVOICE TO:', padX, 55);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  safeText(doc, qData.client.client_company.name, padX, 62);
+  safeText(doc, qData.client?.client_company?.name || 'PERORANGAN', padX, 62);
   doc.setFontSize(10);
-  safeText(doc, `${qData.client.salutation} ${qData.client.name}`, padX, 68);
-  safeText(doc, `P: ${String(qData.client.whatsapp)}`, padX, 74);
-  safeText(doc, `E: ${String(qData.client.email)}`, padX, 79);
+  safeText(doc, `${qData.client?.salutation || ''} ${qData.client?.name || ''}`.trim(), padX, 68);
+  safeText(doc, `P: ${String(qData.client?.whatsapp || '')}`, padX, 74);
+  safeText(doc, `E: ${String(qData.client?.email || '')}`, padX, 79);
   
   const metaX = 130;
-  safeText(doc, 'QUOTATION NO', metaX, 55);
+  
+  let dateTitle = 'VALID UNTIL';
+  let printDate = qData.expiry_date;
+  let docNoLabel = 'QUOTATION NO';
+  if ((config as any).document_type === 'invoice') {
+    dateTitle = 'DUE DATE';
+    printDate = qData.due_date;
+    docNoLabel = 'INVOICE NO';
+  } else if ((config as any).document_type === 'proforma') {
+    dateTitle = 'DUE DATE';
+    printDate = qData.due_date;
+    docNoLabel = 'PROFORMA NO';
+  } else if ((config as any).document_type === 'kwitansi') {
+    dateTitle = 'DATE';
+    printDate = qData.date;
+    docNoLabel = 'KWITANSI NO';
+  }
+
+  safeText(doc, docNoLabel, metaX, 55);
   safeText(doc, ':', metaX + 30, 55);
   safeText(doc, qData.number, metaX + 35, 55);
   safeText(doc, 'DATE', metaX, 61);
   safeText(doc, ':', metaX + 30, 61);
   safeText(doc, formatDateString(qData.date), metaX + 35, 61);
-  safeText(doc, 'DUE DATE', metaX, 67);
+  safeText(doc, dateTitle, metaX, 67);
   safeText(doc, ':', metaX + 30, 67);
   doc.setFont('helvetica', 'bold');
-  safeText(doc, formatDateString(qData.expiry_date), metaX + 35, 67);
+  safeText(doc, formatDateString(printDate), metaX + 35, 67);
   
+  const items = qData.quotation_items || qData.proforma_items || qData.invoice_items || qData.kwitansi_items || [];
+
   autoTable(doc, {
     startY: 95,
     head: [['Item / Description', 'Price', 'Qty', 'Total']],
-    body: qData.quotation_items.map((it: any) => [
-      `${it.products.name}\n${it.description}`, 
+    body: items.map((it: any) => [
+      `${it.products?.name || ''}\n${it.description || ''}`, 
       formatIDR(it.price), 
-      `${it.qty} ${it.unit_name}`, 
+      `${it.qty} ${it.unit_name || ''}`, 
       formatIDR(it.total)
     ]),
     theme: 'plain',
@@ -161,15 +191,29 @@ export const generateTemplate5 = async (
   safeRect(doc, 0, finalY + 5, 84, 8, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(10);
-  safeText(doc, `Due Date: ${formatDateString(qData.expiry_date)}`, padX, finalY + 10.5);
+  const dateTitleCased = dateTitle.split(' ').map((w: string) => w.charAt(0) + w.slice(1).toLowerCase()).join(' ');
+  safeText(doc, `${dateTitleCased}: ${formatDateString(printDate)}`, padX, finalY + 10.5);
   
   doc.setTextColor(17, 17, 17);
   const labelX = 130;
   const valueX = pageWidth - padX;
-  safeText(doc, 'Sub Total', labelX, finalY + 10.5);
-  safeText(doc, formatIDR(qData.subtotal), valueX, finalY + 10.5, { align: 'right' });
   
-  const grandTotalY = finalY + 18.5;
+  let currentY = finalY + 10.5;
+  safeText(doc, 'Sub Total', labelX, currentY);
+  safeText(doc, formatIDR(qData.subtotal), valueX, currentY, { align: 'right' });
+  
+  if (qData.discount_value > 0) {
+    currentY += 6;
+    safeText(doc, 'Discount', labelX, currentY);
+    safeText(doc, `-${formatIDR(qData.discount_value)}`, valueX, currentY, { align: 'right' });
+  }
+
+  currentY += 6;
+  const taxLabel = qData.tax_value > 0 ? (qData.tax_type || 'Tax') : 'Non Pajak';
+  safeText(doc, taxLabel, labelX, currentY);
+  safeText(doc, formatIDR(qData.tax_value || 0), valueX, currentY, { align: 'right' });
+
+  const grandTotalY = currentY + 8;
   doc.setFillColor(tealColor);
   safeRect(doc, 120, grandTotalY, 90, 10, 'F');
   doc.setTextColor(255, 255, 255);
@@ -178,11 +222,59 @@ export const generateTemplate5 = async (
   safeText(doc, 'Grand Total', labelX, grandTotalY + 6.5);
   safeText(doc, formatIDR(qData.total), valueX, grandTotalY + 6.5, { align: 'right' });
 
-  const bottomY = grandTotalY + 30;
+  const notesY = grandTotalY + 15;
   doc.setTextColor(17, 17, 17);
-  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+  safeText(doc, 'Payment via Bank Transfer:', padX, notesY);
   doc.setFont('helvetica', 'normal');
-  safeText(doc, config.signature_name || '', pageWidth - 55, bottomY + 22, { align: 'center' });
+  safeText(doc, config.payment_info || '- BCA 5435033030 an PT Integrasi Data Nusantara', padX, notesY + 5, { maxWidth: pageWidth / 2 + 10 });
+  
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+  safeText(doc, 'Mohon kirimkan bukti pembayaran ke: ', padX, notesY + 15);
+  const labelW = (doc.getStringUnitWidth('Mohon kirimkan bukti pembayaran ke: ') * doc.getFontSize()) / doc.internal.scaleFactor;
+  doc.setFont('helvetica', 'normal');
+  safeText(doc, config.finance_email || 'finance@idn.id', padX + labelW, notesY + 15);
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+  safeText(doc, 'Catatan:', padX, notesY + 23);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  safeText(doc, config.note_footer || '- Info jadwal training yang tersedia, silakan cek di www.jadwal.idn.id\n- Pendaftaran training akan diproses setelah pembayaran kami terima\n- Maksimal pembayaran H-4 dari tanggal pelaksanaan training.', padX, notesY + 28, { maxWidth: pageWidth / 2 + 10 });
+
+  const sigY = notesY + 30;
+  if (config.signature_url) {
+      try {
+        const { width, height, element } = await getImgDimensions(config.signature_url);
+        const maxW = 50; const maxH = 20;
+        const ratio = Math.min(maxW / width, maxH / height);
+        doc.addImage(element, 'PNG', pageWidth - padX - 65, sigY, width * ratio, height * ratio, undefined, 'FAST');
+      } catch(e) { }
+  }
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  safeText(doc, config.signature_company || '', pageWidth - 55, bottomY + 27, { align: 'center' });
+  safeText(doc, config.signature_name || 'Reftika Diansa', pageWidth - padX - 40, sigY + 25, { align: 'center' });
+  doc.setFont('helvetica', 'normal');
+  safeText(doc, config.signature_title || 'Sales Administrative Assistant', pageWidth - padX - 40, sigY + 29, { align: 'center' });
+
+  const docHeight = doc.internal.pageSize.getHeight();
+  doc.setFillColor(gray2Color);
+  safeRect(doc, 0, docHeight - 14, pageWidth, 7, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+  safeText(doc, config.footer_bar_text || 'Thank you for your business', pageWidth / 2, docHeight - 9.5, { align: 'center' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(17, 17, 17);
+  safeText(doc, config.footer_text || 'PT Integrasi Data Nusantara | www.idn.id | info@idn.id | 0819-0819-1001', pageWidth / 2, docHeight - 3, { align: 'center' });
+
+  // Add Page Numbers (Page X of Y) in top right corner
+  const pageCount = (doc.internal as any).pages.length - 1;
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(17, 17, 17);
+    doc.setFont('helvetica', 'normal');
+    const pageText = `Page ${i} of ${pageCount}`;
+    safeText(doc, pageText, pageWidth - padX, 10, { align: 'right' });
+  }
 };

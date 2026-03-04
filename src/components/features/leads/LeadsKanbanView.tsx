@@ -3,16 +3,18 @@ import { Button, Subtext, Label, Badge } from '@/components/ui';
 import { Lead, LeadStage } from '@/lib/types';
 import { User as UserIcon, ChevronRight, Trash2 } from 'lucide-react';
 
+import { KanbanBoard, KanbanItem, KanbanStage } from '@/components/shared/KanbanBoard/KanbanBoard';
+
+// Extend KanbanItem
+interface KanbanLead extends Lead, KanbanItem { }
+
 interface Props {
   stages: LeadStage[];
   leadsByStatus: Record<string, Lead[]>;
   onEdit: (lead: Lead) => void;
   onDelete: (id: number, e: React.MouseEvent) => void;
-  onDragStart: (e: React.DragEvent, id: number) => void;
-  onDragOver: (e: React.DragEvent, stageName: string) => void;
-  onDrop: (e: React.DragEvent, stageName: string) => void;
-  dropTarget: string | null;
   formatIDR: (num?: number) => string;
+  onReorder: (itemId: number, newStatus: string, newIndex?: number) => void;
 }
 
 const getStageColor = (status: string) => {
@@ -26,58 +28,73 @@ const getStageColor = (status: string) => {
 };
 
 export const LeadsKanbanView: React.FC<Props> = ({
-  stages, leadsByStatus, onEdit, onDelete, onDragStart,
-  onDragOver, onDrop, dropTarget, formatIDR
+  stages, leadsByStatus, onEdit, onDelete, formatIDR, onReorder
 }) => {
-  return (
-    <div className="flex gap-4 items-start h-full overflow-x-auto pb-4 custom-scrollbar">
-      {stages.map((stage) => {
-        const sKey = stage.name.toLowerCase();
-        return (
-          <div key={stage.id} onDragOver={(e) => onDragOver(e, sKey)} onDrop={(e) => onDrop(e, sKey)} className="flex flex-col gap-3 min-w-[260px] w-[260px] h-full transition-all">
-            <div className={`p-4 ${getStageColor(stage.name)} rounded-xl shadow-md flex items-center justify-between`}>
-              <Label className="text-[10px] uppercase tracking-tight text-white">{stage.name}</Label>
-              <Label className="text-[10px] text-white bg-white/20 px-2.5 py-0.5 rounded-full">{leadsByStatus[sKey]?.length || 0}</Label>
-            </div>
-            <div className={`flex-1 space-y-3 p-2 rounded-2xl border-2 border-dashed transition-all overflow-y-auto custom-scrollbar ${dropTarget === sKey ? 'bg-blue-50/50 border-blue-300' : 'bg-gray-50/50 border-gray-200'}`}>
-              {leadsByStatus[sKey]?.map(lead => (
-                <div key={lead.id} draggable onDragStart={(e) => onDragStart(e, lead.id)} onClick={() => onEdit(lead)} className="group p-4 bg-white border border-gray-100 rounded-xl shadow-sm hover:border-blue-300 transition-all cursor-pointer transform hover:-translate-y-1 relative">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => { e.stopPropagation(); onDelete(lead.id, e as any); }}
-                    className="absolute top-2 right-2 !p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
-                  >
-                    <Trash2 size={12} />
-                  </Button>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex flex-col gap-0.5">
-                      <Subtext className="text-[9px] text-gray-300 uppercase">#{String(lead.id).padStart(4, '0')}</Subtext>
-                      <Label className="text-[9px] text-gray-400">
-                        {lead.input_date ? new Date(lead.input_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
-                      </Label>
-                    </div>
-                    <Badge variant="primary" className="!px-2 !py-0.5 !text-[8px]">{lead.source}</Badge>
-                  </div>
-                  <h4 className="text-[13px] text-gray-900 mb-1 group-hover:text-blue-600 transition-colors">
-                    {lead.salutation && <span className="text-blue-400 mr-1">{lead.salutation}</span>}
-                    {lead.name}
-                  </h4>
-                  <Subtext className="text-[10px] text-blue-600 mb-1">{formatIDR(lead.expected_value)}</Subtext>
-                  <Subtext className="text-[10px] text-gray-400 truncate mb-3">{lead.client_company?.name || 'Perorangan'}</Subtext>
-                  <div className="pt-3 border-t border-gray-50 flex items-center justify-between text-gray-400 text-[9px]">
-                    <div className="flex items-center gap-1.5">
-                      <UserIcon size={10} />
-                      {lead.sales_profile?.full_name?.split(' ')[0] || '-'}
-                    </div>
-                    <ChevronRight size={12} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })}
+
+  const kanbanStages: KanbanStage[] = stages.map(s => ({
+    id: s.name.toLowerCase(),
+    name: s.name,
+    colorClass: getStageColor(s.name)
+  }));
+
+  const renderCard = (lead: KanbanLead, isDragged: boolean) => (
+    <div
+      onClick={() => onEdit(lead)}
+      className={`group p-3 bg-white border border-gray-100 rounded-xl shadow-sm hover:border-blue-300 transition-all cursor-pointer transform relative ${isDragged ? 'opacity-30' : 'hover:-translate-y-1'}`}
+    >
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={(e) => { e.stopPropagation(); onDelete(lead.id, e as any); }}
+        className="absolute top-1.5 right-1.5 !p-1.5 text-gray-300 hover:text-red-500 hover:bg-transparent opacity-0 group-hover:opacity-100 transition-all z-10"
+      >
+        <Trash2 size={12} />
+      </Button>
+      <div className="flex items-center justify-between mb-1.5 pr-6">
+        <div className="flex items-center gap-1.5">
+          <Subtext className="text-[9px] text-gray-400 font-medium uppercase">#{String(lead.id).padStart(4, '0')}</Subtext>
+          <span className="text-[8px] text-gray-200">•</span>
+          <Label className="text-[9px] text-gray-400 font-normal">
+            {lead.input_date ? new Date(lead.input_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+          </Label>
+        </div>
+      </div>
+
+      <div className="mb-2">
+        <h4 className="text-[12px] leading-tight text-gray-900 font-medium mb-0.5 line-clamp-2 pr-4">
+          {lead.salutation && <span className="text-blue-400 mr-1">{lead.salutation}</span>}
+          {lead.name}{' '}
+          <span className="text-[10px] text-gray-400 font-normal">
+            ({lead.client_company?.name || 'Perorangan'})
+          </span>
+        </h4>
+      </div>
+
+      <div className="flex items-center justify-between mb-2">
+        <Subtext className="text-[10px] font-medium text-blue-600">{formatIDR(lead.expected_value)}</Subtext>
+        {lead.source && lead.source.trim() !== '' && (
+          <Badge variant="primary" className="!px-1.5 !py-0 h-4 flex items-center justify-center !text-[8.5px] uppercase tracking-wider">
+            {lead.source}
+          </Badge>
+        )}
+      </div>
+
+      <div className="pt-2 border-t border-gray-50 flex items-center justify-between text-gray-400 text-[9px]">
+        <div className="flex items-center gap-1.5">
+          <UserIcon size={10} className="text-gray-300" />
+          <span className="truncate max-w-[120px]">{lead.sales_profile?.full_name?.split(' ')[0] || '-'}</span>
+        </div>
+        <ChevronRight size={12} className="text-gray-300" />
+      </div>
     </div>
+  );
+
+  return (
+    <KanbanBoard<KanbanLead>
+      stages={kanbanStages}
+      itemsByStatus={leadsByStatus as Record<string, KanbanLead[]>}
+      onReorder={onReorder}
+      renderCard={renderCard}
+    />
   );
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Input, Select, Button, Modal } from '@/components/ui';
+import { Input, Button, Modal, ComboBox } from '@/components/ui';
 import { CompanyRole } from '@/lib/types';
 
 interface AdminInviteMemberModalProps {
@@ -24,23 +24,23 @@ export const AdminInviteMemberModal: React.FC<AdminInviteMemberModalProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Undang Anggota">
       <div className="space-y-6">
-        <Input 
-           label="Email User" 
-           type="email" 
-           value={form.email} 
-           onChange={e => setForm({...form, email: e.target.value})} 
-           placeholder="email@user.com" 
+        <Input
+          label="Email User"
+          type="email"
+          value={form.email}
+          onChange={e => setForm({ ...form, email: e.target.value })}
+          placeholder="email@user.com"
         />
-        <Select 
-           label="Role" 
-           value={form.role_id} 
-           onChange={e => setForm({...form, role_id: e.target.value})}
-        >
-            <option value="">Pilih Role</option>
-            {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-        </Select>
+        <ComboBox
+          label="Role"
+          value={form.role_id}
+          onChange={(val: string | number) => setForm({ ...form, role_id: val.toString() })}
+          options={[
+            ...roles.map(r => ({ value: r.id, label: r.name }))
+          ]}
+        />
         <Button onClick={onInvite} isLoading={isProcessing} className="w-full">
-            Undang Sekarang
+          Undang Sekarang
         </Button>
       </div>
     </Modal>

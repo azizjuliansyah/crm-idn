@@ -39,7 +39,7 @@ export const ClientCompanyCategoryFormModal: React.FC<ClientCompanyCategoryFormM
             type="text"
             value={form.name || ''}
             onChange={e => setForm({ ...form, name: e.target.value })}
-            className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-xl  outline-none focus:bg-white focus:border-indigo-500 transition-all shadow-sm"
+            className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-md  outline-none focus:bg-white focus:border-indigo-500 transition-all shadow-sm"
             placeholder="Misal: Prospektif, High-Value, Corporate..."
           />
         </div>

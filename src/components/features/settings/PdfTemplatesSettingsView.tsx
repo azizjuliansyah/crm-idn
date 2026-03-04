@@ -70,7 +70,11 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
     footer_bar_text: '',
     footer_text: '',
     logo_url: '',
-    signature_url: ''
+    signature_url: '',
+    company_address: '',
+    contact_phone_hours: '',
+    company_website: '',
+    finance_email: ''
   });
 
   const fetchData = useCallback(async () => {
@@ -95,7 +99,7 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
     fetchData();
   }, [fetchData]);
 
-  const handleUpdateTemplate = async (docType: 'quotation' | 'invoice', templateId: string) => {
+  const handleUpdateTemplate = async (docType: 'quotation' | 'invoice' | 'kwitansi', templateId: string) => {
     setIsProcessing(true);
     try {
       const existing = settings.find(s => s.document_type === docType);
@@ -131,7 +135,11 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
         footer_bar_text: s.config?.footer_bar_text || '',
         footer_text: s.config?.footer_text || '',
         logo_url: s.config?.logo_url || '',
-        signature_url: s.config?.signature_url || ''
+        signature_url: s.config?.signature_url || '',
+        company_address: s.config?.company_address || '',
+        contact_phone_hours: s.config?.contact_phone_hours || '',
+        company_website: s.config?.company_website || '',
+        finance_email: s.config?.finance_email || ''
       });
       setIsConfiguring(docType);
     } else {
@@ -145,7 +153,11 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
         footer_bar_text: '',
         footer_text: '',
         logo_url: '',
-        signature_url: ''
+        signature_url: '',
+        company_address: '',
+        contact_phone_hours: '',
+        company_website: '',
+        finance_email: ''
       });
       setIsConfiguring(docType);
     }
@@ -228,7 +240,7 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
     return dateStr;
   };
 
-  const handlePreview = async (templateId: string, templateName: string) => {
+  const handlePreview = async (templateId: string, templateName: string, docType: string) => {
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
     const padX = 18;
@@ -251,20 +263,40 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
       },
       quotation_items: [
         { products: { name: 'Profesional support' }, description: 'Mikrotik BGP + Server - Juli 2025', qty: 1, unit_name: 'pax', price: 3800000, total: 3800000 },
-        { products: { name: 'Cloud Infrastructure' }, description: 'Dedicated resources storage enterprise', qty: 1, unit_name: 'unit', price: 6200000, total: 6200000 }
+        { products: { name: 'Cloud Infrastructure' }, description: 'Dedicated resources storage enterprise', qty: 1, unit_name: 'unit', price: 6200000, total: 6200000 },
+        { products: { name: 'Cloud Infrastructure 2' }, description: 'Dedicated resources storage enterprise', qty: 1, unit_name: 'unit', price: 6200000, total: 6200000 },
+        // { products: { name: 'Cloud Infrastructure 3' }, description: 'Dedicated resources storage enterprise', qty: 1, unit_name: 'unit', price: 6200000, total: 6200000 },
+        // { products: { name: 'Cloud Infrastructure 4' }, description: 'Dedicated resources storage enterprise', qty: 1, unit_name: 'unit', price: 6200000, total: 6200000 },
+        // { products: { name: 'Cloud Infrastructure 5' }, description: 'Dedicated resources storage enterprise', qty: 1, unit_name: 'unit', price: 6200000, total: 6200000 },
+        // { products: { name: 'Cloud Infrastructure 6' }, description: 'Dedicated resources storage enterprise', qty: 1, unit_name: 'unit', price: 6200000, total: 6200000 },
+        // { products: { name: 'Cloud Infrastructure 7' }, description: 'Dedicated resources storage enterprise', qty: 1, unit_name: 'unit', price: 6200000, total: 6200000 },
+        // { products: { name: 'Cloud Infrastructure 8' }, description: 'Dedicated resources storage enterprise', qty: 1, unit_name: 'unit', price: 6200000, total: 6200000 },
+        // { products: { name: 'Cloud Infrastructure 9' }, description: 'Dedicated resources storage enterprise', qty: 1, unit_name: 'unit', price: 6200000, total: 6200000 },
+        // { products: { name: 'Cloud Infrastructure 10' }, description: 'Dedicated resources storage enterprise', qty: 1, unit_name: 'unit', price: 6200000, total: 6200000 },
+        // { products: { name: 'Cloud Infrastructure 11' }, description: 'Dedicated resources storage enterprise', qty: 1, unit_name: 'unit', price: 6200000, total: 6200000 },
+        // { products: { name: 'Cloud Infrastructure 12' }, description: 'Dedicated resources storage enterprise', qty: 1, unit_name: 'unit', price: 6200000, total: 6200000 },
+        // { products: { name: 'Cloud Infrastructure 13' }, description: 'Dedicated resources storage enterprise', qty: 1, unit_name: 'unit', price: 6200000, total: 6200000 },
+        // { products: { name: 'Cloud Infrastructure 14' }, description: 'Dedicated resources storage enterprise', qty: 1, unit_name: 'unit', price: 6200000, total: 6200000 },
       ]
     };
 
-    const s = settings.find(st => st.document_type === 'quotation');
+    const s = settings.find(st => st.document_type === docType);
     const config = s?.config || {
       top_contact: '0851-XXXX-XXXX  |  info@spiznet.com  |  www.spiznet.com',
+      company_address: 'info@idn.id\nJl. Anggrek Rosliana no 12A Slipi\nPalmerah Jakarta Barat 11480',
+      contact_phone_hours: '0819-0819-1001\nSenin - Jumat\n09.00 to 17.00 WIB',
+      company_website: 'www.idn.id',
+      finance_email: 'finance@idn.id',
       payment_info: 'Bank MANDIRI 1650003926038 a.n. SPIZNET',
       note_footer: '- Please send payment confirmation\n- Terms & conditions apply',
       signature_name: 'Administrator',
+      signature_title: 'Sales Administrative Assistant',
       signature_company: company.name,
       footer_bar_text: 'Thank you for your business',
       footer_text: `${company.name} | Professional Services`
     };
+
+    config.document_type = docType;
 
     if (templateId === 'template5') {
       await generateTemplate5(doc, qData, config, company, pageWidth, padX);
@@ -302,7 +334,7 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
         </div>
 
         <div className="p-10 space-y-12">
-          {['quotation', 'invoice'].map((type) => (
+          {['quotation', 'invoice', 'kwitansi'].map((type) => (
             <div key={type} className="space-y-6">
               <div className="flex items-center justify-between px-2">
                 <div className="flex items-center gap-3">
@@ -311,7 +343,7 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
                   </div>
                   <div>
                     <h4 className="text-[10px] font-medium text-gray-400 uppercase tracking-[0.2em]">Dokumen</h4>
-                    <h5 className="text-lg font-medium text-gray-900 capitalize">{type}</h5>
+                    <h5 className="text-lg font-medium text-gray-900 capitalize">{type === 'invoice' ? 'Invoice & Proforma' : type === 'kwitansi' ? 'Kwitansi' : type}</h5>
                   </div>
                 </div>
                 <button
@@ -351,7 +383,7 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
 
                       <div className="flex items-center justify-between mt-4">
                         <button
-                          onClick={(e) => { e.stopPropagation(); handlePreview(tmpl.id, tmpl.name); }}
+                          onClick={(e) => { e.stopPropagation(); handlePreview(tmpl.id, tmpl.name, type); }}
                           className="px-4 py-2 bg-white border border-gray-100 rounded-lg text-[10px] font-medium uppercase tracking-widest text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm flex items-center gap-2"
                         >
                           <Eye size={12} /> Preview
@@ -398,9 +430,21 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
                   </div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-medium text-gray-400 uppercase tracking-widest ml-1">Kontak Header (Single Line)</label>
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-medium text-gray-400 uppercase tracking-widest ml-1">Kontak Header (Single Line for Template 1&5)</label>
                 <input type="text" value={configForm.top_contact} onChange={e => setConfigForm({ ...configForm, top_contact: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-xl font-bold text-xs" placeholder="Misal: 0851-XXXX | info@company.com" />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-medium text-gray-400 uppercase tracking-widest ml-1">Alamat Kontak (Multi Line for Template 6)</label>
+                <textarea value={configForm.company_address} onChange={e => setConfigForm({ ...configForm, company_address: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-xl font-bold text-xs h-20 resize-none" placeholder="info@idn.id\nJl. Anggrek..." />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-medium text-gray-400 uppercase tracking-widest ml-1">Jam Kerja & Telepon (Multi Line for Template 6)</label>
+                <textarea value={configForm.contact_phone_hours} onChange={e => setConfigForm({ ...configForm, contact_phone_hours: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-xl font-bold text-xs h-20 resize-none" placeholder="0819-0819-1001\nSenin - Jumat..." />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-medium text-gray-400 uppercase tracking-widest ml-1">Website Perusahaan (Template 6)</label>
+                <input type="text" value={configForm.company_website} onChange={e => setConfigForm({ ...configForm, company_website: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-xl font-bold text-xs" placeholder="www.idn.id" />
               </div>
             </div>
           </div>
@@ -417,6 +461,10 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
                 <textarea value={configForm.payment_info} onChange={e => setConfigForm({ ...configForm, payment_info: e.target.value })} className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-xl font-bold text-xs h-24 resize-none" placeholder="Bank Mandiri No. Rek ..." />
               </div>
               <div className="space-y-2">
+                <label className="text-[10px] font-medium text-gray-400 uppercase tracking-widest ml-1">Email Finance (Bukti Pembayaran)</label>
+                <input type="text" value={configForm.finance_email} onChange={e => setConfigForm({ ...configForm, finance_email: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-xl font-bold text-xs" placeholder="finance@idn.id" />
+              </div>
+              <div className="space-y-2 md:col-span-2">
                 <label className="text-[10px] font-medium text-gray-400 uppercase tracking-widest ml-1">Catatan Kaki (Note)</label>
                 <textarea value={configForm.note_footer} onChange={e => setConfigForm({ ...configForm, note_footer: e.target.value })} className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-xl font-bold text-xs h-24 resize-none" placeholder="- Berlaku 7 hari..." />
               </div>
@@ -447,6 +495,10 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
                 <div className="space-y-2">
                   <label className="text-[10px] font-medium text-gray-400 uppercase tracking-widest ml-1">Nama Penanda Tangan</label>
                   <input type="text" value={configForm.signature_name} onChange={e => setConfigForm({ ...configForm, signature_name: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-xl font-bold text-xs" placeholder="John Doe" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-medium text-gray-400 uppercase tracking-widest ml-1">Jabatan Penanda Tangan</label>
+                  <input type="text" value={configForm.signature_title} onChange={e => setConfigForm({ ...configForm, signature_title: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-xl font-bold text-xs" placeholder="Sales Admin" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-medium text-gray-400 uppercase tracking-widest ml-1">Nama Perusahaan Penanda Tangan</label>

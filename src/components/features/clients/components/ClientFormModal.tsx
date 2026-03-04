@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Input, Select, Button, Subtext, Label, Modal } from '@/components/ui';
-import { Loader2, Check, Save, Tags, MapPin } from 'lucide-react';
+import { Input, Button, Subtext, Label, Modal, ComboBox } from '@/components/ui';
+import { Loader2, Check, Save, Tags, MapPin, X } from 'lucide-react';
 import { Client, ClientCompany, ClientCompanyCategory } from '@/lib/types';
 
 interface ClientFormModalProps {
@@ -96,7 +96,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
       title={form.id ? "Edit Data Client" : "Tambah Client Baru"}
       size="lg"
       footer={
-        <Button onClick={(e) => onSave(form)} disabled={isProcessing} className="px-10 py-4 bg-emerald-600 text-white rounded-lg  text-xs uppercase tracking-tight shadow-xl flex items-center gap-2">
+        <Button onClick={(e) => onSave(form)} disabled={isProcessing} variant='success'>
           {isProcessing && <Loader2 className="animate-spin" size={14} />} Simpan Client
         </Button>
       }
@@ -104,12 +104,16 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
       <div className="flex flex-col gap-6 pb-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <Label className="text-[10px]  text-gray-400 uppercase tracking-tight ml-1">Sapaan</Label>
-            <Select value={form.salutation || ''} onChange={e => setForm({ ...form, salutation: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-lg  outline-none cursor-pointer">
-              <option value="">Pilih Sapaan</option>
-              <option value="Bapak">Bapak</option>
-              <option value="Ibu">Ibu</option>
-            </Select>
+            <ComboBox
+              label="Sapaan"
+              value={form.salutation || ''}
+              onChange={(val: string | number) => setForm({ ...form, salutation: val.toString() })}
+              options={[
+                { value: '', label: 'Pilih Sapaan' },
+                { value: 'Bapak', label: 'Bapak' },
+                { value: 'Ibu', label: 'Ibu' },
+              ]}
+            />
           </div>
           <div className="space-y-2">
             <Label className="text-[10px]  text-gray-400 uppercase tracking-tight ml-1">Nama Lengkap Client</Label>
@@ -119,17 +123,15 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
           <div className="md:col-span-2 space-y-2">
             <div className="flex items-center justify-between px-1">
               <Label className="text-[10px]  text-gray-400 uppercase tracking-tight">Pilih Perusahaan Client</Label>
-              <Button
-                type="button"
-                onClick={() => { setIsAddingCo(!isAddingCo); setIsAddingCatInCo(false); }}
-                className="text-[9px]  text-indigo-600 uppercase hover:underline transition-all"
-              >
-                {isAddingCo ? 'Batal' : '+ Perusahaan Baru'}
-              </Button>
             </div>
 
             {isAddingCo ? (
               <div className="p-5 bg-indigo-50/50 border border-indigo-100 rounded-xl space-y-4 shadow-inner">
+                <div className="flex justify-end mb-2">
+                  <Button variant="ghost" size="sm" onClick={() => setIsAddingCo(false)} className="!text-[10px] !p-1 !text-gray-400 uppercase">
+                    <X size={10} className="mr-1" /> Batal Tambah
+                  </Button>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <Label className="text-[9px]  text-gray-400 uppercase">Nama Perusahaan*</Label>
@@ -142,35 +144,48 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                     />
                   </div>
                   <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-[9px]  text-gray-400 uppercase">Kategori*</Label>
-                      <Button type="button" onClick={() => setIsAddingCatInCo(!isAddingCatInCo)} className="text-[8px]  text-indigo-600 uppercase hover:underline">
-                        {isAddingCatInCo ? 'Batal' : '+ Kategori Baru'}
-                      </Button>
-                    </div>
                     {isAddingCatInCo ? (
-                      <div className="flex gap-2">
-                        <Input
-                          autoFocus
-                          type="text"
-                          value={newCatInCoName}
-                          onChange={e => setNewCatInCoName(e.target.value)}
-                          className="flex-1 px-3 py-2 bg-white border border-indigo-100 rounded-lg  text-[10px] outline-none"
-                          placeholder="Kategori..."
-                        />
-                        <Button type="button" onClick={handleQuickAddCategoryInner} disabled={catInCoProcessing || !newCatInCoName.trim()} className="px-3 bg-indigo-600 text-white rounded-lg">
-                          {catInCoProcessing ? <Loader2 size={12} className="animate-spin" /> : <Check size={14} />}
-                        </Button>
+                      <div className="animate-in slide-in-from-left-2 duration-200">
+                        <Label className="text-[9px] text-gray-400 uppercase ml-1">Kategori Baru*</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            autoFocus
+                            type="text"
+                            value={newCatInCoName}
+                            onChange={e => setNewCatInCoName(e.target.value)}
+                            className="flex-1 px-3 py-2 bg-white border border-indigo-100 rounded-lg text-[10px] outline-none"
+                            placeholder="Kategori..."
+                          />
+                          <Button
+                            type="button"
+                            variant="success"
+                            size="sm"
+                            onClick={handleQuickAddCategoryInner}
+                            disabled={catInCoProcessing || !newCatInCoName.trim()}
+                            className="!px-3"
+                          >
+                            {catInCoProcessing ? <Loader2 size={12} className="animate-spin" /> : <Check size={14} />}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setIsAddingCatInCo(false)}
+                            className="!px-3 text-gray-400"
+                          >
+                            <X size={14} />
+                          </Button>
+                        </div>
                       </div>
                     ) : (
-                      <Select
+                      <ComboBox
                         value={newCo.category_id}
-                        onChange={e => setNewCo({ ...newCo, category_id: e.target.value })}
-                        className="w-full px-4 py-2.5 bg-white border border-indigo-100 rounded-lg  text-xs outline-none cursor-pointer"
-                      >
-                        <option value="">-- Pilih Kategori --</option>
-                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                      </Select>
+                        label="Pilih Kategori"
+                        onChange={(val: string | number) => setNewCo({ ...newCo, category_id: val.toString() })}
+                        options={categories.map(c => ({ value: c.id.toString(), label: c.name }))}
+                        onAddNew={() => setIsAddingCatInCo(true)}
+                        addNewLabel="Tambah Kategori Baru"
+                      />
                     )}
                   </div>
                   <div className="md:col-span-2 space-y-1">
@@ -182,18 +197,23 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                   type="button"
                   disabled={coProcessing}
                   onClick={handleQuickAddCompanyInner}
-                  className="w-full py-3 bg-indigo-600 text-white rounded-lg  text-[10px] uppercase tracking-tight flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 active:scale-[0.98] transition-all"
+                  className="w-full"
+                  variant="primary"
                 >
                   {coProcessing ? <Loader2 size={12} className="animate-spin" /> : <Save size={14} />} SIMPAN & PILIH PERUSAHAAN
                 </Button>
               </div>
             ) : (
-              <Select value={form.client_company_id || ''} onChange={e => setForm({ ...form, client_company_id: e.target.value ? Number(e.target.value) : null })} className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-lg  outline-none cursor-pointer focus:bg-white transition-all shadow-sm">
-                <option value="">-- Personal / Tanpa Perusahaan --</option>
-                {clientCompanies.map(co => (
-                  <option key={co.id} value={co.id}>{co.name}</option>
-                ))}
-              </Select>
+              <ComboBox
+                value={form.client_company_id || ''}
+                onChange={(val: string | number) => setForm({ ...form, client_company_id: val ? Number(val) : null })}
+                options={[
+                  { value: '', label: '-- Personal / Tanpa Perusahaan --' },
+                  ...clientCompanies.map(co => ({ value: co.id.toString(), label: co.name }))
+                ]}
+                onAddNew={() => setIsAddingCo(true)}
+                addNewLabel="Tambah Perusahaan Baru"
+              />
             )}
           </div>
 

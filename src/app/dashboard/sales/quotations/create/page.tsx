@@ -1,20 +1,34 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useDashboard } from '../../../DashboardContext';
 import { QuotationFormView } from '@/components/features/quotations/QuotationFormView';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function CreateQuotationPage() {
+function QuotationFormWrapper() {
   const { activeCompany } = useDashboard();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const clientId = searchParams.get('client_id');
+  const dealId = searchParams.get('deal_id');
 
   if (!activeCompany) return <div className="p-8 text-center text-gray-500">Loading Company Data...</div>;
 
   return (
-    <QuotationFormView 
-      company={activeCompany} 
+    <QuotationFormView
+      company={activeCompany}
+      initialClientId={clientId ? Number(clientId) : undefined}
+      initialDealId={dealId ? Number(dealId) : undefined}
       onSaveSuccess={() => router.push('/dashboard/sales/quotations')}
     />
+  );
+}
+
+export default function CreateQuotationPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-gray-500">Memuat form penawaran...</div>}>
+      <QuotationFormWrapper />
+    </Suspense>
   );
 }

@@ -31,7 +31,7 @@ export const H4: React.FC<TextProps> = ({ children, className = '', title }) => 
 );
 
 export const Subtext: React.FC<TextProps> = ({ children, className = '', title }) => (
-  <p title={title} className={`text-sm text-gray-500 ${className}`}>
+  <p title={title} className={`text-sm font-medium text-gray-500 ${className}`}>
     {children}
   </p>
 );

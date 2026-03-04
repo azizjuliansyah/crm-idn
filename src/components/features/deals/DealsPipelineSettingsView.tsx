@@ -316,9 +316,9 @@ export const DealsPipelineSettingsView: React.FC<Props> = ({ company }) => {
                 onChange={e => setNewStageInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && addStageToForm()}
                 placeholder="Nama stage..."
-                className="flex-1 px-4 py-3 bg-gray-50 border border-transparent rounded-xl outline-none text-xs  focus:bg-white focus:border-blue-200 transition-all"
+                className="flex-1 px-4 py-3 bg-gray-50 border border-transparent rounded-md outline-none text-xs  focus:bg-white focus:border-blue-200 transition-all"
               />
-              <Button onClick={addStageToForm} className="px-4 py-3 bg-gray-900 text-white rounded-xl  text-[10px] uppercase">Tambah</Button>
+              <Button onClick={addStageToForm} className="px-4 py-3 bg-gray-900 text-white rounded-md  text-[10px] uppercase">Tambah</Button>
             </div>
           </div>
         </div>

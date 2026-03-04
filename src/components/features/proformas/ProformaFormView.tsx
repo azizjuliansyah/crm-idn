@@ -1,16 +1,19 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Input, Select, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, H3, Subtext, Label, Modal, Card, ComboBox, Breadcrumb, SectionHeader } from '@/components/ui';
+import { Input, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, H3, Subtext, Label, Modal, Card, ComboBox, Breadcrumb, SectionHeader, H2 } from '@/components/ui';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { generateTemplate1, generateTemplate5, generateTemplate6 } from '@/lib/pdf-templates';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import {
   Client, Product, Quotation, ProformaInvoice, TaxSetting,
   ProductCategory, ProductUnit, ClientCompany, ClientCompanyCategory,
-  AutonumberSetting, Company
+  AutonumberSetting, Company, ClientForm, ProductForm
 } from '@/lib/types';
+import { ClientFormModal } from '../clients/components/ClientFormModal';
+import { ProductFormModal } from '../products/components/ProductFormModal';
 import {
   ArrowLeft, FileDown, Loader2, Save, FileCheck, User,
   ChevronDown, Search, Package, Trash2, Plus, X,
@@ -36,15 +39,7 @@ interface ItemRow {
   total: number;
 }
 
-const getImgDimensions = (url: string): Promise<{ width: number, height: number, element: HTMLImageElement }> => {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = "Anonymous";
-    img.onload = () => resolve({ width: img.width, height: img.height, element: img });
-    img.onerror = reject;
-    img.src = url;
-  });
-};
+
 
 const romanize = (num: number): string => {
   if (num <= 0) return String(num);
@@ -119,21 +114,33 @@ export const ProformaFormView: React.FC<Props> = ({ company, editingId, initialC
   const [selectedTaxIds, setSelectedTaxIds] = useState<number[]>([]);
   const [items, setItems] = useState<ItemRow[]>([{ productId: '', description: '', qty: 1, unit: 'pcs', price: 0, total: 0 }]);
 
-  // Quick Add States
-  const [isQuickClientModalOpen, setIsQuickClientModalOpen] = useState(false);
-  const [isQuickProductModalOpen, setIsQuickProductModalOpen] = useState(false);
+  // Modal States
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isProcessingQuick, setIsProcessingQuick] = useState(false);
-  const [quickClientForm, setQuickClientForm] = useState({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: '' });
-  const [quickProductForm, setQuickProductForm] = useState({ name: '', category_id: '', unit_id: '', price: 0, description: '' });
 
-  // Quick Company/Category/Unit States
-  const [isAddingCo, setIsAddingCo] = useState(false);
-  const [newCo, setNewCo] = useState({ name: '', category_id: '', address: '' });
+  const [clientForm, setClientForm] = useState<Partial<Client>>({
+    salutation: '',
+    name: '',
+    email: '',
+    whatsapp: '',
+    client_company_id: null,
+  });
+
+  const [productForm, setProductForm] = useState<Partial<Product>>({
+    name: '',
+    category_id: null,
+    unit_id: null,
+    price: 0,
+    description: '',
+  });
+
   const [coProcessing, setCoProcessing] = useState(false);
-  const [isAddingCat, setIsAddingCat] = useState(false);
+  const [newCo, setNewCo] = useState({ name: '', category_id: '', address: '' });
+  const [newCoCatName, setNewCoCatName] = useState('');
   const [newCatName, setNewCatName] = useState('');
-  const [isAddingUnit, setIsAddingUnit] = useState(false);
   const [newUnitName, setNewUnitName] = useState('');
+  const [topicInput, setTopicInput] = useState('');
 
   const handleCheckReset = async (setting: AutonumberSetting) => {
     if (!setting || setting.reset_period === 'never') return setting.next_number;
@@ -252,7 +259,7 @@ export const ProformaFormView: React.FC<Props> = ({ company, editingId, initialC
     } else {
       if (tRes.data && existing) {
         const taxNames = existing.tax_type?.split(', ').map((s: string) => s.trim()) || [];
-        const taxIds = tRes.data.filter(t => taxNames.includes(t.name)).map(t => t.id);
+        const taxIds = tRes.data.filter(t => taxNames.includes(t.name) || taxNames.includes(`${t.name} ${t.rate}%`)).map(t => t.id);
         setSelectedTaxIds(taxIds);
       }
     }
@@ -317,7 +324,7 @@ export const ProformaFormView: React.FC<Props> = ({ company, editingId, initialC
     if (!clientId || !proformaNumber) return;
     setLoading(true);
     try {
-      const taxLabels = selectedTaxesList.map(t => t.name).join(', ') || 'Non Pajak';
+      const taxLabels = selectedTaxesList.map(t => `${t.name} ${t.rate}%`).join(', ') || 'Non Pajak';
       const payload = {
         company_id: company.id,
         client_id: parseInt(clientId),
@@ -378,127 +385,42 @@ export const ProformaFormView: React.FC<Props> = ({ company, editingId, initialC
       .from('document_template_settings')
       .select('*')
       .eq('company_id', company.id)
-      .eq('document_type', 'proforma')
+      .eq('document_type', 'invoice')
       .maybeSingle();
 
     const templateId = templateSetting?.template_id || 'template1';
     const config = templateSetting?.config || {};
+    config.document_type = 'proforma';
 
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
     const padX = 18;
 
-    const safeNum = (val: any, fallback: number = 0) => {
-      const n = Number(val);
-      return Number.isFinite(n) ? n : fallback;
-    };
-
-    const safeText = (text: any, x: number, y: number, options?: any) => {
-      doc.text(String(text || ''), safeNum(x), safeNum(y), options);
-    };
-
-    const safeRect = (x: number, y: number, w: number, h: number, style?: string) => {
-      doc.rect(safeNum(x), safeNum(y), safeNum(w), safeNum(h), style);
-    };
-
-    if (templateId === 'template5') {
-      const tealColor = '#2596BE';
-      const gray2Color = '#9B9B9B';
-      const rowTealColor = '#2596BE';
-      const rowLightColor = '#F2F9FB';
-
-      doc.setFontSize(8.5);
-      doc.setTextColor(17, 17, 17);
-      safeText(config.top_contact || '', pageWidth - padX, 10, { align: 'right' });
-
-      const bannerHeight = 22;
-      const startY = 18;
-
-      const logoUrl = config.logo_url || company.logo_url;
-      if (logoUrl) {
-        try {
-          const { width, height, element } = await getImgDimensions(logoUrl);
-          const maxWidth = 60;
-          const maxHeight = bannerHeight;
-          const ratio = Math.min(maxWidth / width, maxHeight / height);
-          const finalWidth = width * ratio;
-          const finalHeight = height * ratio;
-          doc.addImage(element, 'PNG', safeNum(padX), safeNum(startY + (maxHeight - finalHeight) / 2), finalWidth, finalHeight, undefined, 'FAST');
-        } catch (e) {
-          doc.setFontSize(14); doc.setFont('helvetica', 'bold'); safeText(company.name, padX, startY + 12);
-        }
-      } else {
-        doc.setFontSize(14); doc.setFont('helvetica', 'bold'); safeText(company.name, padX, startY + 12);
-      }
-
-      doc.setFillColor(tealColor);
-      safeRect(pageWidth - 110, startY, 110, bannerHeight, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(30);
-      doc.setFont('helvetica', 'bold');
-      safeText('PROFORMA', pageWidth - 100, startY + 15);
-
-      doc.setTextColor(17, 17, 17);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      safeText('INVOICE TO:', padX, 55);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      safeText(p.client?.client_company?.name || 'PERORANGAN', padX, 62);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      safeText(`${p.client?.salutation || ''} ${p.client?.name || ''}`.trim(), padX, 68);
-
-      const metaX = 130;
-      safeText('PROFORMA NO', metaX, 55);
-      safeText(':', metaX + 30, 55);
-      safeText(p.number, metaX + 35, 55);
-      safeText('DATE', metaX, 61);
-      safeText(':', metaX + 30, 61);
-      safeText(formatDateString(p.date), metaX + 35, 61);
-
-      autoTable(doc, {
-        startY: 95,
-        head: [['Item / Description', 'Price', 'Qty', 'Total']],
-        body: p.proforma_items?.map((it: any) => [
-          `${it.products?.name || ''}\n${it.description || ''}`,
-          formatIDRVal(it.price),
-          `${it.qty} ${it.unit_name || ''}`,
-          formatIDRVal(it.total)
-        ]) || [],
-        theme: 'plain',
-        headStyles: { fillColor: tealColor, textColor: '#FFFFFF', fontSize: 11, fontStyle: 'bold', minCellHeight: 12, valign: 'middle', halign: 'left' },
-        bodyStyles: { fillColor: rowLightColor, fontSize: 10, textColor: '#111111', minCellHeight: 14, valign: 'middle', halign: 'left' },
-        alternateRowStyles: { fillColor: rowTealColor, textColor: '#FFFFFF' },
-        columnStyles: { 0: { cellWidth: 100, cellPadding: { left: padX, top: 4, right: 4, bottom: 4 } }, 3: { cellPadding: { left: 4, top: 4, right: padX, bottom: 4 } } },
-        margin: { left: 0, right: 0 },
-        tableWidth: pageWidth
-      });
-
-      const finalY = safeNum((doc as any).lastAutoTable?.finalY, 150);
-      safeText('Sub Total', 130, finalY + 10.5);
-      safeText(formatIDRVal(p.subtotal), pageWidth - padX, finalY + 10.5, { align: 'right' });
-
-      const grandTotalY = finalY + 18.5;
-      doc.setFillColor(tealColor);
-      safeRect(120, grandTotalY, 90, 10, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      safeText('Grand Total', 130, grandTotalY + 6.5);
-      safeText(formatIDRVal(p.total), pageWidth - padX, grandTotalY + 6.5, { align: 'right' });
+    if (templateId === 'template1') {
+      await generateTemplate1(doc, p, config, company, pageWidth, padX);
+    } else if (templateId === 'template5') {
+      await generateTemplate5(doc, p, config, company, pageWidth, padX);
+    } else if (templateId === 'template6') {
+      await generateTemplate6(doc, p, config, company, pageWidth, padX);
     } else {
+      // Fallback for other templates
       doc.setFillColor('#4F46E5');
-      safeRect(0, 0, pageWidth, 40, 'F');
+      doc.rect(0, 0, pageWidth, 40, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(24);
       doc.setFont('helvetica', 'bold');
-      safeText('PROFORMA INVOICE', 20, 25);
+      doc.text('PROFORMA INVOICE', 20, 25);
+
       autoTable(doc, {
         startY: 50,
         head: [['Produk', 'Deskripsi', 'Qty', 'Harga', 'Total']],
-        body: items.map(it => [String(it.productId ? products.find(p => p.id.toString() === it.productId)?.name : ''), String(it.description || ''), `${it.qty} ${it.unit || ''}`, formatIDRVal(it.price), formatIDRVal(it.total)]) || [],
+        body: p.proforma_items?.map((it: any) => [
+          String(it.products?.name || ''),
+          String(it.description || ''),
+          `${it.qty} ${it.unit_name || ''}`,
+          formatIDRVal(it.price),
+          formatIDRVal(it.total)
+        ]) || [],
         theme: 'striped',
         headStyles: { fillColor: '#4F46E5' }
       });
@@ -507,88 +429,90 @@ export const ProformaFormView: React.FC<Props> = ({ company, editingId, initialC
     doc.save(`${p.number}.pdf`);
   };
 
+
   // --- Quick Add Handlers ---
 
-  const handleQuickAddClient = async () => {
-    if (!quickClientForm.name.trim()) return;
+  const handleSaveClient = async () => {
+    if (!clientForm.name?.trim()) return;
     setIsProcessingQuick(true);
     try {
       const { data, error } = await supabase.from('clients').insert({
         company_id: company.id,
-        salutation: quickClientForm.salutation,
-        name: quickClientForm.name.trim(),
-        client_company_id: quickClientForm.client_company_id ? parseInt(quickClientForm.client_company_id) : null,
-        email: quickClientForm.email,
-        whatsapp: quickClientForm.whatsapp
+        salutation: clientForm.salutation,
+        name: clientForm.name.trim(),
+        client_company_id: clientForm.client_company_id,
+        email: clientForm.email,
+        whatsapp: clientForm.whatsapp ? `+62${clientForm.whatsapp.replace(/\D/g, '')}` : null
       }).select().single();
       if (error) throw error;
       const freshRes = await supabase.from('clients').select('*, client_company:client_companies(*)').eq('company_id', company.id).order('name');
       if (freshRes.data) setClients(freshRes.data);
       setClientId(String(data.id));
-      setIsQuickClientModalOpen(false);
-      setQuickClientForm({ salutation: '', name: '', client_company_id: '', email: '', whatsapp: '' }); // Reset form
+      setIsClientModalOpen(false);
+      setClientForm({ salutation: '', name: '', client_company_id: null, email: '', whatsapp: '' });
     } catch (err: any) { alert(err.message); } finally { setIsProcessingQuick(false); }
   };
 
-  const handleQuickAddProduct = async () => {
-    if (!quickProductForm.name.trim() || !quickProductForm.price) return;
+  const handleSaveProduct = async () => {
+    if (!productForm.name?.trim() || !productForm.price) return;
     setIsProcessingQuick(true);
     try {
       const { data, error } = await supabase.from('products').insert({
         company_id: company.id,
-        name: quickProductForm.name.trim(),
-        category_id: quickProductForm.category_id ? parseInt(quickProductForm.category_id) : null,
-        unit_id: quickProductForm.unit_id ? parseInt(quickProductForm.unit_id) : null,
-        price: quickProductForm.price,
-        description: quickProductForm.description
+        name: productForm.name.trim(),
+        category_id: productForm.category_id,
+        unit_id: productForm.unit_id,
+        price: productForm.price,
+        description: productForm.description
       }).select().single();
       if (error) throw error;
       const freshRes = await supabase.from('products').select('*, product_units(*)').eq('company_id', company.id).order('name');
       if (freshRes.data) setProducts(freshRes.data);
-      setIsQuickProductModalOpen(false);
+      setIsProductModalOpen(false);
+      setProductForm({ name: '', category_id: null, unit_id: null, price: 0, description: '' });
     } catch (err: any) { alert(err.message); } finally { setIsProcessingQuick(false); }
   };
 
-  const handleQuickAddCo = async () => {
-    if (!newCo.name.trim() || !newCo.category_id) return;
+  const handleQuickAddCo = async (coData: any) => {
     setCoProcessing(true);
     try {
       const { data, error } = await supabase.from('client_companies').insert({
         company_id: company.id,
-        name: newCo.name.trim(),
-        category_id: parseInt(newCo.category_id),
-        address: newCo.address
+        name: coData.name.trim(),
+        category_id: parseInt(coData.category_id),
+        address: coData.address
       }).select().single();
       if (error) throw error;
       const freshRes = await supabase.from('client_companies').select('*').eq('company_id', company.id).order('name');
       if (freshRes.data) setClientCompanies(freshRes.data);
-      setQuickClientForm(prev => ({ ...prev, client_company_id: String(data.id) }));
-      setIsAddingCo(false);
-      setNewCo({ name: '', category_id: '', address: '' }); // Reset form
+      setClientForm((prev: Partial<Client>) => ({ ...prev, client_company_id: data.id }));
     } catch (err: any) { alert(err.message); } finally { setCoProcessing(false); }
   };
 
-  const handleQuickAddCat = async () => {
-    if (!newCatName.trim()) return;
+  const handleQuickAddCoCat = async (catName: string) => {
     try {
-      const { data, error } = await supabase.from('product_categories').insert({ company_id: company.id, name: newCatName.trim() }).select().single();
+      const { data, error } = await supabase.from('client_company_categories').insert({ company_id: company.id, name: catName.trim() }).select().single();
       if (error) throw error;
-      setCategories(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
-      setQuickProductForm(prev => ({ ...prev, category_id: String(data.id) }));
-      setIsAddingCat(false);
-      setNewCatName(''); // Reset form
+      setClientCategories((prev: ClientCompanyCategory[]) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+      return data.id;
     } catch (err: any) { alert(err.message); }
   };
 
-  const handleQuickAddUnit = async () => {
-    if (!newUnitName.trim()) return;
+  const handleQuickAddProdCat = async (catName: string) => {
     try {
-      const { data, error } = await supabase.from('product_units').insert({ company_id: company.id, name: newUnitName.trim() }).select().single();
+      const { data, error } = await supabase.from('product_categories').insert({ company_id: company.id, name: catName.trim() }).select().single();
+      if (error) throw error;
+      setCategories(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+      return data.id;
+    } catch (err: any) { alert(err.message); }
+  };
+
+  const handleQuickAddUnit = async (unitName: string) => {
+    try {
+      const { data, error } = await supabase.from('product_units').insert({ company_id: company.id, name: unitName.trim() }).select().single();
       if (error) throw error;
       setUnits(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
-      setQuickProductForm(prev => ({ ...prev, unit_id: String(data.id) }));
-      setIsAddingUnit(false);
-      setNewUnitName(''); // Reset form
+      return data.id;
     } catch (err: any) { alert(err.message); }
   };
 
@@ -648,6 +572,7 @@ export const ProformaFormView: React.FC<Props> = ({ company, editingId, initialC
             <Button
               onClick={handleSave}
               isLoading={loading}
+              disabled={!clientId}
               leftIcon={<Save size={16} />}
               variant='primary'>
               {editingId ? 'Update Proforma' : 'Simpan Proforma'}
@@ -664,37 +589,48 @@ export const ProformaFormView: React.FC<Props> = ({ company, editingId, initialC
             className="mb-8"
           />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
-            <ComboBox
-              label="Pelanggan"
-              placeholder="Pilih Pelanggan"
-              value={clientId}
-              onChange={(val: string | number) => setClientId(val.toString())}
-              options={clients.map(c => ({
-                value: c.id.toString(),
-                label: c.name,
-                sublabel: c.client_company?.name || 'PERSONAL'
-              }))}
-              onAddNew={() => setIsQuickClientModalOpen(true)}
-              leftIcon={<User size={16} />}
-            />
-            <Input label="Nomor Proforma" value={proformaNumber} onChange={(e: any) => setProformaNumber(e.target.value)} />
-            <div className="space-y-1.5">
-              <Label className="ml-1">Status</Label>
-              <Select value={status} onChange={(e: any) => setStatus(e.target.value)}>
-                <option value="Draft">Draft</option>
-                <option value="Sent">Sent</option>
-                <option value="Paid">Paid</option>
-              </Select>
+            <div className="space-y-4">
+              <ComboBox
+                label="Pelanggan"
+                placeholder="Pilih Pelanggan"
+                value={clientId}
+                onChange={(val: string | number) => setClientId(val.toString())}
+                options={clients.map(c => ({
+                  value: c.id.toString(),
+                  label: c.name,
+                  sublabel: c.client_company?.name || 'PERSONAL'
+                }))}
+                onAddNew={() => setIsClientModalOpen(true)}
+                addNewLabel="Tambah Pelanggan Baru"
+                leftIcon={<User size={16} />}
+              />
+
             </div>
+            <Input label="Nomor Proforma" value={proformaNumber} onChange={(e: any) => setProformaNumber(e.target.value)} />
+            <ComboBox
+              label="Status"
+              value={status}
+              onChange={(val: string | number) => setStatus(val.toString())}
+              options={[
+                { value: 'Draft', label: 'Draft' },
+                { value: 'Sent', label: 'Sent' },
+                { value: 'Paid', label: 'Paid' },
+              ]}
+            />
             <Input type="date" label="Tanggal" value={date} onChange={(e: any) => setDate(e.target.value)} />
             <Input type="date" label="Batas Pembayaran" value={dueDate} onChange={(e: any) => setDueDate(e.target.value)} />
-            <div className="space-y-1.5">
-              <Label className="ml-1">Referensi Penawaran</Label>
-              <Select value={quotationId || ''} onChange={(e: any) => setQuotationId(e.target.value ? Number(e.target.value) : null)}>
-                <option value="">-- Tanpa Referensi --</option>
-                {quotations.map(q => (<option key={q.id} value={q.id}>{q.number}</option>))}
-              </Select>
-            </div>
+            <ComboBox
+              label="Referensi Penawaran"
+              value={quotationId || ''}
+              onChange={(val: string | number) => setQuotationId(val ? Number(val) : null)}
+              options={[
+                { value: '', label: '-- Tanpa Referensi --' },
+                ...quotations.map(q => ({
+                  value: q.id.toString(),
+                  label: q.number
+                }))
+              ]}
+            />
           </div>
         </Card>
 
@@ -730,7 +666,7 @@ export const ProformaFormView: React.FC<Props> = ({ company, editingId, initialC
                           label: p.name,
                           sublabel: formatIDRVal(p.price)
                         }))}
-                        onAddNew={() => setIsQuickProductModalOpen(true)}
+                        onAddNew={() => setIsProductModalOpen(true)}
                         addNewLabel="Daftar Produk Baru"
                       />
                     </TableCell>
@@ -777,9 +713,11 @@ export const ProformaFormView: React.FC<Props> = ({ company, editingId, initialC
               </TableBody>
             </Table>
           </div>
-          <Button onClick={handleAddItem} variant="ghost" size="sm" leftIcon={<Plus size={14} />} className="mt-4 !text-[#4F46E5] hover:bg-indigo-50 font-bold tracking-tight uppercase text-[10px]">
-            Tambah Baris
-          </Button>
+          <div className="flex items-center gap-3 mt-4">
+            <Button onClick={handleAddItem} variant="ghost" size="sm" leftIcon={<Plus size={14} />} className="!text-[#4F46E5] hover:bg-indigo-50 font-bold tracking-tight uppercase text-[10px]">
+              Tambah Baris
+            </Button>
+          </div>
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
@@ -807,19 +745,24 @@ export const ProformaFormView: React.FC<Props> = ({ company, editingId, initialC
               <div className="flex items-center gap-4">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">Diskon</span>
                 <div className="flex bg-white rounded border border-gray-200 overflow-hidden shadow-sm h-11">
-                  <Select
+                  <ComboBox
                     value={discountType}
-                    onChange={(e: any) => setDiscountType(e.target.value as any)}
-                    className="!bg-gray-50 !px-2 !border-0 !border-r !rounded-none !h-full text-[10px] font-bold uppercase cursor-pointer"
-                  >
-                    <option value="Rp">Rp</option>
-                    <option value="%">%</option>
-                  </Select>
+                    onChange={(val: string | number) => setDiscountType(val as any)}
+                    className="!w-24"
+                    options={[
+                      { value: 'Rp', label: 'Rp' },
+                      { value: '%', label: '%' },
+                    ]}
+                    hideSearch={true}
+                    size="sm"
+                    triggerClassName="!border-0 !h-full !rounded-none !ring-0 !px-4"
+                  />
+                  <div className="w-px bg-gray-200 h-6 my-auto" />
                   <Input
                     type="number"
                     value={discountValue}
                     onChange={(e: any) => setDiscountValue(Number(e.target.value))}
-                    className="!w-20 !px-3 font-bold !border-0 !h-full !rounded-none"
+                    className="!w-32 !px-3 font-bold !border-0 !h-full !rounded-none !ring-0 text-base"
                   />
                 </div>
               </div>
@@ -830,14 +773,22 @@ export const ProformaFormView: React.FC<Props> = ({ company, editingId, initialC
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">Pajak</span>
                 <div className="relative">
-                  <Select
+                  <ComboBox
+                    placeholder="+ Tambah Pajak"
                     value=""
-                    onChange={(e: any) => { if (e.target.value) { const id = Number(e.target.value); setSelectedTaxIds(prev => prev.includes(id) ? prev : [...prev, id]); } }}
-                    className="!py-1.5 !px-4 text-[10px]"
-                  >
-                    <option value="">+ Tambah Pajak</option>
-                    {availableTaxes.filter(t => !selectedTaxIds.includes(t.id)).map(tax => (<option key={tax.id} value={tax.id}>{tax.name} ({tax.rate}%)</option>))}
-                  </Select>
+                    onChange={(val: string | number) => {
+                      if (val) {
+                        const id = Number(val);
+                        setSelectedTaxIds(prev => prev.includes(id) ? prev : [...prev, id]);
+                      }
+                    }}
+                    options={[
+                      ...availableTaxes.filter(t => !selectedTaxIds.includes(t.id)).map(tax => ({
+                        value: tax.id.toString(),
+                        label: `${tax.name} (${tax.rate}%)`
+                      }))
+                    ]}
+                  />
                 </div>
               </div>
               {selectedTaxesList.map(tax => (
@@ -877,121 +828,6 @@ export const ProformaFormView: React.FC<Props> = ({ company, editingId, initialC
         </div>
       </div>
 
-      {/* QUICK ADD MODALS */}
-
-      <Modal
-        isOpen={isQuickClientModalOpen}
-        onClose={() => setIsQuickClientModalOpen(false)}
-        title="Daftarkan Pelanggan Baru"
-        size="lg"
-        footer={<Button onClick={handleQuickAddClient} disabled={isProcessingQuick} leftIcon={isProcessingQuick ? <Loader2 className="animate-spin" size={14} /> : undefined} className="uppercase tracking-tight">Simpan & Pilih</Button>}
-      >
-        <div className="space-y-8 py-2">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-2">
-              <Label className="ml-1">Sapaan</Label>
-              <Select value={quickClientForm.salutation} onChange={(e: any) => setQuickClientForm({ ...quickClientForm, salutation: e.target.value })}>
-                <option value="">Pilih</option>
-                <option value="Bapak">Bapak</option>
-                <option value="Ibu">Ibu</option>
-              </Select>
-            </div>
-            <div className="md:col-span-2 space-y-2">
-              <Input label="Nama Lengkap*" value={quickClientForm.name} onChange={(e: any) => setQuickClientForm({ ...quickClientForm, name: e.target.value })} placeholder="John Doe..." />
-            </div>
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between px-1">
-              <Label className="text-[10px]  text-gray-400 uppercase tracking-tight">Pilih Perusahaan Client</Label>
-              <Button onClick={() => setIsAddingCo(!isAddingCo)} className="text-[9px]  text-blue-600 uppercase hover:underline">{isAddingCo ? 'Batal' : '+ Perusahaan Baru'}</Button>
-            </div>
-            {isAddingCo ? (
-              <div className="p-6 bg-blue-50/50 border border-blue-100 rounded-2xl space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <Input label="Nama Perusahaan*" placeholder="Nama PT..." value={newCo.name} onChange={(e: any) => setNewCo({ ...newCo, name: e.target.value })} />
-                  <div className="space-y-2">
-                    <Label className="ml-1">Kategori*</Label>
-                    <Select value={newCo.category_id} onChange={(e: any) => setNewCo({ ...newCo, category_id: e.target.value })}>
-                      <option value="">Pilih Kategori</option>
-                      {clientCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </Select>
-                  </div>
-                </div>
-                <Input label="Alamat Perusahaan*" placeholder="Alamat lengkap..." value={newCo.address} onChange={(e: any) => setNewCo({ ...newCo, address: e.target.value })} />
-                <Button onClick={handleQuickAddCo} disabled={coProcessing} className="w-full uppercase tracking-tight mt-2" leftIcon={coProcessing ? <Loader2 size={12} className="animate-spin" /> : <Save size={14} />}>
-                  SIMPAN PERUSAHAAN
-                </Button>
-              </div>
-            ) : (
-              <Select value={quickClientForm.client_company_id} onChange={(e: any) => setQuickClientForm({ ...quickClientForm, client_company_id: e.target.value })}>
-                <option value="">Personal / Tanpa Perusahaan</option>
-                {clientCompanies.map(co => <option key={co.id} value={co.id}>{co.name}</option>)}
-              </Select>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Input type="email" label="Email" value={quickClientForm.email} onChange={(e: any) => setQuickClientForm({ ...quickClientForm, email: e.target.value })} placeholder="email@client.com" />
-            </div>
-            <div className="space-y-2">
-              <Input label="WhatsApp" value={quickClientForm.whatsapp} onChange={(e: any) => setQuickClientForm({ ...quickClientForm, whatsapp: e.target.value })} placeholder="08..." />
-            </div>
-          </div>
-        </div>
-      </Modal>
-
-      <Modal
-        isOpen={isQuickProductModalOpen}
-        onClose={() => setIsQuickProductModalOpen(false)}
-        title="Daftarkan Produk Baru"
-        size="lg"
-        footer={<Button onClick={handleQuickAddProduct} disabled={isProcessingQuick} className="uppercase tracking-tight">Simpan Produk</Button>}
-      >
-        <div className="space-y-8 py-2">
-          <Input label="Nama Produk / Jasa*" value={quickProductForm.name} onChange={(e: any) => setQuickProductForm({ ...quickProductForm, name: e.target.value })} placeholder="Misal: Paket Langganan Pro..." />
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between px-1">
-                <Label>Kategori</Label>
-                <Button type="button" onClick={() => setIsAddingCat(!isAddingCat)} className="text-[9px]  text-blue-600 uppercase hover:underline">{isAddingCat ? 'Batal' : '+ Baru'}</Button>
-              </div>
-              {isAddingCat ? (
-                <div className="flex gap-2 items-center">
-                  <Input autoFocus placeholder="Kategori baru..." value={newCatName} onChange={(e: any) => setNewCatName(e.target.value)} className="w-full" />
-                  <Button onClick={handleQuickAddCat} className="!px-3 !py-2.5 h-[42px]"><CheckIcon size={16} /></Button>
-                </div>
-              ) : (
-                <Select value={quickProductForm.category_id} onChange={(e: any) => setQuickProductForm({ ...quickProductForm, category_id: e.target.value })}>
-                  <option value="">Pilih</option>
-                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </Select>
-              )}
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between px-1">
-                <Label>Satuan</Label>
-                <Button type="button" onClick={() => setIsAddingUnit(!isAddingUnit)} className="text-[9px]  text-blue-600 uppercase hover:underline">{isAddingUnit ? 'Batal' : '+ Baru'}</Button>
-              </div>
-              {isAddingUnit ? (
-                <div className="flex gap-2 items-center">
-                  <Input autoFocus placeholder="Satuan baru..." value={newUnitName} onChange={(e: any) => setNewUnitName(e.target.value)} className="w-full" />
-                  <Button onClick={handleQuickAddUnit} className="!px-3 !py-2.5 h-[42px]"><CheckIcon size={16} /></Button>
-                </div>
-              ) : (
-                <Select value={quickProductForm.unit_id} onChange={(e: any) => setQuickProductForm({ ...quickProductForm, unit_id: e.target.value })}>
-                  <option value="">Pilih</option>
-                  {units.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                </Select>
-              )}
-            </div>
-          </div>
-          <Input type="number" label="Harga Jual (IDR)*" value={quickProductForm.price} onChange={(e: any) => setQuickProductForm({ ...quickProductForm, price: Number(e.target.value) })} placeholder="0" />
-          <div className="space-y-2">
-            <Label className="ml-1">Deskripsi</Label>
-            <Textarea value={quickProductForm.description} onChange={(e: any) => setQuickProductForm({ ...quickProductForm, description: e.target.value })} className="h-32 resize-none" placeholder="Detail produk..." />
-          </div>
-        </div>
-      </Modal>
 
       {/* Success Notification Toast */}
       {showSuccessToast && (
@@ -1008,6 +844,33 @@ export const ProformaFormView: React.FC<Props> = ({ company, editingId, initialC
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
       `}</style>
+
+      <ClientFormModal
+        isOpen={isClientModalOpen}
+        onClose={() => setIsClientModalOpen(false)}
+        onSave={handleSaveClient}
+        form={clientForm}
+        setForm={setClientForm}
+        isProcessing={isProcessingQuick}
+        clientCompanies={clientCompanies}
+        categories={clientCategories}
+        companyId={company.id}
+        onQuickAddCompany={handleQuickAddCo}
+        onQuickAddCategory={handleQuickAddCoCat}
+      />
+
+      <ProductFormModal
+        isOpen={isProductModalOpen}
+        onClose={() => setIsProductModalOpen(false)}
+        onSave={handleSaveProduct}
+        form={productForm}
+        setForm={setProductForm}
+        isProcessing={isProcessingQuick}
+        categories={categories}
+        units={units}
+        onQuickAddCategory={handleQuickAddProdCat}
+        onQuickAddUnit={handleQuickAddUnit}
+      />
     </div>
   );
 };

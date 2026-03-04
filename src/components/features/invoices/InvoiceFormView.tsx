@@ -6,11 +6,14 @@ import { Company, Client, Product, Invoice, InvoiceItem, TaxSetting, ProductCate
 import {
   ArrowLeft, Save, Plus, Trash2, Calendar, FileBadge,
   User, ChevronDown, Package, Loader2, CheckCircle2, X, AlertCircle, Tags, Weight,
-  Building, Mail, Phone, Search, FileText, Check as CheckIcon, FileDown
+  Building, Mail, Phone, Search, FileText, Check as CheckIcon, FileDown, DollarSign
 } from 'lucide-react';
-import { Modal, Button, Input, Select, Textarea, SectionHeader, Badge, Label, Subtext, Table, TableHeader, TableBody, TableRow, TableCell, ComboBox } from '@/components/ui';
+import { Modal, Button, Input, Textarea, SectionHeader, Label, Subtext, Table, TableHeader, TableBody, TableRow, TableCell, ComboBox, H2, Card } from '@/components/ui';
+import { ClientFormModal } from '@/components/features/clients/components/ClientFormModal';
+import { ProductFormModal } from '@/components/features/products/components/ProductFormModal';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { generateTemplate1, generateTemplate5, generateTemplate6 } from '@/lib/pdf-templates';
 import { useRouter } from 'next/navigation';
 
 interface Props {
@@ -19,6 +22,7 @@ interface Props {
   initialClientId?: number;
   initialProformaId?: number;
   initialQuotationId?: number;
+  initialRequestId?: number;
   onSaveSuccess?: (id: number) => void;
 }
 
@@ -32,15 +36,7 @@ interface ItemRow {
   total: number;
 }
 
-const getImgDimensions = (url: string): Promise<{ width: number, height: number, element: HTMLImageElement }> => {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = "Anonymous";
-    img.onload = () => resolve({ width: img.width, height: img.height, element: img });
-    img.onerror = reject;
-    img.src = url;
-  });
-};
+
 
 const romanize = (num: number): string => {
   if (num <= 0) return String(num);
@@ -82,7 +78,7 @@ const generateFormattedNumber = (pattern: string, nextNum: number, digitCount: n
     .replace(/\[PREFIX\]/g, prefix);
 };
 
-export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialClientId, initialProformaId, initialQuotationId, onSaveSuccess }) => {
+export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialClientId, initialProformaId, initialQuotationId, initialRequestId, onSaveSuccess }) => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
@@ -113,21 +109,12 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
   const [selectedTaxIds, setSelectedTaxIds] = useState<number[]>([]);
   const [items, setItems] = useState<ItemRow[]>([{ productId: '', description: '', qty: 1, unit: 'pcs', price: 0, total: 0 }]);
 
-  // Quick Add States
-  const [isQuickClientModalOpen, setIsQuickClientModalOpen] = useState(false);
-  const [isQuickProductModalOpen, setIsQuickProductModalOpen] = useState(false);
+  // Quick Add State (Modals)
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [clientForm, setClientForm] = useState<Partial<Client>>({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [productForm, setProductForm] = useState<Partial<Product>>({ name: '', category_id: null, unit_id: null, price: 0, description: '' });
   const [isProcessingQuick, setIsProcessingQuick] = useState(false);
-  const [quickClientForm, setQuickClientForm] = useState({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: '' });
-  const [quickProductForm, setQuickProductForm] = useState({ name: '', category_id: '', unit_id: '', price: 0, description: '' });
-
-  // Quick Company/Category/Unit States
-  const [isAddingCo, setIsAddingCo] = useState(false);
-  const [newCo, setNewCo] = useState({ name: '', category_id: '', address: '' });
-  const [coProcessing, setCoProcessing] = useState(false);
-  const [isAddingCat, setIsAddingCat] = useState(false);
-  const [newCatName, setNewCatName] = useState('');
-  const [isAddingUnit, setIsAddingUnit] = useState(false);
-  const [newUnitName, setNewUnitName] = useState('');
 
   const handleCheckReset = async (setting: AutonumberSetting) => {
     if (!setting || setting.reset_period === 'never') return setting.next_number;
@@ -266,7 +253,7 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
     } else {
       if (tRes.data && existing) {
         const taxNames = existing.tax_type?.split(', ').map((s: string) => s.trim()) || [];
-        const taxIds = tRes.data.filter(t => taxNames.includes(t.name)).map(t => t.id);
+        const taxIds = tRes.data.filter(t => taxNames.includes(t.name) || taxNames.includes(`${t.name} ${t.rate}%`)).map(t => t.id);
         setSelectedTaxIds(taxIds);
       }
     }
@@ -325,7 +312,7 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
     if (!clientId || !invoiceNumber) return;
     setLoading(true);
     try {
-      const taxLabels = selectedTaxesList.map(t => t.name).join(', ') || 'Non Pajak';
+      const taxLabels = selectedTaxesList.map(t => `${t.name} ${t.rate}%`).join(', ') || 'Non Pajak';
       const payload = {
         company_id: company.id,
         client_id: parseInt(clientId),
@@ -364,6 +351,9 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
       }
 
       if (invId) {
+        if (!editingId && initialRequestId) {
+          await supabase.from('invoice_requests').update({ invoice_id: invId, status: 'Approved' }).eq('id', initialRequestId);
+        }
         onSaveSuccess?.(invId);
         setShowSuccessToast(true);
         setTimeout(() => setShowSuccessToast(false), 3000);
@@ -392,124 +382,37 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
 
     const templateId = templateSetting?.template_id || 'template1';
     const config = templateSetting?.config || {};
+    config.document_type = 'invoice';
 
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
     const padX = 18;
 
-    const safeNum = (val: any, fallback: number = 0) => {
-      const n = Number(val);
-      return Number.isFinite(n) ? n : fallback;
-    };
-
-    const safeText = (text: any, x: number, y: number, options?: any) => {
-      doc.text(String(text || ''), safeNum(x), safeNum(y), options);
-    };
-
-    const safeRect = (x: number, y: number, w: number, h: number, style?: string) => {
-      doc.rect(safeNum(x), safeNum(y), safeNum(w), safeNum(h), style);
-    };
-
-    if (templateId === 'template5') {
-      const mainColor = '#4F46E5';
-      const grayColor = '#9B9B9B';
-      const rowLightColor = '#F5F5FF';
-
-      doc.setFontSize(8.5);
-      doc.setTextColor(17, 17, 17);
-      safeText(config.top_contact || '', pageWidth - padX, 10, { align: 'right' });
-
-      const bannerHeight = 22;
-      const startY = 18;
-
-      const logoUrl = config.logo_url || company.logo_url;
-      if (logoUrl) {
-        try {
-          const { width, height, element } = await getImgDimensions(logoUrl);
-          const maxWidth = 60;
-          const maxHeight = bannerHeight;
-          const ratio = Math.min(maxWidth / width, maxHeight / height);
-          const finalWidth = width * ratio;
-          const finalHeight = height * ratio;
-          doc.addImage(element, 'PNG', safeNum(padX), safeNum(startY + (maxHeight - finalHeight) / 2), finalWidth, finalHeight, undefined, 'FAST');
-        } catch (e) {
-          doc.setFontSize(14); doc.setFont('helvetica', 'bold'); safeText(company.name, padX, startY + 12);
-        }
-      } else {
-        doc.setFontSize(14); doc.setFont('helvetica', 'bold'); safeText(company.name, padX, startY + 12);
-      }
-
-      doc.setFillColor(mainColor);
-      safeRect(pageWidth - 110, startY, 110, bannerHeight, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(34);
-      doc.setFont('helvetica', 'bold');
-      safeText('INVOICE', pageWidth - 100, startY + 15);
-
-      doc.setTextColor(17, 17, 17);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      safeText('BILLED TO:', padX, 55);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      safeText(inv.client?.client_company?.name || 'PERORANGAN', padX, 62);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      safeText(`${inv.client?.salutation || ''} ${inv.client?.name || ''}`.trim(), padX, 68);
-
-      const metaX = 130;
-      safeText('INVOICE NO', metaX, 55);
-      safeText(':', metaX + 30, 55);
-      safeText(inv.number, metaX + 35, 55);
-      safeText('DATE', metaX, 61);
-      safeText(':', metaX + 30, 61);
-      safeText(formatDateString(inv.date), metaX + 35, 61);
-      safeText('DUE DATE', metaX, 67);
-      safeText(':', metaX + 30, 67);
-      safeText(formatDateString(inv.due_date), metaX + 35, 67);
-
-      autoTable(doc, {
-        startY: 95,
-        head: [['Item / Description', 'Price', 'Qty', 'Total']],
-        body: inv.invoice_items?.map((it: any) => [
-          `${it.products?.name || ''}\n${it.description || ''}`,
-          formatIDRVal(it.price),
-          `${it.qty} ${it.unit_name || ''}`,
-          formatIDRVal(it.total)
-        ]) || [],
-        theme: 'plain',
-        headStyles: { fillColor: mainColor, textColor: '#FFFFFF', fontSize: 11, fontStyle: 'bold', minCellHeight: 12, valign: 'middle', halign: 'left' },
-        bodyStyles: { fillColor: '#FFFFFF', fontSize: 10, textColor: '#111111', minCellHeight: 14, valign: 'middle', halign: 'left' },
-        alternateRowStyles: { fillColor: rowLightColor },
-        columnStyles: { 0: { cellWidth: 100, cellPadding: { left: padX, top: 4, right: 4, bottom: 4 } }, 3: { cellPadding: { left: 4, top: 4, right: padX, bottom: 4 } } },
-        margin: { left: 0, right: 0 },
-        tableWidth: pageWidth
-      });
-
-      const finalY = safeNum((doc as any).lastAutoTable?.finalY, 150);
-      safeText('Sub Total', 130, finalY + 10.5);
-      safeText(formatIDRVal(inv.subtotal), pageWidth - padX, finalY + 10.5, { align: 'right' });
-
-      const grandTotalY = finalY + 18.5;
-      doc.setFillColor(mainColor);
-      safeRect(120, grandTotalY, 90, 10, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      safeText('Grand Total', 130, grandTotalY + 6.5);
-      safeText(formatIDRVal(inv.total), pageWidth - padX, grandTotalY + 6.5, { align: 'right' });
+    if (templateId === 'template1') {
+      await generateTemplate1(doc, inv, config, company, pageWidth, padX);
+    } else if (templateId === 'template5') {
+      await generateTemplate5(doc, inv, config, company, pageWidth, padX);
+    } else if (templateId === 'template6') {
+      await generateTemplate6(doc, inv, config, company, pageWidth, padX);
     } else {
+      // Fallback for other templates
       doc.setFillColor('#4F46E5');
-      safeRect(0, 0, pageWidth, 40, 'F');
+      doc.rect(0, 0, pageWidth, 40, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(24);
       doc.setFont('helvetica', 'bold');
-      safeText('SALES INVOICE', 20, 25);
+      doc.text('SALES INVOICE', 20, 25);
+
       autoTable(doc, {
         startY: 50,
         head: [['Produk', 'Deskripsi', 'Qty', 'Harga', 'Total']],
-        body: inv.invoice_items?.map((it: any) => [String(it.products?.name || ''), String(it.description || ''), `${it.qty} ${it.unit_name || ''}`, formatIDRVal(it.price), formatIDRVal(it.total)]) || [],
+        body: inv.invoice_items?.map((it: any) => [
+          String(it.products?.name || ''),
+          String(it.description || ''),
+          `${it.qty} ${it.unit_name || ''}`,
+          formatIDRVal(it.price),
+          formatIDRVal(it.total)
+        ]) || [],
         theme: 'striped',
         headStyles: { fillColor: '#4F46E5' }
       });
@@ -518,85 +421,80 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
     doc.save(`${inv.number}.pdf`);
   };
 
+
   // --- Quick Add Handlers ---
 
-  const handleQuickAddClient = async () => {
-    if (!quickClientForm.name.trim()) return;
+  const handleSaveClient = async (formData: Partial<Client>) => {
+    if (!formData.name?.trim()) return;
     setIsProcessingQuick(true);
     try {
       const { data, error } = await supabase.from('clients').insert({
         company_id: company.id,
-        salutation: quickClientForm.salutation,
-        name: quickClientForm.name.trim(),
-        client_company_id: quickClientForm.client_company_id ? parseInt(quickClientForm.client_company_id) : null,
-        email: quickClientForm.email,
-        whatsapp: quickClientForm.whatsapp
+        salutation: formData.salutation,
+        name: formData.name.trim(),
+        client_company_id: formData.client_company_id,
+        email: formData.email,
+        whatsapp: formData.whatsapp ? `+62${formData.whatsapp.replace(/\D/g, '')}` : null
       }).select().single();
       if (error) throw error;
       const freshRes = await supabase.from('clients').select('*, client_company:client_companies(*)').eq('company_id', company.id).order('name');
       if (freshRes.data) setClients(freshRes.data);
       setClientId(String(data.id));
-      setIsQuickClientModalOpen(false);
+      setIsClientModalOpen(false);
+      setClientForm({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
     } catch (err: any) { alert(err.message); } finally { setIsProcessingQuick(false); }
   };
 
-  const handleQuickAddProduct = async () => {
-    if (!quickProductForm.name.trim() || !quickProductForm.price) return;
+  const handleSaveProduct = async (formData: Partial<Product>) => {
+    if (!formData.name?.trim() || !formData.price) return;
     setIsProcessingQuick(true);
     try {
       const { data, error } = await supabase.from('products').insert({
         company_id: company.id,
-        name: quickProductForm.name.trim(),
-        category_id: quickProductForm.category_id ? parseInt(quickProductForm.category_id) : null,
-        unit_id: quickProductForm.unit_id ? parseInt(quickProductForm.unit_id) : null,
-        price: quickProductForm.price,
-        description: quickProductForm.description
+        name: formData.name.trim(),
+        category_id: formData.category_id,
+        unit_id: formData.unit_id,
+        price: formData.price,
+        description: formData.description
       }).select().single();
       if (error) throw error;
       const freshRes = await supabase.from('products').select('*, product_units(*)').eq('company_id', company.id).order('name');
       if (freshRes.data) setProducts(freshRes.data);
-      setIsQuickProductModalOpen(false);
+      setIsProductModalOpen(false);
+      setProductForm({ name: '', category_id: null, unit_id: null, price: 0, description: '' });
     } catch (err: any) { alert(err.message); } finally { setIsProcessingQuick(false); }
   };
 
-  const handleQuickAddCo = async () => {
-    if (!newCo.name.trim() || !newCo.category_id) return;
-    setCoProcessing(true);
-    try {
-      const { data, error } = await supabase.from('client_companies').insert({
-        company_id: company.id,
-        name: newCo.name.trim(),
-        category_id: parseInt(newCo.category_id),
-        address: newCo.address
-      }).select().single();
-      if (error) throw error;
-      const freshRes = await supabase.from('client_companies').select('*').eq('company_id', company.id).order('name');
-      if (freshRes.data) setClientCompanies(freshRes.data);
-      setQuickClientForm(prev => ({ ...prev, client_company_id: String(data.id) }));
-      setIsAddingCo(false);
-    } catch (err: any) { alert(err.message); } finally { setCoProcessing(false); }
+  const handleQuickAddCo = async (coData: any) => {
+    const { data, error } = await supabase.from('client_companies').insert({
+      company_id: company.id,
+      ...coData
+    }).select().single();
+    if (error) throw error;
+    const freshRes = await supabase.from('client_companies').select('*').eq('company_id', company.id).order('name');
+    if (freshRes.data) setClientCompanies(freshRes.data);
+    return data;
   };
 
-  const handleQuickAddCat = async () => {
-    if (!newCatName.trim()) return;
-    try {
-      const { data, error } = await supabase.from('product_categories').insert({ company_id: company.id, name: newCatName.trim() }).select().single();
-      if (error) throw error;
-      setCategories(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
-      setQuickProductForm(prev => ({ ...prev, category_id: String(data.id) }));
-      setIsAddingCat(false);
-    } catch (err: any) { alert(err.message); }
+  const handleQuickAddCoCat = async (name: string) => {
+    const { data, error } = await supabase.from('client_company_categories').insert({ company_id: company.id, name: name.trim() }).select().single();
+    if (error) throw error;
+    setClientCategories(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+    return data;
   };
 
-  const handleQuickAddUnit = async () => {
-    if (!newUnitName.trim()) return;
-    try {
-      const { data, error } = await supabase.from('product_units').insert({ company_id: company.id, name: newUnitName.trim() }).select().single();
-      if (error) throw error;
-      setUnits(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
-      setQuickProductForm(prev => ({ ...prev, unit_id: String(data.id) }));
-      setIsAddingUnit(false);
-    } catch (err: any) { alert(err.message); }
+  const handleQuickAddProdCat = async (name: string) => {
+    const { data, error } = await supabase.from('product_categories').insert({ company_id: company.id, name: name.trim() }).select().single();
+    if (error) throw error;
+    setCategories(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+    return data;
+  };
+
+  const handleQuickAddUnit = async (name: string) => {
+    const { data, error } = await supabase.from('product_units').insert({ company_id: company.id, name: name.trim() }).select().single();
+    if (error) throw error;
+    setUnits(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+    return data;
   };
 
 
@@ -618,16 +516,26 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
           <div className="flex items-center gap-3">
             <Button variant="ghost" onClick={() => router.push('/dashboard/sales/invoices')}>Batal</Button>
             {editingId && (
-              <Button
-                variant="secondary"
-                onClick={handleDownloadPDF}
-                leftIcon={<FileDown size={16} />}
-                className="border-indigo-200 text-indigo-600 hover:bg-indigo-50"
-              >
-                PDF
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => router.push(`/dashboard/sales/kwitansi-requests/create?invoiceId=${editingId}`)}
+                  leftIcon={<FileText size={16} />}
+                  className="border-amber-200 text-amber-600 hover:bg-amber-50"
+                >
+                  Request Kwitansi
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={handleDownloadPDF}
+                  leftIcon={<FileDown size={16} />}
+                  className="border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+                >
+                  PDF
+                </Button>
+              </div>
             )}
-            <Button onClick={handleSave} isLoading={loading} leftIcon={editingId ? <Save size={16} /> : <CheckCircle2 size={16} />}>
+            <Button onClick={handleSave} isLoading={loading} disabled={!clientId} leftIcon={editingId ? <Save size={16} /> : <CheckCircle2 size={16} />} variant="primary">
               {editingId ? 'Update Invoice' : 'Simpan Invoice'}
             </Button>
           </div>
@@ -642,35 +550,38 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
             className="mb-8"
           />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
-            <ComboBox
-              label="Pelanggan"
-              placeholder="Pilih Pelanggan"
-              value={clientId}
-              onChange={(val: string | number) => setClientId(val.toString())}
-              options={clients.map(c => ({
-                value: c.id.toString(),
-                label: c.name,
-                sublabel: c.client_company?.name || 'PERSONAL'
-              }))}
-              onAddNew={() => setIsQuickClientModalOpen(true)}
-              leftIcon={<User size={16} />}
-            />
+            <div className="space-y-4">
+              <ComboBox
+                label="Pelanggan"
+                placeholder="Pilih Pelanggan"
+                value={clientId}
+                onChange={(val: string | number) => setClientId(val.toString())}
+                options={clients.map(c => ({
+                  value: c.id.toString(),
+                  label: c.name,
+                  sublabel: c.client_company?.name || 'PERSONAL'
+                }))}
+                onAddNew={() => setIsClientModalOpen(true)}
+                addNewLabel="Tambah Pelanggan Baru"
+                leftIcon={<User size={16} />}
+              />
+            </div>
             <Input
               label="Nomor Invoice"
               value={invoiceNumber}
               onChange={e => setInvoiceNumber(e.target.value)}
               className="font-medium h-[46px]"
             />
-            <Select
+            <ComboBox
               label="Status"
               value={status}
-              onChange={e => setStatus(e.target.value)}
-              className="font-medium h-[46px]"
-            >
-              <option value="Unpaid">Unpaid</option>
-              <option value="Partial">Partial</option>
-              <option value="Paid">Paid</option>
-            </Select>
+              onChange={(val: string | number) => setStatus(val.toString())}
+              options={[
+                { value: 'Unpaid', label: 'Unpaid' },
+                { value: 'Partial', label: 'Partial' },
+                { value: 'Paid', label: 'Paid' },
+              ]}
+            />
             <Input
               label="Tanggal Tagihan"
               type="date"
@@ -685,24 +596,24 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
               onChange={e => setDueDate(e.target.value)}
               className="font-medium h-[46px]"
             />
-            <Select
+            <ComboBox
               label="Referensi Proforma"
               value={proformaId || ''}
-              onChange={e => setProformaId(e.target.value ? Number(e.target.value) : null)}
-              className="font-medium h-[46px]"
-            >
-              <option value="">-- Tanpa Referensi --</option>
-              {proformas.map(pf => (<option key={pf.id} value={pf.id}>{pf.number}</option>))}
-            </Select>
-            <Select
+              onChange={(val: string | number) => setProformaId(val ? Number(val) : null)}
+              options={[
+                { value: '', label: '-- Tanpa Referensi --' },
+                ...proformas.map(pf => ({ value: pf.id.toString(), label: pf.number }))
+              ]}
+            />
+            <ComboBox
               label="Referensi Penawaran"
               value={quotationId || ''}
-              onChange={e => setQuotationId(e.target.value ? Number(e.target.value) : null)}
-              className="font-medium h-[46px]"
-            >
-              <option value="">-- Tanpa Referensi --</option>
-              {quotations.map(q => (<option key={q.id} value={q.id}>{q.number}</option>))}
-            </Select>
+              onChange={(val: string | number) => setQuotationId(val ? Number(val) : null)}
+              options={[
+                { value: '', label: '-- Tanpa Referensi --' },
+                ...quotations.map(q => ({ value: q.id.toString(), label: q.number }))
+              ]}
+            />
           </div>
         </div>
 
@@ -737,7 +648,7 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
                         label: p.name,
                         sublabel: formatIDRVal(p.price)
                       }))}
-                      onAddNew={() => setIsQuickProductModalOpen(true)}
+                      onAddNew={() => setIsProductModalOpen(true)}
                       addNewLabel="Daftar Produk Baru"
                     />
                   </TableCell>
@@ -758,9 +669,9 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
                     />
                   </TableCell>
                   <TableCell className="px-4 text-center">
-                    <Badge variant="secondary" className="w-full py-2.5">
+                    <div className="w-full px-2 py-2 bg-gray-50 border border-gray-100 rounded-[4px] text-[10px] text-center text-gray-400 font-bold uppercase tracking-tight">
                       {item.unit}
-                    </Badge>
+                    </div>
                   </TableCell>
                   <TableCell className="px-4">
                     <Input
@@ -782,75 +693,104 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
               ))}
             </TableBody>
           </Table>
-          <Button
-            variant="secondary"
-            onClick={handleAddItem}
-            className="mt-8 border-indigo-100 text-indigo-600"
-            leftIcon={<Plus size={16} />}
-          >
-            Tambah Baris
-          </Button>
+          <div className="flex items-center gap-3 mt-4">
+            <Button onClick={handleAddItem} variant="ghost" size="sm" leftIcon={<Plus size={14} />} className="!text-[#4F46E5] hover:bg-indigo-50 font-bold tracking-tight uppercase text-[10px]">
+              Tambah Baris
+            </Button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-8 space-y-4">
-            <Label>Syarat & Ketentuan</Label>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+          <Card className="p-8 space-y-4">
+            <SectionHeader
+              icon={<FileText size={18} />}
+              title="Syarat & Ketentuan"
+              className="mb-4"
+            />
             <Textarea
               value={notes}
               onChange={e => setNotes(e.target.value)}
-              className="h-44 rounded-md"
+              className="h-44 shadow-sm"
               placeholder="Informasi rekening pembayaran, dll..."
             />
-          </div>
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-8 space-y-5">
+          </Card>
+
+          <Card className="p-8 space-y-5">
+            <SectionHeader
+              icon={<DollarSign size={18} />}
+              title="Ringkasan Biaya"
+              className="mb-4"
+            />
             <div className="flex items-center justify-between border-b border-gray-50 pb-4">
-              <Label className="uppercase tracking-tight">Subtotal</Label>
-              <Label className="text-sm text-gray-900">{formatIDRVal(subtotal)}</Label>
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">Subtotal</span>
+              <span className="text-sm font-bold text-gray-900">{formatIDRVal(subtotal)}</span>
             </div>
             <div className="flex items-center justify-between border-b border-gray-50 pb-4">
               <div className="flex items-center gap-4">
-                <Label className="uppercase tracking-tight">Diskon</Label>
-                <div className="flex border border-gray-200 rounded-md overflow-hidden h-9">
-                  <Select value={discountType} onChange={e => setDiscountType(e.target.value as any)} className="bg-gray-50 px-2 border-r text-[10px] uppercase outline-none focus:ring-0 active:ring-0">
-                    <option value="Rp">Rp</option>
-                    <option value="%">%</option>
-                  </Select>
-                  <Input type="number" value={discountValue} onChange={e => setDiscountValue(Number(e.target.value))} className="w-20 px-3 text-xs outline-none" />
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">Diskon</span>
+                <div className="flex bg-white rounded border border-gray-200 overflow-hidden h-11">
+                  <ComboBox
+                    value={discountType}
+                    onChange={(val: string | number) => setDiscountType(val as any)}
+                    options={[
+                      { value: 'Rp', label: 'Rp' },
+                      { value: '%', label: '%' },
+                    ]}
+                    hideSearch={true}
+                    className="!w-24"
+                    size="sm"
+                    triggerClassName="!border-0 !h-full !rounded-none !ring-0 !px-4"
+                  />
+                  <div className="w-px bg-gray-200 h-6 my-auto" />
+                  <Input
+                    type="number"
+                    value={discountValue}
+                    onChange={e => setDiscountValue(Number(e.target.value))}
+                    className="!w-32 font-bold !border-0 !h-full !rounded-none !ring-0 text-base"
+                  />
                 </div>
               </div>
-              <Label className="text-sm text-rose-600">- {formatIDRVal(discountAmount)}</Label>
+              <span className="text-sm font-bold text-rose-600">- {formatIDRVal(discountAmount)}</span>
             </div>
 
             <div className="space-y-4 border-b border-gray-50 pb-4">
               <div className="flex items-center justify-between">
-                <Label className="uppercase tracking-tight">Pajak</Label>
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">Pajak</span>
                 <div className="relative">
-                  <Select
+                  <ComboBox
                     value=""
-                    onChange={e => { if (e.target.value) { const id = Number(e.target.value); setSelectedTaxIds(prev => prev.includes(id) ? prev : [...prev, id]); } }}
-                    className="!px-4 !py-1.5 text-[10px] uppercase tracking-tight shadow-sm h-9 rounded-md"
-                  >
-                    <option value="">+ Tambah Pajak</option>
-                    {availableTaxes.filter(t => !selectedTaxIds.includes(t.id)).map(tax => (<option key={tax.id} value={tax.id}>{tax.name} ({tax.rate}%)</option>))}
-                  </Select>
+                    onChange={(val: string | number) => {
+                      if (val) {
+                        const id = Number(val);
+                        setSelectedTaxIds(prev => prev.includes(id) ? prev : [...prev, id]);
+                      }
+                    }}
+                    options={[
+                      { value: '', label: '+ Tambah Pajak' },
+                      ...availableTaxes.filter(t => !selectedTaxIds.includes(t.id)).map(tax => ({
+                        value: tax.id.toString(),
+                        label: `${tax.name} (${tax.rate}%)`
+                      }))
+                    ]}
+                  />
                 </div>
               </div>
               {selectedTaxesList.map(tax => (
-                <div key={tax.id} className="flex items-center justify-between pl-4 text-[11px] text-gray-700">
+                <div key={tax.id} className="flex items-center justify-between pl-4 text-[11px] font-bold text-gray-700">
                   <div className="flex items-center gap-2">
-                    <Label>{tax.name} ({tax.rate}%)</Label>
+                    <span>{tax.name} ({tax.rate}%)</span>
                     <Button variant="ghost" size="sm" onClick={() => setSelectedTaxIds(prev => prev.filter(id => id !== tax.id))} className="!p-1 text-rose-400 hover:bg-rose-50">
                       <X size={12} />
                     </Button>
                   </div>
-                  <Label className="text-gray-900">{formatIDRVal(tax.calculated_value)}</Label>
+                  <span className="text-gray-900">{formatIDRVal(tax.calculated_value)}</span>
                 </div>
               ))}
             </div>
 
-            <div className="pt-2 pb-6 flex items-center justify-between">
-              <Label className="text-base uppercase tracking-tight">Grand Total</Label>
-              <Subtext className="text-2xl font-bold text-indigo-600">{formatIDRVal(total)}</Subtext>
+            <div className="flex items-center justify-between py-4 mt-2 border-t-2 border-gray-100">
+              <span className="text-md font-bold text-gray-900 uppercase tracking-tight">Total Tagihan</span>
+              <span className="text-2xl font-bold text-blue-600">{formatIDRVal(total)}</span>
             </div>
 
             <Button
@@ -858,124 +798,15 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
               isLoading={loading}
               disabled={!clientId}
               className="w-full"
-              leftIcon={editingId ? <Save size={16} /> : <CheckCircle2 size={16} />}
+              variant='primary'
+              leftIcon={<Save size={16} />}
             >
               {editingId ? 'Update Invoice' : 'Simpan Invoice'}
             </Button>
-          </div>
+          </Card>
         </div>
       </div>
 
-      {/* QUICK ADD MODALS */}
-
-      <Modal
-        isOpen={isQuickClientModalOpen}
-        onClose={() => setIsQuickClientModalOpen(false)}
-        title="Daftarkan Pelanggan Baru"
-        size="lg"
-        footer={<Button onClick={handleQuickAddClient} isLoading={isProcessingQuick} variant="success" leftIcon={<CheckCircle2 size={14} />}>Simpan & Pilih</Button>}
-      >
-        <div className="space-y-8 py-2">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Select label="Sapaan" value={quickClientForm.salutation} onChange={e => setQuickClientForm({ ...quickClientForm, salutation: e.target.value })} className="rounded-md">
-              <option value="">Pilih</option>
-              <option value="Bapak">Bapak</option>
-              <option value="Ibu">Ibu</option>
-            </Select>
-            <div className="md:col-span-2">
-              <Input label="Nama Lengkap*" value={quickClientForm.name} onChange={e => setQuickClientForm({ ...quickClientForm, name: e.target.value })} placeholder="John Doe..." className="rounded-md" />
-            </div>
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between px-1">
-              <Label className="uppercase tracking-tight">Pilih Perusahaan Client</Label>
-              <Button variant="ghost" size="sm" onClick={() => setIsAddingCo(!isAddingCo)} className="text-blue-600 h-6 !p-0">
-                {isAddingCo ? 'Batal' : '+ Perusahaan Baru'}
-              </Button>
-            </div>
-            {isAddingCo ? (
-              <div className="p-6 bg-blue-50/50 border border-blue-100 rounded-2xl space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <Input label="Nama Perusahaan*" placeholder="Nama PT..." value={newCo.name} onChange={e => setNewCo({ ...newCo, name: e.target.value })} className="bg-white border-blue-100 rounded-md" />
-                  <Select label="Kategori*" value={newCo.category_id} onChange={e => setNewCo({ ...newCo, category_id: e.target.value })} className="bg-white border-blue-100 rounded-md">
-                    <option value="">Pilih Kategori</option>
-                    {clientCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </Select>
-                </div>
-                <Input label="Alamat Perusahaan*" placeholder="Alamat lengkap..." value={newCo.address} onChange={e => setNewCo({ ...newCo, address: e.target.value })} className="bg-white border-blue-100 rounded-md" />
-                <Button onClick={handleQuickAddCo} isLoading={coProcessing} className="w-full" leftIcon={<Save size={14} />}>
-                  SIMPAN PERUSAHAAN
-                </Button>
-              </div>
-            ) : (
-              <Select value={quickClientForm.client_company_id} onChange={e => setQuickClientForm({ ...quickClientForm, client_company_id: e.target.value })} className="rounded-md">
-                <option value="">Personal / Tanpa Perusahaan</option>
-                {clientCompanies.map(co => <option key={co.id} value={co.id}>{co.name}</option>)}
-              </Select>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-6">
-            <Input label="Email" type="email" value={quickClientForm.email} onChange={e => setQuickClientForm({ ...quickClientForm, email: e.target.value })} placeholder="email@client.com" className="rounded-md" />
-            <Input label="WhatsApp" value={quickClientForm.whatsapp} onChange={e => setQuickClientForm({ ...quickClientForm, whatsapp: e.target.value })} placeholder="08..." className="rounded-md" />
-          </div>
-        </div>
-      </Modal>
-
-      <Modal
-        isOpen={isQuickProductModalOpen}
-        onClose={() => setIsQuickProductModalOpen(false)}
-        title="Daftarkan Produk Baru"
-        size="lg"
-        footer={<Button onClick={handleQuickAddProduct} isLoading={isProcessingQuick} leftIcon={<Save size={14} />}>Simpan Produk</Button>}
-      >
-        <div className="space-y-8 py-2">
-          <Input label="Nama Produk / Jasa*" value={quickProductForm.name} onChange={e => setQuickProductForm({ ...quickProductForm, name: e.target.value })} placeholder="Misal: Paket Langganan Pro..." className="rounded-md" />
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between px-1">
-                <Label className="uppercase tracking-tight">Kategori</Label>
-                <Button variant="ghost" size="sm" onClick={() => setIsAddingCat(!isAddingCat)} className="text-blue-600 h-6 !p-0">
-                  {isAddingCat ? 'Batal' : '+ Baru'}
-                </Button>
-              </div>
-              {isAddingCat ? (
-                <div className="flex gap-2 animate-in zoom-in-95">
-                  <Input autoFocus placeholder="Kategori baru..." value={newCatName} onChange={e => setNewCatName(e.target.value)} className="flex-1 bg-white border-blue-200 rounded-md" />
-                  <Button onClick={handleQuickAddCat} className="!px-3"><CheckIcon size={16} /></Button>
-                </div>
-              ) : (
-                <Select value={quickProductForm.category_id} onChange={e => setQuickProductForm({ ...quickProductForm, category_id: e.target.value })} className="rounded-md">
-                  <option value="">Pilih</option>
-                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </Select>
-              )}
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between px-1">
-                <Label className="uppercase tracking-tight">Satuan</Label>
-                <Button variant="ghost" size="sm" onClick={() => setIsAddingUnit(!isAddingUnit)} className="text-blue-600 h-6 !p-0">
-                  {isAddingUnit ? 'Batal' : '+ Baru'}
-                </Button>
-              </div>
-              {isAddingUnit ? (
-                <div className="flex gap-2 animate-in zoom-in-95">
-                  <Input autoFocus placeholder="Satuan baru..." value={newUnitName} onChange={e => setNewUnitName(e.target.value)} className="flex-1 bg-white border-blue-200 rounded-md" />
-                  <Button onClick={handleQuickAddUnit} className="!px-3"><CheckIcon size={16} /></Button>
-                </div>
-              ) : (
-                <Select value={quickProductForm.unit_id} onChange={e => setQuickProductForm({ ...quickProductForm, unit_id: e.target.value })} className="rounded-md">
-                  <option value="">Pilih</option>
-                  {units.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                </Select>
-              )}
-            </div>
-          </div>
-          <Input label="Harga Jual (IDR)*" type="number" value={quickProductForm.price} onChange={e => setQuickProductForm({ ...quickProductForm, price: Number(e.target.value) })} placeholder="0" className="rounded-md" />
-          <Textarea label="Deskripsi" value={quickProductForm.description} onChange={e => setQuickProductForm({ ...quickProductForm, description: e.target.value })} className="h-32 rounded-md" placeholder="Detail produk..." />
-        </div>
-      </Modal>
-
-      {/* Success Notification Toast */}
       {showSuccessToast && (
         <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] fade-in duration-500">
           <div className="bg-emerald-600 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border border-emerald-500">
@@ -990,6 +821,33 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
       `}</style>
+
+      <ClientFormModal
+        isOpen={isClientModalOpen}
+        onClose={() => setIsClientModalOpen(false)}
+        onSave={handleSaveClient}
+        form={clientForm}
+        setForm={setClientForm}
+        isProcessing={isProcessingQuick}
+        clientCompanies={clientCompanies}
+        categories={clientCategories}
+        companyId={company.id}
+        onQuickAddCompany={handleQuickAddCo}
+        onQuickAddCategory={handleQuickAddCoCat}
+      />
+
+      <ProductFormModal
+        isOpen={isProductModalOpen}
+        onClose={() => setIsProductModalOpen(false)}
+        onSave={handleSaveProduct}
+        form={productForm}
+        setForm={setProductForm}
+        isProcessing={isProcessingQuick}
+        categories={categories}
+        units={units}
+        onQuickAddCategory={handleQuickAddProdCat}
+        onQuickAddUnit={handleQuickAddUnit}
+      />
     </div>
   );
 };

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Input, Textarea, Button, H3, Subtext, Card } from '@/components/ui';
+import { Input, Textarea, Button, H3, Subtext, Card, ComboBox } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { Company, AiSetting } from '@/lib/types';
-import { Loader2, Save, BrainCircuit, Check, AlertTriangle } from 'lucide-react';
+import { Loader2, Save, BrainCircuit, Check, AlertTriangle, Cpu } from 'lucide-react';
 import { NotificationModal } from '@/components/shared/modals/NotificationModal';
 
 interface Props {
@@ -15,6 +15,7 @@ export const AiSettingsView: React.FC<Props> = ({ company }) => {
   const [settings, setSettings] = useState<AiSetting | null>(null);
 
   const [apiKey, setApiKey] = useState('');
+  const [modelName, setModelName] = useState('gemini-2.0-flash');
   const [instruction, setInstruction] = useState('');
 
   const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' | 'warning' }>({
@@ -37,6 +38,7 @@ export const AiSettingsView: React.FC<Props> = ({ company }) => {
       if (data) {
         setSettings(data);
         setApiKey(data.gemini_api_key || '');
+        setModelName(data.model_name || 'gemini-2.0-flash');
         setInstruction(data.system_instruction || '');
       }
     } finally {
@@ -51,6 +53,7 @@ export const AiSettingsView: React.FC<Props> = ({ company }) => {
       const payload = {
         company_id: company.id,
         gemini_api_key: apiKey,
+        model_name: modelName,
         system_instruction: instruction,
         updated_at: new Date().toISOString()
       };
@@ -93,6 +96,19 @@ export const AiSettingsView: React.FC<Props> = ({ company }) => {
         }
       >
         <form onSubmit={handleSave} className="p-8 space-y-6">
+          <ComboBox
+            label="Model Gemini"
+            value={modelName}
+            onChange={val => setModelName(val as string)}
+            options={[
+              { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', sublabel: 'Terbaru, Tercepat & Pintar' },
+              { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', sublabel: 'Cepat & Efisien' },
+              { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', sublabel: 'Paling Canggih' },
+            ]}
+            leftIcon={<Cpu size={16} />}
+            hideSearch
+          />
+
           <Input
             label="Gemini API Key"
             type="password"

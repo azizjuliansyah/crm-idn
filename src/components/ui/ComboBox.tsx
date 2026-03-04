@@ -18,8 +18,12 @@ interface ComboBoxProps {
   leftIcon?: React.ReactNode;
   onAddNew?: () => void;
   addNewLabel?: string;
+  hideSearch?: boolean;
   className?: string;
   disabled?: boolean;
+  placeholderSize?: string;
+  size?: 'sm' | 'md' | 'lg';
+  triggerClassName?: string;
 }
 
 export const ComboBox: React.FC<ComboBoxProps> = ({
@@ -32,13 +36,17 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
   leftIcon,
   onAddNew,
   addNewLabel = 'Tambah Baru',
+  hideSearch = false,
   className = '',
   disabled = false,
+  placeholderSize = 'text-sm',
+  size = 'md',
+  triggerClassName = '',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0, placement: 'bottom' as 'top' | 'bottom' });
 
   const selectedOption = useMemo(() =>
     options.find(opt => opt.value === value),
@@ -46,12 +54,12 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
   );
 
   const filteredOptions = useMemo(() => {
-    if (!searchTerm) return options;
+    if (hideSearch || !searchTerm) return options;
     return options.filter(opt =>
       opt.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (opt.sublabel && opt.sublabel.toLowerCase().includes(searchTerm.toLowerCase()))
     );
-  }, [options, searchTerm]);
+  }, [options, searchTerm, hideSearch]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -60,8 +68,8 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
       }
     };
 
-    const handleScroll = () => {
-      if (isOpen) {
+    const handleScroll = (event: Event) => {
+      if (isOpen && containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
@@ -76,8 +84,12 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
   }, [isOpen]);
 
   useEffect(() => {
-    if (isOpen) setSearchTerm('');
-  }, [isOpen]);
+    if (isOpen) {
+      if (hideSearch) {
+        setSearchTerm('');
+      }
+    }
+  }, [isOpen, hideSearch]);
 
   const handleSelect = (optionValue: string | number) => {
     onChange(optionValue);
@@ -85,7 +97,7 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
   };
 
   return (
-    <div className={`space-y-2 w-full relative ${className}`} ref={containerRef}>
+    <div className={`relative ${className}`} ref={containerRef}>
       {label && (
         <label className="text-[10px] font-medium text-gray-400 uppercase tracking-tight ml-1">
           {label}
@@ -97,34 +109,46 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
           if (!disabled) {
             if (!isOpen && containerRef.current) {
               const rect = containerRef.current.getBoundingClientRect();
+              const viewportHeight = window.innerHeight;
+              const dropdownHeight = 350; // Max estimated height
+              const spaceBelow = viewportHeight - rect.bottom;
+              const spaceAbove = rect.top;
+
+              let placement: 'top' | 'bottom' = 'bottom';
+              if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
+                placement = 'top';
+              }
+
               setDropdownPosition({
-                top: rect.bottom,
+                top: placement === 'bottom' ? rect.bottom + 4 : rect.top - 4,
                 left: rect.left,
                 width: rect.width,
+                placement
               });
             }
             setIsOpen(!isOpen);
           }
         }}
         className={`
-          flex items-center gap-3 px-5 py-3.5 bg-white border rounded-md transition-all cursor-pointer
+          flex items-center ${size === 'sm' ? 'gap-2 px-3 py-2' : 'gap-3 px-5 py-3.5'} bg-white border rounded-md transition-all cursor-pointer
           ${isOpen ? 'border-blue-500 ring-4 ring-blue-50/50' : 'border-gray-200 hover:border-gray-300'}
           ${disabled ? 'opacity-50 cursor-not-allowed grayscale' : ''}
           ${error ? 'border-rose-300 ring-rose-50/50' : ''}
+          ${triggerClassName}
         `}
       >
         {leftIcon && <div className="text-gray-300">{leftIcon}</div>}
 
         <div className="flex-1 overflow-hidden">
           {selectedOption ? (
-            <div className="flex flex-col">
-              <span className="text-sm font-medium text-gray-900 truncate">{selectedOption.label}</span>
+            <div className="flex flex-col min-w-0">
+              <span className={`font-medium text-gray-900 truncate block normal-case ${placeholderSize}`}>{selectedOption.label}</span>
               {selectedOption.sublabel && (
-                <span className="text-[10px] text-gray-400 uppercase tracking-tight truncate">{selectedOption.sublabel}</span>
+                <span className="text-[10px] text-gray-400 uppercase tracking-tight truncate block">{selectedOption.sublabel}</span>
               )}
             </div>
           ) : (
-            <span className="text-sm text-gray-400">{placeholder}</span>
+            <span className={`text-gray-400 font-medium normal-case truncate block whitespace-nowrap ${placeholderSize}`}>{placeholder}</span>
           )}
         </div>
 
@@ -136,26 +160,33 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
 
       {isOpen && (
         <div
-          className="fixed bg-white border border-gray-100 rounded-md shadow-2xl z-[9999] py-3 animate-in fade-in zoom-in duration-200 origin-top"
+          className={`fixed bg-white border border-gray-100 rounded-md shadow-2xl z-[9999] py-3 animate-in fade-in zoom-in-95 duration-200 ${dropdownPosition.placement === 'top' ? 'origin-bottom' : 'origin-top'
+            }`}
           style={{
-            top: `${dropdownPosition.top + 8}px`,
+            top: dropdownPosition.placement === 'top' ? 'auto' : `${dropdownPosition.top}px`,
+            bottom: dropdownPosition.placement === 'top' ? `${window.innerHeight - dropdownPosition.top}px` : 'auto',
             left: `${dropdownPosition.left}px`,
-            width: `${dropdownPosition.width}px`
+            width: `${dropdownPosition.width}px`,
+            maxHeight: '350px',
+            display: 'flex',
+            flexDirection: 'column'
           }}
         >
-          <div className="px-3 pb-2 border-b border-gray-50 mb-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" size={14} />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Cari..."
-                className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border-none rounded-md text-sm font-medium outline-none focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all"
-                autoFocus
-              />
+          {!hideSearch && (
+            <div className="px-3 pb-2 border-b border-gray-50 mb-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" size={14} />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Cari..."
+                  className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border-none rounded-md text-sm font-medium outline-none focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all"
+                  autoFocus
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="max-h-[250px] overflow-y-auto custom-scrollbar px-2 space-y-1">
             {filteredOptions.length > 0 ? (
@@ -168,8 +199,8 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
                     ${opt.value === value ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50 text-gray-700'}
                   `}
                 >
-                  <div className="flex flex-col overflow-hidden">
-                    <span className="text-sm font-semibold truncate">{opt.label}</span>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-sm font-semibold">{opt.label}</span>
                     {opt.sublabel && (
                       <span className="text-[9px] uppercase tracking-tight text-gray-400 truncate">{opt.sublabel}</span>
                     )}

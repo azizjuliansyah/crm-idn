@@ -1,8 +1,9 @@
-import { Plus, Save, X, Mail, Building, Contact2, Wallet, FileText, Check as CheckIcon, CheckCircle as CheckCircle2 } from 'lucide-react';
+import { Plus, Save, X, Mail, Building, Contact2, Wallet, FileText, Check as CheckIcon, CheckCircle as CheckCircle2, User } from 'lucide-react';
 import { Company, Client, ClientCompany, ClientCompanyCategory, Lead, LeadStage, LeadSource, CompanyMember } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
-import React, { useState } from 'react';
-import { Input, Select, Textarea, Button, Subtext, Label, Modal, H4 } from '@/components/ui';
+import React, { useState, useEffect } from 'react';
+import { Input, Textarea, Button, Subtext, Label, Modal, H4, ComboBox } from '@/components/ui';
+import { ClientFormModal } from '@/components/features/clients/components/ClientFormModal';
 
 
 
@@ -24,12 +25,57 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
   isOpen, onClose, company, members, stages, sources, clientCompanies, categories, onSuccess, setClientCompanies, setCategories
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isAddingCo, setIsAddingCo] = useState(false);
-  const [newCo, setNewCo] = useState({ name: '', category_id: '', address: '' });
-  const [coProcessing, setCoProcessing] = useState(false);
-  const [isAddingCatInCo, setIsAddingCatInCo] = useState(false);
-  const [newCatInCoName, setNewCatInCoName] = useState('');
-  const [catInCoProcessing, setCatInCoProcessing] = useState(false);
+
+  const [clients, setClients] = useState<Client[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
+
+  // ClientFormModal State
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [clientForm, setClientForm] = useState<Partial<Client>>({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
+  const [isProcessingQuick, setIsProcessingQuick] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadClients();
+    }
+  }, [isOpen]);
+
+  const loadClients = async () => {
+    try {
+      const { data } = await supabase.from('clients').select('*, client_company:client_companies(*)').eq('company_id', company.id).order('name');
+      if (data) setClients(data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleClientSelect = (clientId: string) => {
+    setSelectedClientId(clientId);
+    const client = clients.find(c => c.id.toString() === clientId);
+    if (client) {
+      setForm(prev => ({
+        ...prev,
+        salutation: client.salutation || '',
+        name: client.name || '',
+        email: client.email || '',
+        client_company_id: client.client_company_id,
+      }));
+      if (client.whatsapp) {
+        setWaNumber(client.whatsapp.startsWith('+62') ? client.whatsapp.replace('+62', '') : client.whatsapp);
+      } else {
+        setWaNumber('');
+      }
+    } else {
+      setForm(prev => ({
+        ...prev,
+        salutation: '',
+        name: '',
+        email: '',
+        client_company_id: clientCompanies.find(c => c.name.toLowerCase() === 'perorangan')?.id || null,
+      }));
+      setWaNumber('');
+    }
+  };
 
   const [form, setForm] = useState<Partial<Lead>>({
     salutation: '', name: '', whatsapp: '', email: '',
@@ -49,56 +95,44 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
     setWaNumber(cleaned);
   };
 
-  const handleQuickAddCatInCo = async () => {
-    if (!newCatInCoName.trim()) return;
-    setCatInCoProcessing(true);
-    try {
-      const { data, error } = await supabase
-        .from('client_company_categories')
-        .insert({ name: newCatInCoName.trim(), company_id: company.id })
-        .select()
-        .single();
-      if (error) throw error;
-      setCategories(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
-      setNewCo(prev => ({ ...prev, category_id: String(data.id) }));
-      setNewCatInCoName('');
-      setIsAddingCatInCo(false);
-    } catch (err: any) {
-      alert("Gagal menambah kategori: " + err.message);
-    } finally {
-      setCatInCoProcessing(false);
-    }
+  const handleQuickAddCompany = async (coData: any) => {
+    const { data, error } = await supabase.from('client_companies').insert({
+      company_id: company.id,
+      ...coData
+    }).select().single();
+    if (error) throw error;
+    setClientCompanies(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+    return data;
   };
 
-  const handleQuickAddCo = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (!newCo.name.trim() || !newCo.category_id || !newCo.address.trim()) {
-      alert("Nama, Kategori, dan Alamat Perusahaan wajib diisi.");
-      return;
-    }
-    setCoProcessing(true);
+  const handleQuickAddCategory = async (name: string) => {
+    const { data, error } = await supabase.from('client_company_categories').insert({ company_id: company.id, name: name.trim() }).select().single();
+    if (error) throw error;
+    setCategories(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+    return data;
+  };
+
+  const handleSaveClient = async (formData: Partial<Client>) => {
+    if (!formData.name?.trim()) return;
+    setIsProcessingQuick(true);
     try {
-      const { data, error } = await supabase
-        .from('client_companies')
-        .insert({
-          name: newCo.name.trim(),
-          category_id: parseInt(newCo.category_id),
-          address: newCo.address.trim(),
-          company_id: company.id
-        })
-        .select('*')
-        .single();
+      const { data, error } = await supabase.from('clients').insert({
+        company_id: company.id,
+        salutation: formData.salutation,
+        name: formData.name.trim(),
+        client_company_id: formData.client_company_id,
+        email: formData.email,
+        whatsapp: formData.whatsapp ? `+62${formData.whatsapp.replace(/\D/g, '')}` : null
+      }).select().single();
       if (error) throw error;
-      setClientCompanies(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
-      setForm(prev => ({ ...prev, client_company_id: data.id }));
-      setIsAddingCo(false);
-      setNewCo({ name: '', category_id: '', address: '' });
-      setIsAddingCatInCo(false);
-    } catch (err: any) {
-      alert("Gagal menambah perusahaan: " + err.message);
-    } finally {
-      setCoProcessing(false);
-    }
+
+      const freshRes = await supabase.from('clients').select('*, client_company:client_companies(*)').eq('company_id', company.id).order('name');
+      if (freshRes.data) setClients(freshRes.data);
+
+      handleClientSelect(String(data.id));
+      setIsClientModalOpen(false);
+      setClientForm({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
+    } catch (err: any) { alert(err.message); } finally { setIsProcessingQuick(false); }
   };
 
   const handleSave = async (e?: React.FormEvent) => {
@@ -155,34 +189,58 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2 md:col-span-2">
-              <Label className="text-[10px]  text-gray-400 uppercase tracking-tight ml-1">Tanggal Input</Label>
-              <Input
-                type="date"
-                value={form.input_date || ''}
-                onChange={e => setForm({ ...form, input_date: e.target.value })}
-                className="!py-2.5"
+            <div className="space-y-4 md:col-span-2">
+              <ComboBox
+                label="Pilih Client (Atau Tambah Baru)"
+                placeholder="Pilih Pelanggan"
+                value={selectedClientId}
+                onChange={(val: string | number) => handleClientSelect(val.toString())}
+                options={[
+                  { value: '', label: '-- Input Manual / Pilih Client --' },
+                  ...clients.map(c => ({
+                    value: c.id.toString(),
+                    label: c.name,
+                    sublabel: c.client_company?.name || 'PERSONAL'
+                  }))
+                ]}
+                onAddNew={() => setIsClientModalOpen(true)}
+                addNewLabel="Tambah Pelanggan Baru"
+                leftIcon={<User size={16} />}
               />
             </div>
 
             <div className="space-y-2 md:col-span-2">
-              <Label className="text-[10px]  text-gray-400 uppercase tracking-tight ml-1">Sapaan & Nama Lengkap*</Label>
-              <div className="flex gap-3">
-                <Select
-                  value={form.salutation}
-                  onChange={e => setForm({ ...form, salutation: e.target.value })}
-                  className="!w-32 !py-2.5"
-                >
-                  <option value="">Sapaan</option>
-                  <option value="Bapak">Bapak</option>
-                  <option value="Ibu">Ibu</option>
-                </Select>
-                <Input
-                  value={form.name}
-                  onChange={e => setForm({ ...form, name: e.target.value })}
-                  className="!py-2.5"
-                  placeholder="Ketik nama lengkap client..."
-                />
+              <Input
+                label="Tanggal Input"
+                type="date"
+                value={form.input_date || ''}
+                onChange={e => setForm({ ...form, input_date: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <div className="grid grid-cols-4 gap-3">
+                <div className="col-span-1">
+                  <ComboBox
+                    label="Sapaan*"
+                    value={form.salutation || ''}
+                    onChange={(val: string | number) => setForm({ ...form, salutation: val.toString() })}
+                    options={[
+                      { value: '-', label: '-' },
+                      { value: 'Bapak', label: 'Bapak' },
+                      { value: 'Ibu', label: 'Ibu' },
+                    ]}
+                    hideSearch
+                  />
+                </div>
+                <div className="col-span-3">
+                  <Input
+                    label="Nama Lengkap*"
+                    value={form.name}
+                    onChange={e => setForm({ ...form, name: e.target.value })}
+                    placeholder="Ketik nama lengkap client..."
+                  />
+                </div>
               </div>
             </div>
 
@@ -193,7 +251,6 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
                 value={form.email}
                 onChange={e => setForm({ ...form, email: e.target.value })}
                 leftIcon={<Mail size={16} />}
-                className="!py-2.5"
                 placeholder="nama@perusahaan.com"
               />
             </div>
@@ -223,75 +280,15 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
           </div>
 
           <div className="space-y-3">
-            <div className="flex items-center justify-between px-1">
-              <Label className="text-[10px]  text-gray-400 uppercase tracking-tight">Pilih Data Perusahaan</Label>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsAddingCo(!isAddingCo)}
-                className="!text-[10px] !p-1 !text-blue-600"
-              >
-                {isAddingCo ? <><X size={10} className="mr-1" /> Batal</> : <><Plus size={10} className="mr-1" /> Tambah Baru</>}
-              </Button>
-            </div>
-
-            {isAddingCo ? (
-              <div className="p-6 bg-blue-50/30 border border-blue-100 rounded-2xl space-y-5">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    label="Nama Instansi*"
-                    value={newCo.name}
-                    onChange={e => setNewCo({ ...newCo, name: e.target.value })}
-                    className="!py-2.5 !text-xs !bg-white border-blue-100 focus:border-blue-400"
-                    placeholder="Misal: PT Teknologi Maju"
-                  />
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <Subtext className="text-[10px]  text-gray-400 uppercase ml-1">Kategori*</Subtext>
-                      <Button variant="ghost" size="sm" onClick={() => setIsAddingCatInCo(!isAddingCatInCo)} className="!text-[8px] ! text-blue-600 uppercase hover:underline !p-0 !h-auto">
-                        {isAddingCatInCo ? 'Batal' : '+ Kategori'}
-                      </Button>
-                    </div>
-                    {isAddingCatInCo ? (
-                      <div className="flex gap-2">
-                        <Input autoFocus value={newCatInCoName} onChange={e => setNewCatInCoName(e.target.value)} className="!py-2 !px-3 !text-[10px] !bg-white border-blue-200" placeholder="Ketik kategori..." />
-                        <Button onClick={handleQuickAddCatInCo} size="sm" className="!px-3"><CheckIcon size={14} /></Button>
-                      </div>
-                    ) : (
-                      <Select value={newCo.category_id} onChange={e => setNewCo({ ...newCo, category_id: e.target.value })} className="!py-2.5 !text-xs !bg-white border-blue-100">
-                        <option value="">-- Pilih Kategori --</option>
-                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                      </Select>
-                    )}
-                  </div>
-                  <div className="md:col-span-2">
-                    <Input
-                      label="Alamat Kantor*"
-                      value={newCo.address}
-                      onChange={e => setNewCo({ ...newCo, address: e.target.value })}
-                      className="!py-2.5 !text-xs !bg-white border-blue-100 focus:border-blue-400"
-                      placeholder="Jalan raya no 123..."
-                    />
-                  </div>
-                </div>
-                <Button
-                  onClick={handleQuickAddCo}
-                  isLoading={coProcessing}
-                  className="w-full !py-3.5 shadow-blue-200"
-                  leftIcon={<Save size={14} />}
-                >
-                  SIMPAN & PILIH PERUSAHAAN
-                </Button>
-              </div>
-            ) : (
-              <Select
-                value={form.client_company_id || ''}
-                onChange={e => setForm({ ...form, client_company_id: e.target.value ? Number(e.target.value) : null })}
-                className="!py-3"
-              >
-                {clientCompanies.map(co => <option key={co.id} value={co.id}>{co.name}</option>)}
-              </Select>
-            )}
+            <ComboBox
+              value={form.client_company_id?.toString() || ''}
+              label="Pilih Perusahaan"
+              onChange={(val: string | number) => setForm({ ...form, client_company_id: val ? Number(val) : null })}
+              options={[
+                { value: '', label: 'Personal / Individual' },
+                ...clientCompanies.map(co => ({ value: co.id.toString(), label: co.name }))
+              ]}
+            />
           </div>
         </div>
 
@@ -310,36 +307,30 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
               value={form.expected_value}
               onChange={e => setForm({ ...form, expected_value: Number(e.target.value) })}
               leftIcon={<Label className="text-[11px]  text-blue-600">Rp</Label>}
-              className="!py-2.5"
               placeholder="0"
             />
 
-            <Select
+            <ComboBox
               label="Sumber Datang Lead"
-              value={form.source}
-              onChange={e => setForm({ ...form, source: e.target.value })}
-              className="!py-2.5 !text-xs uppercase tracking-tight"
-            >
-              {sources.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-            </Select>
+              value={form.source || ''}
+              onChange={(val: string | number) => setForm({ ...form, source: val.toString() })}
+              options={sources.map(s => ({ value: s.name, label: s.name }))}
+            />
 
-            <Select
+            <ComboBox
               label="Status / Tahapan"
-              value={form.status}
-              onChange={e => setForm({ ...form, status: e.target.value })}
-              className="!py-2.5 !text-xs uppercase tracking-tight"
-            >
-              {stages.map(s => <option key={s.id} value={s.name.toLowerCase()}>{s.name}</option>)}
-            </Select>
+              hideSearch
+              value={form.status || ''}
+              onChange={(val: string | number) => setForm({ ...form, status: val.toString() })}
+              options={stages.map(s => ({ value: s.name.toLowerCase(), label: s.name }))}
+            />
 
-            <Select
+            <ComboBox
               label="PIC Sales Penanggung Jawab"
-              value={form.sales_id}
-              onChange={e => setForm({ ...form, sales_id: e.target.value })}
-              className="!py-2.5 !text-xs uppercase tracking-tight"
-            >
-              {members.map(m => <option key={m.user_id} value={m.user_id}>{m.profile?.full_name || 'Tanpa Nama'}</option>)}
-            </Select>
+              value={form.sales_id || ''}
+              onChange={(val: string | number) => setForm({ ...form, sales_id: val.toString() })}
+              options={members.map(m => ({ value: m.user_id, label: m.profile?.full_name || 'Tanpa Nama' }))}
+            />
           </div>
         </div>
 
@@ -358,6 +349,20 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
           />
         </div>
       </div>
+
+      <ClientFormModal
+        isOpen={isClientModalOpen}
+        onClose={() => setIsClientModalOpen(false)}
+        form={clientForm}
+        setForm={setClientForm}
+        isProcessing={isProcessingQuick}
+        onSave={handleSaveClient}
+        clientCompanies={clientCompanies}
+        categories={categories}
+        companyId={company.id}
+        onQuickAddCompany={handleQuickAddCompany}
+        onQuickAddCategory={handleQuickAddCategory}
+      />
     </Modal>
   );
 };

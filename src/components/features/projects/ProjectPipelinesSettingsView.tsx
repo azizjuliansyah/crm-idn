@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 
-import { Input, Select, Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, Modal, Card } from '@/components/ui';
+import { Input, Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, Modal, Card, ComboBox } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -401,15 +401,17 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
                   className="!py-3"
                 />
                 <div className="flex gap-2">
-                  <Select
+                  <ComboBox
                     value={newFieldType}
-                    onChange={(e: any) => setNewFieldType(e.target.value)}
-                    className="flex-1 !py-3 w-32"
-                  >
-                    <option value="text">Text</option>
-                    <option value="number">Number</option>
-                    <option value="date">Date</option>
-                  </Select>
+                    onChange={(val: string | number) => setNewFieldType(val as any)}
+                    options={[
+                      { value: 'text', label: 'Text' },
+                      { value: 'number', label: 'Number' },
+                      { value: 'date', label: 'Date' },
+                    ]}
+                    hideSearch={true}
+                    className="flex-1 w-32"
+                  />
                   <Button onClick={addCustomField} className="px-5 py-3 bg-emerald-600 text-white rounded-xl  text-[10px] uppercase shadow-lg shadow-emerald-100">+ Add</Button>
                 </div>
               </div>

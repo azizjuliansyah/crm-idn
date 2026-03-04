@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Label, SearchInput, Checkbox } from '@/components/ui';
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Label, SearchInput, Checkbox, H2 } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -243,39 +243,52 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
   if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-emerald-600 mb-4" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Mensinkronisasi Data Client...</Subtext></div>;
 
   return (
-    <div className="flex flex-col gap-6 h-full text-gray-900">
-      <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0 overflow-x-auto custom-scrollbar">
-        <div className="flex items-center gap-4 shrink-0">
-          <div className="w-[400px]">
+    <div className="flex flex-col gap-6 text-gray-900">
+      <div className="flex flex-col gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+        <div className="flex items-center justify-between">
+          <div>
+            <H2 className="text-xl">Kontak Client</H2>
+            <Subtext className="text-[10px] uppercase tracking-tight">Kelola daftar kontak person client.</Subtext>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => {
+                setForm({ salutation: '', name: '', client_company_id: null, email: '', whatsapp: '' });
+                setIsModalOpen(true);
+              }}
+              leftIcon={<Plus size={14} strokeWidth={3} />}
+              className="!px-6 py-2.5 text-[10px] uppercase tracking-tight shadow-lg shadow-emerald-100"
+              variant="success"
+              size="sm"
+            >
+              Client Baru
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-gray-50">
+          <div className="w-[400px] shrink-0">
             <SearchInput
               placeholder="Cari client atau perusahaan..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="rounded-xl border-gray-100 shadow-none bg-gray-50/30"
             />
           </div>
-          {selectedIds.length > 0 && (
-            <Button
-              onClick={() => setIsConfirmBulkOpen(true)}
-              className="px-4 py-3 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl  text-[10px] uppercase tracking-tight flex items-center gap-2 hover:bg-rose-600 hover:text-white transition-all shadow-sm"
-            >
-              <Trash2 size={14} /> Hapus {selectedIds.length} Client
-            </Button>
-          )}
+          <div className="flex items-center gap-3 shrink-0 ml-auto">
+            {selectedIds.length > 0 && (
+              <Button
+                onClick={() => setIsConfirmBulkOpen(true)}
+                className="px-4 py-2.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl text-[10px] uppercase tracking-tight flex items-center gap-2 hover:bg-rose-600 hover:text-white transition-all shadow-sm"
+              >
+                <Trash2 size={14} /> Hapus {selectedIds.length} Client
+              </Button>
+            )}
+          </div>
         </div>
-        <Button
-          onClick={() => {
-            setForm({ salutation: '', name: '', client_company_id: null, email: '', whatsapp: '' });
-            setIsModalOpen(true);
-          }}
-          className="px-6 py-3.5 bg-emerald-600 text-white rounded-xl  text-[10px] uppercase tracking-tight flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 hover:bg-emerald-700 transition-all active:scale-95 shrink-0 ml-auto"
-        >
-          <Plus size={14} strokeWidth={3} /> Client Baru
-        </Button>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm flex-1 min-h-[400px]">
-        <div className="overflow-x-auto h-full custom-scrollbar">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm h-[80vh] mb-4 flex flex-col overflow-hidden">
+        <div className="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
           <Table className="w-full text-left border-collapse">
             <TableHeader className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur-sm">
               <TableRow>

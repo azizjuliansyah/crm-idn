@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Select, Textarea, Button, H1, Subtext, Label } from '@/components/ui';
+import { Textarea, Button, H1, Subtext, Label, ComboBox } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -125,18 +125,17 @@ export const InvoiceRequestFormView: React.FC<Props> = ({ company, user, onNavig
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
         <form onSubmit={handleSave} className="p-10 space-y-8">
           <div className="space-y-6">
-            <Select
+            <ComboBox
               label="Pilih Client Utama"
               value={clientId}
-              onChange={e => { setClientId(e.target.value); setDocId(''); }}
-              className="!h-14 "
-              required
-            >
-              <option value="">-- Pilih Client --</option>
-              {clients.map(c => (
-                <option key={c.id} value={c.id}>{c.name} ({c.client_company?.name || 'Personal'})</option>
-              ))}
-            </Select>
+              onChange={(val: string | number) => { setClientId(val.toString()); setDocId(''); }}
+              options={clients.map(c => ({
+                value: c.id.toString(),
+                label: c.name,
+                sublabel: c.client_company?.name || 'Personal'
+              }))}
+              className="h-14 font-medium"
+            />
 
             <div className="space-y-3">
               <Label className="uppercase tracking-tight ml-1">Referensi Dokumen Asal</Label>
@@ -167,18 +166,17 @@ export const InvoiceRequestFormView: React.FC<Props> = ({ company, user, onNavig
                 </Button>
               </div>
 
-              <Select
+              <ComboBox
                 value={docId}
-                onChange={e => setDocId(e.target.value)}
+                onChange={(val: string | number) => setDocId(val.toString())}
                 disabled={!clientId}
-                className="!h-14  disabled:opacity-30"
-                required
-              >
-                <option value="">-- Pilih Dokumen --</option>
-                {filteredDocs.map((d: any) => (
-                  <option key={d.id} value={d.id}>{d.number} - Rp {d.total.toLocaleString('id-ID')}</option>
-                ))}
-              </Select>
+                options={filteredDocs.map((d: any) => ({
+                  value: d.id.toString(),
+                  label: d.number,
+                  sublabel: `Rp ${d.total.toLocaleString('id-ID')}`
+                }))}
+                className="h-14 font-medium disabled:opacity-30"
+              />
               {!clientId && <Subtext className="text-[9px] text-gray-400 italic px-2">Silakan pilih client terlebih dahulu untuk melihat daftar dokumen.</Subtext>}
               {clientId && filteredDocs.length === 0 && <Subtext className="text-[9px] text-rose-500  px-2">Tidak ada dokumen {refType} yang tersedia untuk client ini.</Subtext>}
             </div>

@@ -37,17 +37,17 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({ session, onNavigat
             </Link>
           ) : (
             <>
-              <Link
+              {/* <Link
                 href="/login"
                 className="hidden md:flex px-6 py-3 text-gray-600  text-xs uppercase tracking-tight hover:text-blue-600 transition-colors"
               >
                 Masuk
-              </Link>
+              </Link> */}
               <Link
-                href="/login?register=true"
+                href="/login"
                 className="px-6 py-3 bg-blue-600 text-white rounded-xl  text-xs uppercase tracking-tight hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 flex items-center gap-2"
               >
-                Mulai Gratis <ArrowRight size={16} />
+                Masuk <ArrowRight size={16} />
               </Link>
             </>
           )}

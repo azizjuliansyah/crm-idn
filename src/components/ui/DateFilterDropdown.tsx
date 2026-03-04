@@ -66,21 +66,21 @@ export const DateFilterDropdown: React.FC<DateFilterDropdownProps> = ({
                     setIsOpen(!isOpen);
                 }}
                 className={`
-          flex items-center gap-2 px-3 py-2 bg-white border rounded-xl transition-all
-          ${isOpen ? 'border-blue-500 ring-2 ring-blue-50/50' : 'border-gray-100 hover:bg-gray-50/50'}
+          flex items-center gap-3 px-5 py-3.5 bg-white border rounded-md transition-all
+          ${isOpen ? 'border-blue-500 ring-4 ring-blue-50/50' : 'border-gray-200 hover:border-gray-300'}
         `}
             >
-                <Calendar size={14} className="text-gray-400 shrink-0" />
-                <span className="text-[10px] uppercase tracking-tight text-gray-500 font-medium whitespace-nowrap">
+                <Calendar size={14} className="text-gray-300 shrink-0" />
+                <span className="text-[10px] font-medium text-gray-900 uppercase tracking-tight whitespace-nowrap">
                     {handleDisplayLabel()}
                 </span>
-                <ChevronDown size={14} className={`text-gray-400 transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180 text-blue-500' : ''}`} />
+                <ChevronDown size={14} className={`text-gray-300 transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180 text-blue-500' : ''}`} />
             </button>
 
             {isOpen && (
                 <div className="absolute top-[calc(100%+8px)] right-0 w-[280px] bg-white border border-gray-100 rounded-xl shadow-xl z-[100] py-3 animate-in fade-in zoom-in duration-200 origin-top-right">
                     <div className="px-3 pb-2 border-b border-gray-50 mb-2">
-                        <span className="text-[10px] font-bold text-gray-900 uppercase tracking-tight ml-1">Filter Tanggal</span>
+                        <span className="text-[10px] font-medium text-gray-900 uppercase tracking-tight ml-1">Filter Tanggal</span>
                     </div>
 
                     <div className="max-h-[300px] overflow-y-auto px-2 space-y-1">

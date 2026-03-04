@@ -70,7 +70,7 @@ export const KnowledgeBaseCategoryModal: React.FC<Props> = ({
               type="submit"
               disabled={isProcessing || !name} 
               isLoading={isProcessing}
-              className="px-6 h-[42px] bg-indigo-600 text-white rounded-xl  text-[10px] uppercase shadow-lg shadow-indigo-100 active:scale-95 transition-all"
+              variant='primary'
             >
               Tambah
             </Button>

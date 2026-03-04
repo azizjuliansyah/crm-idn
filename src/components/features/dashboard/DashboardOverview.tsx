@@ -328,7 +328,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
               variant="ghost"
               size="sm"
               leftIcon={<TrendingUp size={12} className="group-hover:translate-y-[-1px] transition-transform" />}
-              className="text-[10px]  text-blue-600 uppercase tracking-tight"
+              className="text-[10px] font-medium text-blue-600 uppercase tracking-tight"
             >
               Sinkronisasi Ulang
             </Button>
@@ -345,7 +345,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
             </div>
             <H3 className="normal-case text-lg  text-gray-900 tracking-tight">Prospek Terbaru</H3>
           </div>
-          <Subtext className="text-[10px]  text-gray-400 uppercase tracking-tight">Pembaruan Otomatis</Subtext>
+          <Subtext className="text-[10px] font-medium text-gray-400 uppercase tracking-tight">Pembaruan Otomatis</Subtext>
         </div>
         <Table>
           <TableHeader>

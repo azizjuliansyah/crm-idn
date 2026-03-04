@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Input, Select, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, Modal, Avatar, Badge, SearchInput } from '@/components/ui';
+import { Input, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, Modal, Avatar, Badge, SearchInput, ComboBox } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -197,7 +197,7 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
   );
 
   return (
-    <div className="flex flex-col gap-5 h-full overflow-hidden text-gray-900">
+    <div className="flex flex-col gap-6 text-gray-900">
       <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0 overflow-x-auto custom-scrollbar">
         <div className="flex items-center gap-4 flex-1">
           <Button
@@ -238,56 +238,58 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden flex flex-col">
         {viewMode === 'table' ? (
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm flex flex-col h-full">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableCell isHeader>Daftar Pekerjaan</TableCell>
-                  <TableCell isHeader>PIC</TableCell>
-                  <TableCell isHeader>Timeline</TableCell>
-                  <TableCell isHeader>Status</TableCell>
-                  <TableCell isHeader className="text-center">Aksi</TableCell>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredTasks.map(t => (
-                  <TableRow key={t.id} className="hover:bg-gray-50/50 group transition-colors">
-                    <TableCell>
-                      <H2 className="text-sm text-gray-900 tracking-tight">{t.title}</H2>
-                      {t.description && <Subtext className="text-[10px] text-gray-400 mt-0.5 line-clamp-1 italic tracking-tight">{t.description}</Subtext>}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Avatar name={t.assigned_profile?.full_name} src={t.assigned_profile?.avatar_url} size="sm" className="bg-emerald-50 text-emerald-600 border border-emerald-100 " />
-                        <Subtext className="text-[11px] text-gray-700 tracking-tight">{t.assigned_profile?.full_name || 'Unassigned'}</Subtext>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <Subtext className="text-[10px]  text-gray-500 flex items-center gap-1.5"><Calendar size={10} /> {t.start_date ? new Date(t.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}</Subtext>
-                        <Subtext className="text-[10px]  text-gray-500 flex items-center gap-1.5"><Clock size={10} /> {t.end_date ? new Date(t.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}</Subtext>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="px-3 py-1 text-[9px]  uppercase rounded-full">
-                        {stages.find(s => s.id === t.stage_id)?.name || 'Unknown'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(t)} className="!p-2 text-blue-500 hover:bg-blue-50 border border-transparent hover:border-blue-100"><Edit2 size={14} /></Button>
-                        <Button variant="ghost" size="sm" onClick={() => setConfirmDelete({ isOpen: true, id: t.id, title: t.title })} className="!p-2 text-rose-500 hover:bg-rose-50 border border-transparent hover:border-rose-100"><Trash2 size={14} /></Button>
-                      </div>
-                    </TableCell>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col flex-1 overflow-hidden">
+            <div className="overflow-x-auto overflow-y-auto h-full scrollbar-hide">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableCell isHeader>Daftar Pekerjaan</TableCell>
+                    <TableCell isHeader>PIC</TableCell>
+                    <TableCell isHeader>Timeline</TableCell>
+                    <TableCell isHeader>Status</TableCell>
+                    <TableCell isHeader className="text-center">Aksi</TableCell>
                   </TableRow>
-                ))}
-                {filteredTasks.length === 0 && (
-                  <TableEmpty colSpan={5} message="Belum ada task pada proyek ini" />
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredTasks.map(t => (
+                    <TableRow key={t.id} className="hover:bg-gray-50/50 group transition-colors">
+                      <TableCell>
+                        <H2 className="text-sm text-gray-900 tracking-tight">{t.title}</H2>
+                        {t.description && <Subtext className="text-[10px] text-gray-400 mt-0.5 line-clamp-1 italic tracking-tight">{t.description}</Subtext>}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Avatar name={t.assigned_profile?.full_name} src={t.assigned_profile?.avatar_url} size="sm" className="bg-emerald-50 text-emerald-600 border border-emerald-100 " />
+                          <Subtext className="text-[11px] text-gray-700 tracking-tight">{t.assigned_profile?.full_name || 'Unassigned'}</Subtext>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <Subtext className="text-[10px]  text-gray-500 flex items-center gap-1.5"><Calendar size={10} /> {t.start_date ? new Date(t.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}</Subtext>
+                          <Subtext className="text-[10px]  text-gray-500 flex items-center gap-1.5"><Clock size={10} /> {t.end_date ? new Date(t.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}</Subtext>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="px-3 py-1 text-[9px]  uppercase rounded-full">
+                          {stages.find(s => s.id === t.stage_id)?.name || 'Unknown'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(t)} className="!p-2 text-blue-500 hover:bg-blue-50 border border-transparent hover:border-blue-100"><Edit2 size={14} /></Button>
+                          <Button variant="ghost" size="sm" onClick={() => setConfirmDelete({ isOpen: true, id: t.id, title: t.title })} className="!p-2 text-rose-500 hover:bg-rose-50 border border-transparent hover:border-rose-100"><Trash2 size={14} /></Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {filteredTasks.length === 0 && (
+                    <TableEmpty colSpan={5} message="Belum ada task pada proyek ini" />
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         ) : (
           <div className="flex gap-4 items-start h-full overflow-x-auto pb-4 scrollbar-hide">
@@ -369,41 +371,43 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
             value={form.title}
             onChange={e => setForm({ ...form, title: e.target.value })}
             placeholder="Tulis tugas spesifik..."
-            className="rounded-xl"
+            className="rounded-md"
             required
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <Select
+            <ComboBox
               label="Tahapan Task"
               value={form.stage_id}
-              onChange={e => setForm({ ...form, stage_id: e.target.value })}
-              className="rounded-xl"
-            >
-              {stages.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </Select>
-            <Select
+              onChange={(val: string | number) => setForm({ ...form, stage_id: val.toString() })}
+              options={stages.map(s => ({ value: s.id, label: s.name }))}
+              hideSearch={true}
+              className="rounded-md"
+            />
+            <ComboBox
               label="Penanggung Jawab (PIC)"
               value={form.assigned_id}
-              onChange={e => setForm({ ...form, assigned_id: e.target.value })}
-              className="rounded-xl"
-            >
-              <option value="">-- Pilih PIC --</option>
-              {members.map(m => <option key={m.profile?.id} value={m.profile?.id}>{m.profile?.full_name}</option>)}
-            </Select>
+              onChange={(val: string | number) => setForm({ ...form, assigned_id: val.toString() })}
+              options={members.map(m => ({
+                value: m.profile?.id.toString() || '',
+                label: m.profile?.full_name || 'Tanpa Nama',
+                sublabel: m.profile?.email
+              }))}
+              className="rounded-md"
+            />
             <Input
               label="Tanggal Mulai"
               type="date"
               value={form.start_date}
               onChange={e => setForm({ ...form, start_date: e.target.value })}
-              className="rounded-xl"
+              className="rounded-md"
             />
             <Input
               label="Tenggat Waktu"
               type="date"
               value={form.end_date}
               onChange={e => setForm({ ...form, end_date: e.target.value })}
-              className="rounded-xl"
+              className="rounded-md"
             />
           </div>
 
@@ -434,6 +438,6 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
         isProcessing={isProcessing}
       />
 
-    </div>
+    </div >
   );
 };
