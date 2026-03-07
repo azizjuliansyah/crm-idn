@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Input, Textarea, Button, H3, Subtext, Card, ComboBox } from '@/components/ui';
+import { Input, Textarea, Button, H2, Subtext, ComboBox, Toast, ToastType } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { Company, AiSetting } from '@/lib/types';
 import { Loader2, Save, BrainCircuit, Check, AlertTriangle, Cpu } from 'lucide-react';
-import { NotificationModal } from '@/components/shared/modals/NotificationModal';
+// Removed legacy NotificationModal import
 
 interface Props {
   company: Company;
@@ -18,16 +18,22 @@ export const AiSettingsView: React.FC<Props> = ({ company }) => {
   const [modelName, setModelName] = useState('gemini-2.0-flash');
   const [instruction, setInstruction] = useState('');
 
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' | 'warning' }>({
-    isOpen: false, title: '', message: '', type: 'success'
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
   });
 
+  const showToast = (message: string, type: ToastType = 'success') => {
+    setToast({ isOpen: true, message, type });
+  };
+
   useEffect(() => {
-    fetchSettings();
+    fetchSettings(true);
   }, [company.id]);
 
-  const fetchSettings = async () => {
-    setLoading(true);
+  const fetchSettings = async (isInitial = false) => {
+    if (isInitial) setLoading(true);
     try {
       const { data } = await supabase
         .from('ai_settings')
@@ -42,7 +48,7 @@ export const AiSettingsView: React.FC<Props> = ({ company }) => {
         setInstruction(data.system_instruction || '');
       }
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   };
 
@@ -70,31 +76,29 @@ export const AiSettingsView: React.FC<Props> = ({ company }) => {
       }
 
       await fetchSettings();
-      setNotification({ isOpen: true, title: 'Berhasil', message: 'Konfigurasi Gemini AI berhasil disimpan.', type: 'success' });
+      showToast('Konfigurasi Gemini AI berhasil disimpan.');
     } catch (err: any) {
-      setNotification({ isOpen: true, title: 'Gagal', message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-indigo-600 mb-4" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Memuat Konfigurasi AI...</Subtext></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-indigo-600 mb-4" /><Subtext className="text-[10px]  uppercase  text-gray-400">Memuat Konfigurasi AI...</Subtext></div>;
 
   return (
-    <div className="max-w-3xl">
-      <Card
-        title={
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
-              <BrainCircuit size={24} />
-            </div>
-            <div>
-              <H3 className="text-xl normal-case">Konfigurasi Gemini AI</H3>
-              <Subtext>Hubungkan workspace Anda dengan Google Gemini untuk fitur cerdas.</Subtext>
-            </div>
-          </div>
-        }
-      >
+    <div className="max-w-3xl flex flex-col space-y-6">
+      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+        <div>
+          <H2 className="text-xl ">Konfigurasi Gemini AI</H2>
+          <Subtext className="text-[10px] uppercase font-semibold text-gray-400">Hubungkan workspace Anda dengan Google Gemini untuk fitur cerdas.</Subtext>
+        </div>
+        <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shadow-sm">
+          <BrainCircuit size={20} />
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <form onSubmit={handleSave} className="p-8 space-y-6">
           <ComboBox
             label="Model Gemini"
@@ -133,19 +137,19 @@ export const AiSettingsView: React.FC<Props> = ({ company }) => {
               isLoading={isProcessing}
               leftIcon={!isProcessing && <Save size={16} />}
               variant='primary'
+              className="!px-8 shadow-lg shadow-indigo-100"
             >
               Simpan Konfigurasi
             </Button>
           </div>
         </form>
-      </Card>
+      </div>
 
-      <NotificationModal
-        isOpen={notification.isOpen}
-        onClose={() => setNotification({ ...notification, isOpen: false })}
-        title={notification.title}
-        message={notification.message}
-        type={notification.type}
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

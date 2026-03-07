@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Button, Table, TableHeader, TableBody, TableRow, TableCell, H2, H3, Subtext, Label, Modal, EmptyState, SearchInput, Badge, ComboBox } from '@/components/ui';
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, H2, H3, Subtext, Label, Modal, EmptyState, SearchInput, Badge, ComboBox, Toast, ToastType } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -14,10 +14,12 @@ import {
   FileDown, FileCheck, FilePlus,
   Clock
 } from 'lucide-react';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
+import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { generateTemplate1, generateTemplate5, generateTemplate6 } from '@/lib/pdf-templates';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface Props {
   company: Company;
@@ -39,6 +41,7 @@ const getImgDimensions = (url: string): Promise<{ width: number, height: number,
 
 export const QuotationsView: React.FC<Props> = ({ company }) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [requestCategories, setRequestCategories] = useState<SalesRequestCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,8 +52,10 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; number: string }>({ isOpen: false, id: null, number: '' });
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
-    isOpen: false, title: '', message: '', type: 'success'
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
   });
   const [requestModal, setRequestModal] = useState<{ isOpen: boolean; quotationId: number | null; quotationStatus: string }>({ isOpen: false, quotationId: null, quotationStatus: '' });
 
@@ -85,6 +90,20 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    const success = searchParams.get('success');
+    if (success) {
+      const message = success === 'created'
+        ? 'Penawaran baru berhasil dibuat'
+        : 'Penawaran berhasil diperbarui';
+      setToast({ isOpen: true, message, type: 'success' });
+
+      // Clean up the URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
+    }
+  }, [searchParams]);
 
   const uniqueClients = useMemo(() => {
     const map = new Map();
@@ -135,8 +154,8 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
     });
   };
 
-  const showNotification = (title: string, message: string, type: 'success' | 'error' = 'success') => {
-    setNotification({ isOpen: true, title, message, type });
+  const showNotification = (title: string, message: string, type: ToastType = 'success') => {
+    setToast({ isOpen: true, message, type });
   };
 
   const executeDelete = async () => {
@@ -484,7 +503,7 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
     doc.save(`${q.number}.pdf`);
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4"><Loader2 className="animate-spin text-blue-600" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Sinkronisasi Penawaran...</Subtext></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4"><Loader2 className="animate-spin text-blue-600" /><Subtext className="text-[10px]  uppercase  text-gray-400">Sinkronisasi Penawaran...</Subtext></div>;
 
   return (
     <div className="flex flex-col gap-6 text-gray-900">
@@ -492,13 +511,13 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
         <div className="flex items-center justify-between">
           <div>
             <H2 className="text-xl ">Daftar Penawaran</H2>
-            <Subtext className="text-[10px]  uppercase tracking-tight">Kelola dan pantau seluruh penawaran pelanggan.</Subtext>
+            <Subtext className="text-[10px]  uppercase ">Kelola dan pantau seluruh penawaran pelanggan.</Subtext>
           </div>
           <div className="flex items-center gap-3">
             <Button
               onClick={() => router.push('/dashboard/sales/quotations/create')}
               leftIcon={<Plus size={14} strokeWidth={3} />}
-              className="!px-6 py-2.5 text-[10px] uppercase tracking-tight shadow-lg shadow-blue-100"
+              className="!px-6 py-2.5 text-[10px] uppercase  shadow-lg shadow-blue-100"
               variant="primary"
               size="sm"
             >
@@ -526,7 +545,7 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
               ]}
               className="w-40"
               hideSearch={true}
-              placeholderSize="text-[10px] font-bold text-gray-900 uppercase tracking-tight"
+              placeholderSize="text-[10px] font-bold text-gray-900 uppercase "
             />
           </div>
         </div>
@@ -566,8 +585,8 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center  text-[10px] uppercase shadow-sm border border-indigo-100">{q.client?.name.charAt(0)}</div>
                       <div>
-                        <Subtext className="text-xs text-gray-900 tracking-tight">{q.client?.name}</Subtext>
-                        <Subtext className="text-[10px] !text-gray-400 mt-1 uppercase tracking-tight italic">{q.client?.client_company?.name || 'Personal'}</Subtext>
+                        <Subtext className="text-xs text-gray-900 ">{q.client?.name}</Subtext>
+                        <Subtext className="text-[10px] !text-gray-400 mt-1 uppercase  italic">{q.client?.client_company?.name || 'Personal'}</Subtext>
                       </div>
                     </div>
                   </TableCell>
@@ -584,42 +603,30 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      <ActionButton
+                        icon={FileDown}
+                        variant="emerald"
                         onClick={() => handleDownloadPDF(q)}
-                        className="!p-2 !text-emerald-500 hover:!bg-emerald-50 rounded-lg transition-colors"
                         title="Unduh PDF"
-                      >
-                        <FileDown size={14} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      />
+                      <ActionButton
+                        icon={FilePlus}
+                        variant="indigo"
                         onClick={() => setRequestModal({ isOpen: true, quotationId: q.id, quotationStatus: q.status })}
-                        className="!p-2 !text-indigo-500 hover:!bg-indigo-50 rounded-lg transition-colors"
                         title="Buat Request Tambahan"
-                      >
-                        <FilePlus size={14} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      />
+                      <ActionButton
+                        icon={Edit2}
+                        variant="blue"
                         onClick={() => router.push(`/dashboard/sales/quotations/${q.id}`)}
-                        className="!p-2 !text-blue-500 hover:!bg-blue-50 rounded-lg transition-colors"
                         title="Edit"
-                      >
-                        <Edit2 size={14} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      />
+                      <ActionButton
+                        icon={Trash2}
+                        variant="rose"
                         onClick={() => setConfirmDelete({ isOpen: true, id: q.id, number: q.number })}
-                        className="!p-2 !text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg"
                         title="Hapus"
-                      >
-                        <Trash2 size={14} />
-                      </Button>
+                      />
                     </div>
                   </TableCell>
                 </TableRow>
@@ -636,65 +643,18 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
         </div>
       </div>
 
-      <Modal
+      <ConfirmDeleteModal
         isOpen={confirmDelete.isOpen}
         onClose={() => setConfirmDelete({ isOpen: false, id: null, number: '' })}
+        onConfirm={executeDelete}
         title="Hapus Penawaran"
-        size="sm"
-      >
-        <div className="flex flex-col items-center py-6 text-center">
-          <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mb-6">
-            <AlertTriangle size={32} />
-          </div>
-          <Subtext className="text-lg  text-gray-900 tracking-tight">Hapus {confirmDelete.number}?</Subtext>
-          <Subtext className="text-sm text-gray-500 font-medium leading-relaxed mt-2 mb-8">
-            Tindakan ini permanen. Seluruh data item rincian pajak pada penawaran ini akan hilang selamanya.
-          </Subtext>
-          <div className="flex w-full gap-3">
-            <Button
-              variant="secondary"
-              onClick={() => setConfirmDelete({ isOpen: false, id: null, number: '' })}
-              className="flex-1 !py-4"
-            >
-              Batal
-            </Button>
-            <Button
-              variant="danger"
-              onClick={executeDelete}
-              isLoading={isProcessing}
-              leftIcon={<Trash2 size={14} />}
-              className="flex-1 !py-4"
-            >
-              Ya, Hapus
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        itemName={confirmDelete.number}
+        description="Tindakan ini permanen. Seluruh data item rincian pajak pada penawaran ini akan hilang selamanya."
+        isProcessing={isProcessing}
+        variant="horizontal"
+      />
 
 
-
-      <Modal
-        isOpen={notification.isOpen}
-        onClose={() => setNotification({ ...notification, isOpen: false })}
-        title=""
-        size="sm"
-      >
-        <div className="flex flex-col items-center py-6 text-center">
-          <div className={`w-16 h-16 rounded-xl flex items-center justify-center mb-6 ${notification.type === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-            {notification.type === 'success' ? <CheckCircle2 size={32} /> : <X size={32} />}
-          </div>
-          <H3 className="text-lg  text-gray-900 mb-2">{notification.title}</H3>
-          <Subtext className="text-sm text-gray-500 font-medium leading-relaxed mb-8">
-            {notification.message}
-          </Subtext>
-          <Button
-            onClick={() => setNotification({ ...notification, isOpen: false })}
-            className="w-full !py-4 bg-gray-900 hover:bg-black text-white"
-          >
-            Tutup
-          </Button>
-        </div>
-      </Modal>
 
       <Modal
         isOpen={requestModal.isOpen}
@@ -729,6 +689,13 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
           ))}
         </div>
       </Modal>
+
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 };

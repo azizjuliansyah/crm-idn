@@ -71,9 +71,7 @@ export function KanbanBoard<T extends KanbanItem>({
 
             <div className="flex gap-4 items-start h-full overflow-x-auto pb-4 custom-scrollbar">
                 {stages.map((stage) => {
-                    // Try to map by string id first (since we passed stage.name.toLowerCase() as id in some views), fallback to strict stringified id
                     const sKey = typeof stage.id === 'string' ? stage.id : stage.id.toString();
-
                     const columnItems = itemsByStatus[sKey] || [];
 
                     return (
@@ -81,7 +79,6 @@ export function KanbanBoard<T extends KanbanItem>({
                             key={stage.id}
                             onDragOver={(e) => {
                                 e.preventDefault();
-                                // Only drop on column if we are not dropping on a specific card
                                 if (!(e.target as HTMLElement).closest('.kanban-card')) {
                                     handleDragOver(e, sKey);
                                 }
@@ -94,59 +91,57 @@ export function KanbanBoard<T extends KanbanItem>({
                             }}
                             className="flex flex-col gap-3 min-w-[260px] w-[260px] h-full transition-all"
                         >
-                            <div className={`p-4 ${stage.colorClass || 'bg-blue-500'} rounded-xl shadow-md flex items-center justify-between`}>
-                                <Label className="text-[10px] uppercase tracking-tight text-white">{stage.name}</Label>
-                                <Label className="text-[10px] text-white bg-white/20 px-2.5 py-0.5 rounded-full">{columnItems.length}</Label>
+                            <div className={`p-4 ${stage.colorClass || 'bg-blue-500'} rounded-2xl shadow-lg shadow-black/5 flex items-center justify-between border-b-4 border-black/10`}>
+                                <Label className="text-[10px] uppercase text-white font-semibold tracking-wider">{stage.name}</Label>
+                                <div className="flex items-center justify-center bg-white/20 px-2.5 py-1 rounded-lg border border-white/20">
+                                    <Label className="text-[10px] text-white font-medium">{columnItems.length}</Label>
+                                </div>
                             </div>
 
-                            <div className={`flex-1 p-2 rounded-2xl border-2 border-dashed transition-all overflow-y-auto custom-scrollbar ${dropTarget?.stage === sKey && dropTarget?.index === undefined ? 'bg-blue-50/50 border-blue-300' : 'bg-gray-50/50 border-gray-200'}`}>
-
-                                {/* Ensure an empty column has a min height to drop onto */}
-                                {columnItems.length === 0 && (
-                                    <div className="min-h-[100px] w-full"></div>
-                                )}
-
-                                {columnItems.map((item, index) => (
-                                    <div key={item.id} className="relative kanban-card mb-2">
-                                        {/* Drop Indicator Above */}
-                                        {dropTarget?.stage === sKey && dropTarget?.index === index && (
-                                            <div className="absolute -top-1.5 left-0 right-0 h-1 bg-blue-500 rounded-full z-50 pointer-events-none"></div>
-                                        )}
-
-                                        <div
-                                            draggable
-                                            onDragStart={(e) => handleDragStart(e, item.id)}
-                                            onDragEnd={handleDragEnd}
-                                            onDragOver={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-
-                                                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                                const isTopHalf = (e.clientY - rect.top) < (rect.height / 2);
-                                                const targetIndex = isTopHalf ? index : index + 1;
-
-                                                handleDragOver(e, sKey, targetIndex);
-                                            }}
-                                            onDrop={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-
-                                                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                                const isTopHalf = (e.clientY - rect.top) < (rect.height / 2);
-                                                const targetIndex = isTopHalf ? index : index + 1;
-
-                                                handleDrop(e, sKey, targetIndex);
-                                            }}
-                                        >
-                                            {renderCard(item, draggedId === item.id)}
+                            <div className={`flex-1 min-h-0 relative rounded-2xl border-2 border-dashed transition-all overflow-hidden ${dropTarget?.stage === sKey && dropTarget?.index === undefined ? 'bg-blue-50/50 border-blue-300' : 'bg-gray-50/50 border-gray-200'}`}>
+                                <div className="absolute inset-0 overflow-y-auto custom-scrollbar p-2">
+                                    {columnItems.length === 0 && (
+                                        <div className="h-24 flex items-center justify-center border-2 border-dashed border-gray-100 rounded-2xl text-[9px] uppercase text-gray-200 tracking-[0.2em] font-medium">
+                                            Kosong
                                         </div>
+                                    )}
 
-                                        {/* Drop Indicator Below Last Item */}
-                                        {dropTarget?.stage === sKey && dropTarget?.index === index + 1 && index === columnItems.length - 1 && (
-                                            <div className="absolute -bottom-0.5 left-0 right-0 h-1 bg-blue-500 rounded-full z-50 pointer-events-none"></div>
-                                        )}
-                                    </div>
-                                ))}
+                                    {columnItems.map((item, index) => (
+                                        <div key={item.id} className="relative kanban-card mb-2">
+                                            {dropTarget?.stage === sKey && dropTarget?.index === index && (
+                                                <div className="absolute -top-1.5 left-0 right-0 h-1 bg-blue-500 rounded-full z-50 pointer-events-none"></div>
+                                            )}
+
+                                            <div
+                                                draggable
+                                                onDragStart={(e) => handleDragStart(e, item.id)}
+                                                onDragEnd={handleDragEnd}
+                                                onDragOver={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                                    const isTopHalf = (e.clientY - rect.top) < (rect.height / 2);
+                                                    const targetIndex = isTopHalf ? index : index + 1;
+                                                    handleDragOver(e, sKey, targetIndex);
+                                                }}
+                                                onDrop={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                                    const isTopHalf = (e.clientY - rect.top) < (rect.height / 2);
+                                                    const targetIndex = isTopHalf ? index : index + 1;
+                                                    handleDrop(e, sKey, targetIndex);
+                                                }}
+                                            >
+                                                {renderCard(item, draggedId === item.id)}
+                                            </div>
+
+                                            {dropTarget?.stage === sKey && dropTarget?.index === index + 1 && index === columnItems.length - 1 && (
+                                                <div className="absolute -bottom-0.5 left-0 right-0 h-1 bg-blue-500 rounded-full z-50 pointer-events-none"></div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     );

@@ -22,10 +22,7 @@ export default function EditProformaPage({ params }: { params: Promise<{ id: str
           router.push('/dashboard/sales/proformas');
         }
       }}
-      onSaveSuccess={(id) => {
-        // Stay on page after update, or maybe navigate back?
-        // Usually stay on page is better for updates
-      }}
+      onSaveSuccess={() => router.push('/dashboard/sales/proformas?success=updated')}
     />
   );
 }

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Button, Table, TableHeader, TableBody, TableRow, TableCell, H2, H3, Subtext, Label, Modal, EmptyState, SearchInput, Badge, ComboBox } from '@/components/ui';
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, H2, H3, Subtext, Label, Modal, EmptyState, SearchInput, Badge, ComboBox, Toast, ToastType } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -14,11 +14,12 @@ import {
   FileDown, FileText, FilePlus,
   Clock
 } from 'lucide-react';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { generateTemplate1, generateTemplate5, generateTemplate6 } from '@/lib/pdf-templates';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface Props {
   company: Company;
@@ -39,6 +40,7 @@ const getImgDimensions = (url: string): Promise<{ width: number, height: number,
 
 export const ProformasView: React.FC<Props> = ({ company }) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [proformas, setProformas] = useState<ProformaInvoice[]>([]);
   const [requestCategories, setRequestCategories] = useState<SalesRequestCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,8 +51,10 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; number: string }>({ isOpen: false, id: null, number: '' });
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
-    isOpen: false, title: '', message: '', type: 'success'
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
   });
   const [requestModal, setRequestModal] = useState<{ isOpen: boolean; proformaId: number | null; proformaStatus: string }>({ isOpen: false, proformaId: null, proformaStatus: '' });
 
@@ -85,6 +89,20 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    const success = searchParams.get('success');
+    if (success) {
+      const message = success === 'created'
+        ? 'Proforma baru berhasil dibuat'
+        : 'Proforma berhasil diperbarui';
+      setToast({ isOpen: true, message, type: 'success' });
+
+      // Clean up the URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
+    }
+  }, [searchParams]);
 
   const uniqueClients = useMemo(() => {
     const map = new Map();
@@ -135,8 +153,8 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
     });
   };
 
-  const showNotification = (title: string, message: string, type: 'success' | 'error' = 'success') => {
-    setNotification({ isOpen: true, title, message, type });
+  const showNotification = (title: string, message: string, type: ToastType = 'success') => {
+    setToast({ isOpen: true, message, type });
   };
 
   const executeDelete = async () => {
@@ -310,7 +328,7 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
     doc.save(`${p.number}.pdf`);
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4"><Loader2 className="animate-spin text-blue-600" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Sinkronisasi Proforma...</Subtext></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4"><Loader2 className="animate-spin text-blue-600" /><Subtext className="text-[10px]  uppercase  text-gray-400">Sinkronisasi Proforma...</Subtext></div>;
 
   return (
     <div className="flex flex-col gap-6 text-gray-900">
@@ -318,13 +336,13 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
         <div className="flex items-center justify-between">
           <div>
             <H2 className="text-xl ">Daftar Proforma Invoice</H2>
-            <Subtext className="text-[10px]  uppercase tracking-tight">Kelola dan pantau seluruh proforma pelanggan.</Subtext>
+            <Subtext className="text-[10px]  uppercase ">Kelola dan pantau seluruh proforma pelanggan.</Subtext>
           </div>
           <div className="flex items-center gap-3">
             <Button
               onClick={() => router.push('/dashboard/sales/proformas/create')}
               leftIcon={<Plus size={14} strokeWidth={3} />}
-              className="!px-6 py-2.5 text-[10px] uppercase tracking-tight shadow-lg shadow-blue-100"
+              className="!px-6 py-2.5 text-[10px] uppercase  shadow-lg shadow-blue-100"
               variant="primary"
               size="sm"
             >
@@ -351,7 +369,7 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
                 ...uniqueClients.map(([id, name]) => ({ value: id.toString(), label: name.toUpperCase() }))
               ]}
               className="w-40"
-              placeholderSize="text-[10px] font-bold text-gray-900 uppercase tracking-tight"
+              placeholderSize="text-[10px] font-bold text-gray-900 uppercase "
             />
           </div>
         </div>
@@ -391,8 +409,8 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center  text-[10px] uppercase shadow-sm border border-indigo-100">{p.client?.name.charAt(0)}</div>
                       <div>
-                        <Subtext className="text-xs text-gray-900 tracking-tight">{p.client?.name}</Subtext>
-                        <Subtext className="text-[10px] !text-gray-400 mt-1 uppercase tracking-tight italic">{p.client?.client_company?.name || 'Personal'}</Subtext>
+                        <Subtext className="text-xs text-gray-900 ">{p.client?.name}</Subtext>
+                        <Subtext className="text-[10px] !text-gray-400 mt-1 uppercase  italic">{p.client?.client_company?.name || 'Personal'}</Subtext>
                       </div>
                     </div>
                   </TableCell>
@@ -404,18 +422,30 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => handleDownloadPDF(p)} className="!p-2 !text-emerald-500 hover:!bg-emerald-50 rounded-lg transition-colors" title="Unduh PDF"><FileDown size={14} /></Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      <ActionButton
+                        icon={FileDown}
+                        variant="emerald"
+                        onClick={() => handleDownloadPDF(p)}
+                        title="Unduh PDF"
+                      />
+                      <ActionButton
+                        icon={FilePlus}
+                        variant="indigo"
                         onClick={() => setRequestModal({ isOpen: true, proformaId: p.id, proformaStatus: p.status })}
-                        className="!p-2 !text-indigo-500 hover:!bg-indigo-50 rounded-lg transition-colors"
                         title="Buat Request Berdasarkan Proforma"
-                      >
-                        <FilePlus size={14} />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => router.push(`/dashboard/sales/proformas/${p.id}`)} className="!p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" title="Edit"><Edit2 size={14} /></Button>
-                      <Button variant="ghost" size="sm" onClick={() => setConfirmDelete({ isOpen: true, id: p.id, number: p.number })} className="!p-2 !text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg" title="Hapus"><Trash2 size={14} /></Button>
+                      />
+                      <ActionButton
+                        icon={Edit2}
+                        variant="blue"
+                        onClick={() => router.push(`/dashboard/sales/proformas/${p.id}`)}
+                        title="Edit"
+                      />
+                      <ActionButton
+                        icon={Trash2}
+                        variant="rose"
+                        onClick={() => setConfirmDelete({ isOpen: true, id: p.id, number: p.number })}
+                        title="Hapus"
+                      />
                     </div>
                   </TableCell>
                 </TableRow>
@@ -443,16 +473,15 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
         title="Hapus Proforma"
         itemName={confirmDelete.number}
         description={`Apakah Anda yakin ingin menghapus proforma ${confirmDelete.number}?`}
+        variant="horizontal"
       />
 
-      <Modal isOpen={notification.isOpen} onClose={() => setNotification({ ...notification, isOpen: false })} title="" size="sm">
-        <div className="flex flex-col items-center py-6 text-center">
-          <div className={`w-16 h-16 rounded-xl flex items-center justify-center mb-6 ${notification.type === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>{notification.type === 'success' ? <CheckCircle2 size={32} /> : <X size={32} />}</div>
-          <H3 className="mb-2 !normal-case">{notification.title}</H3>
-          <Subtext className="mb-8">{notification.message}</Subtext>
-          <Button onClick={() => setNotification({ ...notification, isOpen: false })} className="w-full">Tutup</Button>
-        </div>
-      </Modal>
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
+      />
 
       <Modal
         isOpen={requestModal.isOpen}

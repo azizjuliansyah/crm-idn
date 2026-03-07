@@ -140,7 +140,7 @@ export const CompanyWizard: React.FC<Props> = ({ userId, onSuccess }) => {
           <div className="w-14 h-14 bg-white/10 rounded-lg flex items-center justify-center mb-8 backdrop-blur-md aspect-square">
             <Rocket size={28} />
           </div>
-          <H1 className="text-4xl  tracking-tight leading-[1.1] mb-6">
+          <H1 className="text-4xl   leading-[1.1] mb-6">
             Satu Langkah Lagi Menuju Bisnis Pintar.
           </H1>
           <Subtext className="text-blue-100 font-medium leading-relaxed opacity-90">
@@ -151,7 +151,7 @@ export const CompanyWizard: React.FC<Props> = ({ userId, onSuccess }) => {
         <div className="flex-1 flex items-center justify-center p-8 md:p-20 overflow-y-auto bg-white">
           <form onSubmit={handleSubmit} className="max-w-md w-full space-y-8">
             <div className="space-y-2">
-              <H2 className="text-3xl  text-gray-900 tracking-tight">Profil Perusahaan</H2>
+              <H2 className="text-3xl  text-gray-900 ">Profil Perusahaan</H2>
               <Subtext className="text-gray-400 font-medium text-sm">Mari buat identitas digital untuk perusahaan Anda.</Subtext>
             </div>
 
@@ -179,9 +179,9 @@ export const CompanyWizard: React.FC<Props> = ({ userId, onSuccess }) => {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Subtext className="text-xs  text-gray-900 uppercase tracking-tight">Logo (Opsional)</Subtext>
+                  <Subtext className="text-xs  text-gray-900 uppercase ">Logo (Opsional)</Subtext>
                   <div className="flex items-center gap-2">
-                    <label className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-medium uppercase tracking-tight cursor-pointer hover:bg-blue-100 transition-all active:scale-95">
+                    <label className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-medium uppercase  cursor-pointer hover:bg-blue-100 transition-all active:scale-95">
                       Upload
                       <input type="file" className="hidden" accept="image/*" onChange={handleUploadLogo} disabled={uploading || loading} />
                     </label>

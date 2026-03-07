@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Input, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Label, Modal, Card, EmptyState, SearchInput, ComboBox, H2 } from '@/components/ui';
+import { Input, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Label, Modal, Card, EmptyState, SearchInput, ComboBox, H2, Toast, ToastType, Badge } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -11,13 +11,16 @@ import {
   Plus, Search, Edit2, Trash2, Loader2, Package,
   Tags, Weight, FileText, Check, X, CheckCircle2
 } from 'lucide-react';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
+import { useSearchParams } from 'next/navigation';
 
 interface Props {
   company: Company | null;
 }
 
 export const ProductsView: React.FC<Props> = ({ company }) => {
+  const searchParams = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [units, setUnits] = useState<ProductUnit[]>([]);
@@ -26,6 +29,11 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null }>({ isOpen: false, id: null });
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
+  });
 
   // Quick Add State
   const [isAddingCat, setIsAddingCat] = useState(false);
@@ -62,6 +70,17 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
     fetchData();
   }, [fetchData]);
 
+  useEffect(() => {
+    const success = searchParams.get('success');
+    if (success) {
+      setToast({ isOpen: true, message: 'Data Berhasil Disimpan', type: 'success' });
+
+      // Clean up the URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
+    }
+  }, [searchParams]);
+
   const filteredProducts = useMemo(() => {
     return products.filter(p =>
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -83,7 +102,9 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
       setForm(prev => ({ ...prev, category_id: data.id }));
       setNewCatName('');
       setIsAddingCat(false);
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) {
+      setToast({ isOpen: true, message: err.message, type: 'error' });
+    }
   };
 
   const handleQuickAddUnit = async () => {
@@ -100,7 +121,9 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
       setForm(prev => ({ ...prev, unit_id: data.id }));
       setNewUnitName('');
       setIsAddingUnit(false);
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) {
+      setToast({ isOpen: true, message: err.message, type: 'error' });
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -117,7 +140,10 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
       else await supabase.from('products').insert(payload);
 
       setIsModalOpen(false);
+      setToast({ isOpen: true, message: `Produk berhasil ${form.id ? 'diperbarui' : 'ditambahkan'}`, type: 'success' });
       fetchData();
+    } catch (err: any) {
+      setToast({ isOpen: true, message: err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -131,7 +157,10 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
     if (!confirmDelete.id) return;
     try {
       await supabase.from('products').delete().eq('id', confirmDelete.id);
+      setToast({ isOpen: true, message: 'Produk berhasil dihapus', type: 'success' });
       fetchData();
+    } catch (err: any) {
+      setToast({ isOpen: true, message: err.message, type: 'error' });
     } finally {
       setConfirmDelete({ isOpen: false, id: null });
     }
@@ -141,7 +170,7 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num).replace('Rp', 'Rp ');
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-emerald-600 mb-4" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Sinkronisasi Katalog Produk...</Subtext></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-emerald-600 mb-4" /><Subtext className="text-[10px]  uppercase  text-gray-400">Sinkronisasi Katalog Produk...</Subtext></div>;
   if (!company) return <div className="text-center p-8 text-gray-500">Pilih workspace terlebih dahulu</div>;
 
   return (
@@ -150,13 +179,13 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
         <div className="flex items-center justify-between">
           <div>
             <H2 className="text-xl">Katalog Produk</H2>
-            <Subtext className="text-[10px] uppercase tracking-tight">Kelola daftar produk dan jasa untuk penawaran.</Subtext>
+            <Subtext className="text-[10px] uppercase ">Kelola daftar produk dan jasa untuk penawaran.</Subtext>
           </div>
           <div className="flex items-center gap-3">
             <Button
               onClick={() => { setForm({ name: '', category_id: categories[0]?.id || null, unit_id: units[0]?.id || null, price: 0, description: '' }); setIsModalOpen(true); }}
               leftIcon={<Plus size={14} strokeWidth={3} />}
-              className="!px-6 py-2.5 text-[10px] uppercase tracking-tight shadow-lg shadow-emerald-100"
+              className="!px-6 py-2.5 text-[10px] uppercase  shadow-lg shadow-emerald-100"
               variant="success"
               size="sm"
             >
@@ -181,6 +210,7 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
           <Table>
             <TableHeader className="sticky top-0 z-10 bg-gray-50/80 backdrop-blur-md border-b border-gray-100">
               <TableRow className="hover:bg-transparent">
+                <TableCell isHeader className="w-20">ID</TableCell>
                 <TableCell isHeader>Informasi Produk</TableCell>
                 <TableCell isHeader>Kategori</TableCell>
                 <TableCell isHeader>Satuan</TableCell>
@@ -192,38 +222,47 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
               {filteredProducts.map(item => (
                 <TableRow key={item.id} className="group hover:bg-emerald-50/30 transition-colors border-b border-gray-50/50 last:border-0">
                   <TableCell className="py-5 px-6">
+                    #{item.id}
+                  </TableCell>
+                  <TableCell className="py-5 px-6">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shadow-sm border border-emerald-100"><Package size={20} strokeWidth={2.5} /></div>
                       <div>
-                        <Subtext className="text-sm text-gray-900 tracking-tight">{item.name}</Subtext>
-                        {item.description && <Subtext className="text-[10px] text-gray-400 mt-1 uppercase tracking-tight italic">{item.description}</Subtext>}
+                        <Subtext className="text-sm text-gray-900 font-medium ">{item.name}</Subtext>
+                        {item.description && <Subtext className="text-[10px] text-gray-400  uppercase  italic">{item.description}</Subtext>}
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className="py-5 px-6">
-                    <Label className="px-3 py-1 bg-white border border-gray-100 rounded-full text-[9px] uppercase tracking-tight text-gray-500 shadow-sm">
+                    <Label className="px-3 py-1 bg-white border border-gray-100 rounded-full text-[9px] uppercase  text-gray-500 shadow-sm">
                       {item.product_categories?.name || 'Umum'}
                     </Label>
                   </TableCell>
                   <TableCell className="py-5 px-6">
-                    <Label className="text-[10px] text-gray-500 uppercase tracking-tight">{item.product_units?.name || '-'}</Label>
+                    <Label className="text-[10px] text-gray-500 uppercase ">{item.product_units?.name || '-'}</Label>
                   </TableCell>
-                  <TableCell className="text-right  text-emerald-600 text-sm py-5 px-6 bg-emerald-50/5 group-hover:bg-emerald-50/20">{formatIDR(item.price)}</TableCell>
+                  <TableCell className="text-right">{formatIDR(item.price)}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => { setForm(item); setIsModalOpen(true); }} className="!p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
-                        <Edit2 size={14} />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(item.id)} className="!p-2 text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg" title="Hapus">
-                        <Trash2 size={14} />
-                      </Button>
+                      <ActionButton
+                        icon={Edit2}
+                        variant="blue"
+                        onClick={() => { setForm(item); setIsModalOpen(true); }}
+                        title="Edit"
+                      />
+                      <ActionButton
+                        icon={Trash2}
+                        variant="rose"
+                        onClick={() => handleDeleteClick(item.id)}
+                        title="Hapus"
+                      />
                     </div>
                   </TableCell>
                 </TableRow>
               ))}
               {filteredProducts.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5}>
+                  <TableCell colSpan={6}>
                     <EmptyState
                       icon={<Package size={48} className="mx-auto mb-4" />}
                       title="Katalog produk masih kosong"
@@ -272,7 +311,7 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
           </div>
 
           <div className="space-y-2 text-left">
-            <Label className="text-[10px] text-gray-400 uppercase tracking-tight ml-1">Kategori Produk</Label>
+            <Label className="text-[10px] text-gray-400 uppercase  ml-1">Kategori Produk</Label>
             {isAddingCat ? (
               <div className="animate-in slide-in-from-left-2 duration-200">
                 <div className="flex gap-2">
@@ -304,7 +343,7 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
           </div>
 
           <div className="space-y-2 text-left">
-            <Label className="text-[10px] text-gray-400 uppercase tracking-tight ml-1">Satuan Produk</Label>
+            <Label className="text-[10px] text-gray-400 uppercase  ml-1">Satuan Produk</Label>
             {isAddingUnit ? (
               <div className="animate-in slide-in-from-left-2 duration-200">
                 <div className="flex gap-2">
@@ -366,6 +405,14 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
         title="Hapus Produk"
         itemName="Produk ini"
         description="Apakah Anda yakin ingin menghapus produk ini dari katalog?"
+        variant="horizontal"
+      />
+
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
       />
 
       <style jsx global>{`

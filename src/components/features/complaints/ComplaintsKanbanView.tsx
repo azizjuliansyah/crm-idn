@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button, Subtext, Badge } from '@/components/ui';
 import { SupportTicket, SupportStage } from '@/lib/types';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ChevronRight, Trash2, ShieldAlert } from 'lucide-react';
 
 import { KanbanBoard, KanbanItem, KanbanStage } from '@/components/shared/KanbanBoard/KanbanBoard';
@@ -40,24 +41,23 @@ export const ComplaintsKanbanView: React.FC<Props> = ({
       className={`group p-3 bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md hover:border-rose-300 transition-all cursor-grab active:cursor-grabbing transform hover:-translate-y-1 relative ${isDragged ? 'opacity-30' : ''}`}
     >
       <div className="flex items-start justify-between mb-2 pl-0.5 -mr-1.5 -mt-1">
-        <Subtext className="text-[9px]  text-gray-300 uppercase tracking-tight mt-1.5">#{String(t.id).padStart(4, '0')}</Subtext>
+        <Subtext className="text-[9px]  text-gray-300 uppercase  mt-1.5">#{String(t.id).padStart(4, '0')}</Subtext>
         <div className="flex items-center gap-1">
           <Badge variant={t.priority === 'urgent' ? 'danger' : 'secondary'} className="text-[8px] py-0.5 px-2 uppercase">{t.priority}</Badge>
-          <Button
-            variant="ghost"
-            size="sm"
+          <ActionButton
+            icon={Trash2}
+            variant="rose"
             onClick={(e) => { e.stopPropagation(); onDelete(t.id, e); }}
-            className="!p-1.5 text-gray-300 hover:text-rose-600 hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-all shadow-none border-none rounded-lg"
-          >
-            <Trash2 size={12} />
-          </Button>
+            className="opacity-0 group-hover:opacity-100 transition-all !p-1 shadow-none border-none"
+            iconSize={12}
+          />
         </div>
       </div>
-      <h4 className=" text-[12px] text-gray-900 mb-1 leading-tight group-hover:text-rose-600 transition-colors pr-6 uppercase tracking-tight line-clamp-2">{t.title}</h4>
+      <h4 className=" text-[12px] text-gray-900 mb-1 leading-tight group-hover:text-rose-600 transition-colors pr-6 uppercase  line-clamp-2">{t.title}</h4>
 
       {t.ticket_topics?.name && (
         <div className="mb-2">
-          <Badge variant="ghost" className="uppercase tracking-tight text-[7px] bg-indigo-50 text-indigo-600 border border-indigo-100 py-0.5 px-1.5">
+          <Badge variant="ghost" className="uppercase  text-[7px] bg-indigo-50 text-indigo-600 border border-indigo-100 py-0.5 px-1.5">
             {t.ticket_topics.name}
           </Badge>
         </div>

@@ -2,8 +2,9 @@ import { ArrowUp, Trash2, Save, X, Target, Star, Clock, ArrowRightLeft, MessageS
 import { Company, Profile, LogActivity, ClientCompany, Lead, LeadStage, LeadSource, CompanyMember, ClientCompanyCategory, Client } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import React, { useState, useEffect } from 'react';
-import { Input, Textarea, Button, Subtext, Label, SectionHeader, Modal, Avatar, Badge, Breadcrumb, EmptyState, Timeline, TimelineItem, TimelineIcon, TimelineContent, ComboBox } from '@/components/ui';
+import { Input, Textarea, Button, Subtext, Label, SectionHeader, Modal, Avatar, Badge, Breadcrumb, EmptyState, Timeline, TimelineItem, TimelineIcon, TimelineContent, ComboBox, Toast, ToastType } from '@/components/ui';
 import { ClientFormModal } from '@/components/features/clients/components/ClientFormModal';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
 
 
 
@@ -23,11 +24,12 @@ interface LeadDetailModalProps {
   onConvertToDeal: () => void;
   setClientCompanies: React.Dispatch<React.SetStateAction<ClientCompany[]>>;
   setCategories: React.Dispatch<React.SetStateAction<ClientCompanyCategory[]>>;
+  setToast: React.Dispatch<React.SetStateAction<{ isOpen: boolean; message: string; type: ToastType }>>;
 }
 
 export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
   isOpen, onClose, lead, company, user, members, stages, sources, clientCompanies, categories, onUpdate, onDelete, onConvertToDeal,
-  setClientCompanies, setCategories
+  setClientCompanies, setCategories, setToast
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activities, setActivities] = useState<LogActivity[]>([]);
@@ -141,9 +143,10 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
       });
 
       setForm(prev => ({ ...prev, status: newStatus.toLowerCase() }));
+      setToast({ isOpen: true, message: `Status berhasil diubah ke ${newStatus.toUpperCase()}`, type: 'success' });
       await fetchActivities();
     } catch (err: any) {
-      alert(err.message);
+      setToast({ isOpen: true, message: err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -161,9 +164,10 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
       });
       if (error) throw error;
       setNewComment('');
+      setToast({ isOpen: true, message: 'Komentar berhasil ditambahkan!', type: 'success' });
       await fetchActivities();
     } catch (err: any) {
-      alert(err.message);
+      setToast({ isOpen: true, message: err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -193,7 +197,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
       onUpdate();
       await fetchActivities();
     } catch (error: any) {
-      alert(error.message);
+      setToast({ isOpen: true, message: error.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -235,8 +239,9 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
 
       handleClientSelect(String(data.id));
       setIsClientModalOpen(false);
+      setToast({ isOpen: true, message: 'Client berhasil ditambahkan!', type: 'success' });
       setClientForm({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
-    } catch (err: any) { alert(err.message); } finally { setIsProcessingQuick(false); }
+    } catch (err: any) { setToast({ isOpen: true, message: err.message, type: 'error' }); } finally { setIsProcessingQuick(false); }
   };
 
   const handleWaNumberChange = (val: string) => {
@@ -283,9 +288,12 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
           </div>
 
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => onDelete(lead.id)} className="!p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50">
-              <Trash2 size={18} />
-            </Button>
+            <ActionButton
+              icon={Trash2}
+              variant="rose"
+              onClick={() => onDelete(lead.id)}
+              title="Hapus Lead"
+            />
             {isQualified && (
               <Button
                 variant="success"
@@ -323,7 +331,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Label className="text-[10px] !text-black uppercase tracking-tight">Expected:</Label>
+            <Label className="text-[10px] !text-black uppercase ">Expected:</Label>
             <Label className="text-sm  !text-black">{formatIDR(form.expected_value)}</Label>
           </div>
         </div>
@@ -355,7 +363,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                   key={stage.id}
                   onClick={() => handleStatusChange(stage.name)}
                   disabled={isProcessing}
-                  className={`relative flex-1 h-full flex items-center justify-center transition-all cursor-pointer font-medium text-[9px] uppercase tracking-wider ${bgColor} ${borderColor} ${isLast ? '' : 'border-r'}`}
+                  className={`relative flex-1 h-full flex items-center justify-center transition-all cursor-pointer font-medium text-[9px] uppercase  ${bgColor} ${borderColor} ${isLast ? '' : 'border-r'}`}
                   style={{
                     clipPath: isLast
                       ? 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 4% 50%)'
@@ -376,8 +384,8 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
           {/* COLUMN LEFT: LOG AKTIVITAS */}
           <div className="w-1/2 flex flex-col min-w-0 border-r border-gray-100 pr-10">
             <SectionHeader
-              title="Log Aktivitas"
-              className="mb-6 shrink-0 uppercase tracking-[0.2em]"
+              title="Log Aktivitas Lead"
+              className="mb-6 shrink-0 uppercase"
             />
 
             <div className="flex-1 flex flex-col overflow-hidden">
@@ -439,8 +447,8 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
           {/* COLUMN RIGHT: DETAIL INFORMASI */}
           <div className="w-1/2 flex flex-col min-w-0">
             <SectionHeader
-              title="Detail Informasi"
-              className="mb-6 shrink-0 uppercase tracking-[0.2em]"
+              title="Detail Informasi Lead"
+              className="mb-6 shrink-0 uppercase"
             />
 
             <div className="flex-1 overflow-y-auto custom-scrollbar pr-4 space-y-6">
@@ -488,7 +496,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-[9px]  text-gray-400 uppercase tracking-wider ml-0.5">WhatsApp</Label>
+                  <Label className="text-[9px]  text-gray-400 uppercase  ml-0.5">WhatsApp</Label>
                   <div className="flex h-10 bg-gray-50 border border-gray-100 rounded-sm overflow-hidden focus-within:bg-white focus-within:border-blue-400 transition-all text-xs">
                     <div className="px-3 bg-gray-100/50 text-[10px]  text-gray-400 border-r border-gray-100 flex items-center">+62</div>
                     <Input
@@ -508,7 +516,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
               </div>
 
               <div className="p-5 bg-blue-50/40 border border-blue-100 rounded-sm space-y-3">
-                <Label className="text-[9px]  text-blue-600 uppercase tracking-wider">Nilai Proyeksi (IDR)</Label>
+                <Label className="text-[9px]  text-blue-600 uppercase ">Nilai Proyeksi (IDR)</Label>
                 <div className="flex items-center gap-3">
                   <Label className="text-[10px]  text-blue-400 bg-white px-2 py-0.5 border border-blue-100 rounded-sm">RP</Label>
                   <Input
@@ -556,7 +564,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
               />
 
               <div className="space-y-1.5">
-                <Label className="text-[9px]  text-gray-400 uppercase tracking-wider ml-0.5">Alamat / Lokasi</Label>
+                <Label className="text-[9px]  text-gray-400 uppercase  ml-0.5">Alamat / Lokasi</Label>
                 <Textarea
                   value={form.address || ''}
                   onChange={e => setForm({ ...form, address: e.target.value })}

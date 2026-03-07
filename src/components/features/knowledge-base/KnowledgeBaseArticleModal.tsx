@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 
-import { Input, Textarea, Button, Modal, ComboBox } from '@/components/ui';
+import { Input, Textarea, Button, Modal, ComboBox, ToastType } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -16,10 +16,11 @@ interface Props {
   categories: KbCategory[];
   article?: KbArticle | null;
   onSuccess: () => void;
+  setToast: (toast: { isOpen: boolean; message: string; type: ToastType }) => void;
 }
 
 export const KnowledgeBaseArticleModal: React.FC<Props> = ({
-  isOpen, onClose, company, categories, article, onSuccess
+  isOpen, onClose, company, categories, article, onSuccess, setToast
 }) => {
   const [form, setForm] = useState<Partial<KbArticle>>({
     title: '', content: '', category_id: null
@@ -52,9 +53,10 @@ export const KnowledgeBaseArticleModal: React.FC<Props> = ({
       }
       onSuccess();
       onClose();
-    } catch (err) {
+      setToast({ isOpen: true, message: form.id ? 'Artikel berhasil diperbarui!' : 'Artikel baru berhasil dibuat!', type: 'success' });
+    } catch (err: any) {
       console.error("Error saving article:", err);
-      alert("Gagal menyimpan artikel");
+      setToast({ isOpen: true, message: "Gagal menyimpan artikel: " + err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }

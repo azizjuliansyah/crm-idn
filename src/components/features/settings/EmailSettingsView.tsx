@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Input, Button, H3, Subtext, Label, Modal } from '@/components/ui';
+import { Input, Button, H2, H3, Subtext, Label, Modal, Toast, ToastType } from '@/components/ui';
 
 import { supabase } from '@/lib/supabase';
 import { Company, CompanyEmailSetting } from '@/lib/types';
@@ -18,9 +18,15 @@ export const EmailSettingsView: React.FC<Props> = ({ company }) => {
   const [fromName, setFromName] = useState('');
   const [fromEmail, setFromEmail] = useState('');
 
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
-    isOpen: false, title: '', message: '', type: 'success'
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
   });
+
+  const showToast = (message: string, type: ToastType = 'success') => {
+    setToast({ isOpen: true, message, type });
+  };
 
   useEffect(() => {
     fetchSettings();
@@ -59,43 +65,48 @@ export const EmailSettingsView: React.FC<Props> = ({ company }) => {
       };
 
       if (settings?.id) {
-        await supabase
+        const { error } = await supabase
           .from('company_email_settings')
           .update(payload)
           .eq('id', settings.id);
+        if (error) throw error;
       } else {
-        await supabase
+        const { error } = await supabase
           .from('company_email_settings')
           .insert(payload);
+        if (error) throw error;
       }
 
       await fetchSettings();
-      setNotification({ isOpen: true, title: 'Berhasil', message: 'Konfigurasi Email berhasil disimpan.', type: 'success' });
+      showToast('Konfigurasi Email berhasil disimpan.');
     } catch (err: any) {
-      setNotification({ isOpen: true, title: 'Gagal', message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-indigo-600 mb-4" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Memuat Konfigurasi Email...</Subtext></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-indigo-600 mb-4" /><Subtext className="text-[10px]  uppercase  text-gray-400">Memuat Konfigurasi Email...</Subtext></div>;
 
   return (
-    <div className="max-w-3xl">
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-        <div className="p-8 border-b border-gray-50 flex items-center gap-4">
-          <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
-            <Mail size={24} />
+    <div className="max-w-3xl flex flex-col gap-6">
+      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shadow-sm border border-indigo-100/50">
+            <Mail size={20} strokeWidth={2.5} />
           </div>
           <div>
-            <H3 className="text-xl  text-gray-900 tracking-tight">Konfigurasi Email (Mailketing)</H3>
-            <Subtext className="text-sm text-gray-400 font-medium">Hubungkan workspace Anda dengan layanan Mailketing untuk pengiriman email transaksional.</Subtext>
+            <H2 className="text-xl">Konfigurasi Email</H2>
+            <Subtext className="text-[10px] uppercase">Workspace Setup</Subtext>
           </div>
         </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm flex-1">
 
         <form onSubmit={handleSave} className="p-8 space-y-6">
           <div className="space-y-2">
-            <Label className="uppercase tracking-tight">Mailketing API Token</Label>
+            <Label className="uppercase ">Mailketing API Token</Label>
             <Input
               type="password"
               value={apiToken}
@@ -108,7 +119,7 @@ export const EmailSettingsView: React.FC<Props> = ({ company }) => {
 
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label className="uppercase tracking-tight">Nama Pengirim (From Name)</Label>
+              <Label className="uppercase ">Nama Pengirim (From Name)</Label>
               <Input
                 type="text"
                 value={fromName}
@@ -118,7 +129,7 @@ export const EmailSettingsView: React.FC<Props> = ({ company }) => {
               />
             </div>
             <div className="space-y-2">
-              <Label className="uppercase tracking-tight">Email Pengirim (Sender Email)</Label>
+              <Label className="uppercase ">Email Pengirim (Sender Email)</Label>
               <Input
                 type="email"
                 value={fromEmail}
@@ -143,17 +154,12 @@ export const EmailSettingsView: React.FC<Props> = ({ company }) => {
         </form>
       </div>
 
-      <Modal isOpen={notification.isOpen} onClose={() => setNotification({ ...notification, isOpen: false })} title="" size="sm">
-        <div className="flex flex-col items-center py-6 text-center">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${notification.type === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
-            }`}>
-            {notification.type === 'success' ? <Check size={24} /> : <AlertTriangle size={24} />}
-          </div>
-          <H3 className="text-lg  text-gray-900 mb-2">{notification.title}</H3>
-          <Subtext className="text-sm text-gray-500 font-medium mb-6">{notification.message}</Subtext>
-          <Button onClick={() => setNotification({ ...notification, isOpen: false })} className="w-full !py-3 shadow-xl">Tutup</Button>
-        </div>
-      </Modal>
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 };

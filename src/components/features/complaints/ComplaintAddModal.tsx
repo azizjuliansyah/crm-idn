@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Input, Textarea, Button, Modal, ComboBox, Label, H4 } from '@/components/ui';
+import { Input, Textarea, Button, Modal, ComboBox, Label, H4, ToastType } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { Company, CompanyMember, SupportStage, Client, SupportTicket, TicketTopic, ClientCompany, ClientCompanyCategory } from '@/lib/types';
 import { Loader2, Save, X, Check } from 'lucide-react';
@@ -14,10 +14,11 @@ interface Props {
   clients: Client[];
   topics: TicketTopic[];
   onSuccess: () => void;
+  setToast: (toast: { isOpen: boolean; message: string; type: ToastType }) => void;
 }
 
 export const ComplaintAddModal: React.FC<Props> = ({
-  isOpen, onClose, company, members, stages, clients, topics, onSuccess
+  isOpen, onClose, company, members, stages, clients, topics, onSuccess, setToast
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [form, setForm] = useState<Partial<SupportTicket>>({
@@ -67,7 +68,7 @@ export const ComplaintAddModal: React.FC<Props> = ({
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title || !form.client_id) {
-      alert("Judul keluhan dan Client wajib diisi.");
+      setToast({ isOpen: true, message: "Judul keluhan dan Client wajib diisi.", type: 'error' });
       return;
     }
 
@@ -77,12 +78,12 @@ export const ComplaintAddModal: React.FC<Props> = ({
         ...form,
         company_id: company.id
       });
-      if (error) throw error;
       onSuccess();
       onClose();
+      setToast({ isOpen: true, message: 'Keluhan baru telah didaftarkan.', type: 'success' });
       setForm({ title: '', description: '', client_id: null, topic_id: null, assigned_id: members[0]?.user_id || '', status: stages[0]?.name.toLowerCase() || 'open', priority: 'high', type: 'complaint' });
     } catch (err: any) {
-      alert(err.message);
+      setToast({ isOpen: true, message: err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -105,9 +106,10 @@ export const ComplaintAddModal: React.FC<Props> = ({
       setForm((prev: any) => ({ ...prev, client_id: data.id }));
       setIsAddingClient(false);
       setNewClientForm({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
+      setToast({ isOpen: true, message: 'Client baru berhasil ditambahkan!', type: 'success' });
       onSuccess(); // Refresh clients in parent
     } catch (err: any) {
-      alert("Gagal menambah client: " + err.message);
+      setToast({ isOpen: true, message: "Gagal menambah client: " + err.message, type: 'error' });
     } finally {
       setIsProcessingQuick(false);
     }
@@ -141,8 +143,9 @@ export const ComplaintAddModal: React.FC<Props> = ({
       setForm({ ...form, topic_id: data.id });
       setNewTopicName('');
       setIsAddingTopic(false);
+      setToast({ isOpen: true, message: 'Topik baru berhasil ditambahkan!', type: 'success' });
     } catch (err: any) {
-      alert(err.message);
+      setToast({ isOpen: true, message: err.message, type: 'error' });
     }
   };
 

@@ -20,7 +20,7 @@ function QuotationFormWrapper() {
       company={activeCompany}
       initialClientId={clientId ? Number(clientId) : undefined}
       initialDealId={dealId ? Number(dealId) : undefined}
-      onSaveSuccess={() => router.push('/dashboard/sales/quotations')}
+      onSaveSuccess={() => router.push('/dashboard/sales/quotations?success=created')}
     />
   );
 }

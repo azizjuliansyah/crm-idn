@@ -22,9 +22,7 @@ function CreateProformaContent() {
           router.push('/dashboard/sales/proformas');
         }
       }}
-      onSaveSuccess={(id) => {
-        router.push('/dashboard/sales/proformas');
-      }}
+      onSaveSuccess={() => router.push('/dashboard/sales/proformas?success=created')}
     />
   );
 }

@@ -70,7 +70,7 @@ export const Modal: React.FC<ModalProps> = ({
       >
         {!hideClose && (
           <div className={`px-8 pt-8 pb-4 flex items-center justify-between border-b border-gray-50 ${title === '' ? 'absolute top-0 right-0 z-50 border-none bg-transparent' : ''}`}>
-            {title !== '' && <H1 className="text-xl  text-gray-900 tracking-tight">{title}</H1>}
+            {title !== '' && <H1 className="text-xl  text-gray-900 ">{title}</H1>}
             <button
               onClick={onClose}
               className={`p-2 rounded-full transition-all cursor-pointer ${title === '' ? 'text-gray-400 hover:text-gray-900 bg-white/50 backdrop-blur-sm' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-50'}`}
@@ -110,11 +110,11 @@ export const PermissionsList: React.FC<{
             onClick={() => onToggle(perm)}
             type="button"
             className={`flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer ${isSelected
-                ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-sm'
-                : 'bg-white border-gray-100 text-gray-500 hover:border-gray-200'
+              ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-sm'
+              : 'bg-white border-gray-100 text-gray-500 hover:border-gray-200'
               }`}
           >
-            <span className="text-xs  uppercase tracking-tight">{perm}</span>
+            <span className="text-xs  uppercase ">{perm}</span>
             <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-all ${isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'bg-gray-50 border-gray-200'
               }`}>
               {isSelected && <Check size={12} strokeWidth={4} />}

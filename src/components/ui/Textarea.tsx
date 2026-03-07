@@ -14,7 +14,7 @@ export const Textarea: React.FC<TextareaProps> = ({
   return (
     <div className="space-y-2 w-full">
       {label && (
-        <label className="text-[10px] font-medium text-gray-400 uppercase tracking-tight ml-1">
+        <label className="text-[10px] font-medium text-gray-400 uppercase  ml-1">
           {label}
         </label>
       )}

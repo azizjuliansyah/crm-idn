@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, SearchInput, ComboBox } from '@/components/ui';
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, SearchInput, ComboBox, Toast, ToastType } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -13,8 +13,9 @@ import {
   AlertTriangle, CheckCircle2, X, Filter,
   FileDown, Download
 } from 'lucide-react';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
-import { NotificationModal } from '@/components/shared/modals/NotificationModal';
+// Removed legacy NotificationModal import
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { generateTemplate1, generateTemplate5, generateTemplate6 } from '@/lib/pdf-templates';
@@ -48,13 +49,19 @@ export const KwitansisView: React.FC<Props> = ({ company }) => {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; number: string }>({ isOpen: false, id: null, number: '' });
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
-    isOpen: false, title: '', message: '', type: 'success'
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
   });
 
-  const fetchData = useCallback(async () => {
+  const showToast = (message: string, type: ToastType = 'success') => {
+    setToast({ isOpen: true, message, type });
+  };
+
+  const fetchData = useCallback(async (isInitial = false) => {
     if (!company?.id) return;
-    setLoading(true);
+    if (isInitial) setLoading(true);
     try {
       const { data, error } = await supabase
         .from('kwitansis')
@@ -67,12 +74,12 @@ export const KwitansisView: React.FC<Props> = ({ company }) => {
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   }, [company?.id]);
 
   useEffect(() => {
-    fetchData();
+    fetchData(true);
   }, [fetchData]);
 
   const uniqueClients = useMemo(() => {
@@ -124,10 +131,6 @@ export const KwitansisView: React.FC<Props> = ({ company }) => {
     });
   };
 
-  const showNotification = (title: string, message: string, type: 'success' | 'error' = 'success') => {
-    setNotification({ isOpen: true, title, message, type });
-  };
-
   const executeDelete = async () => {
     if (!confirmDelete.id) return;
     setIsProcessing(true);
@@ -135,10 +138,10 @@ export const KwitansisView: React.FC<Props> = ({ company }) => {
       const { error } = await supabase.from('kwitansis').delete().eq('id', confirmDelete.id);
       if (error) throw error;
       setConfirmDelete({ isOpen: false, id: null, number: '' });
-      showNotification('Berhasil', `Kwitansi ${confirmDelete.number} telah dihapus.`);
+      showToast(`Kwitansi ${confirmDelete.number} telah dihapus.`);
       fetchData();
     } catch (err: any) {
-      showNotification('Gagal', err.message, 'error');
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -300,7 +303,7 @@ export const KwitansisView: React.FC<Props> = ({ company }) => {
     doc.save(`${inv.number}.pdf`);
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4"><Loader2 className="animate-spin text-blue-600" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Sinkronisasi Kwitansi...</Subtext></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4"><Loader2 className="animate-spin text-blue-600" /><Subtext className="text-[10px]  uppercase  text-gray-400">Sinkronisasi Kwitansi...</Subtext></div>;
 
   return (
     <div className="flex flex-col gap-6 text-gray-900">
@@ -308,13 +311,13 @@ export const KwitansisView: React.FC<Props> = ({ company }) => {
         <div className="flex items-center justify-between">
           <div>
             <H2 className="text-xl ">Daftar Kwitansi</H2>
-            <Subtext className="text-[10px]  uppercase tracking-tight">Kelola dan pantau seluruh tagihan pelanggan.</Subtext>
+            <Subtext className="text-[10px]  uppercase ">Kelola dan pantau seluruh tagihan pelanggan.</Subtext>
           </div>
           <div className="flex items-center gap-3">
             <Button
               onClick={() => router.push('/dashboard/sales/kwitansis/create')}
               leftIcon={<Plus size={14} strokeWidth={3} />}
-              className="!px-6 py-2.5 text-[10px] uppercase tracking-tight shadow-lg shadow-blue-100"
+              className="!px-6 py-2.5 text-[10px] uppercase  shadow-lg shadow-blue-100"
               variant="primary"
               size="sm"
             >
@@ -341,7 +344,7 @@ export const KwitansisView: React.FC<Props> = ({ company }) => {
                 ...uniqueClients.map(([id, name]) => ({ value: id.toString(), label: name.toUpperCase() }))
               ]}
               className="w-40"
-              placeholderSize="text-[10px] font-bold text-gray-900 uppercase tracking-tight"
+              placeholderSize="text-[10px] font-bold text-gray-900 uppercase "
             />
 
             <ComboBox
@@ -355,7 +358,7 @@ export const KwitansisView: React.FC<Props> = ({ company }) => {
               ]}
               className="w-40"
               hideSearch={true}
-              placeholderSize="text-[10px] font-bold text-gray-900 uppercase tracking-tight"
+              placeholderSize="text-[10px] font-bold text-gray-900 uppercase "
             />
           </div>
         </div>
@@ -383,7 +386,7 @@ export const KwitansisView: React.FC<Props> = ({ company }) => {
                   <TableCell className="py-5 px-6">
                     <Button
                       onClick={() => router.push(`/dashboard/sales/kwitansis/${inv.id}`)}
-                      className=" text-indigo-600 text-xs tracking-tight hover:underline flex items-center gap-1.5"
+                      className=" text-indigo-600 text-xs  hover:underline flex items-center gap-1.5"
                     >
                       <FileBadge size={12} className="text-indigo-400" />
                       {inv.number}
@@ -393,14 +396,14 @@ export const KwitansisView: React.FC<Props> = ({ company }) => {
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center  text-[10px] uppercase shadow-sm border border-indigo-100">{inv.client?.name.charAt(0)}</div>
                       <div>
-                        <Subtext className="text-xs text-gray-900 tracking-tight">{inv.client?.name}</Subtext>
-                        <Subtext className="text-[10px] !text-gray-400 mt-1 uppercase tracking-tight italic">{inv.client?.client_company?.name || 'Personal'}</Subtext>
+                        <Subtext className="text-xs text-gray-900 ">{inv.client?.name}</Subtext>
+                        <Subtext className="text-[10px] !text-gray-400 mt-1 uppercase  italic">{inv.client?.client_company?.name || 'Personal'}</Subtext>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className="text-right  text-indigo-600 text-xs py-5 px-6 bg-indigo-50/5 group-hover:bg-indigo-50/20">{formatIDR(inv.total)}</TableCell>
                   <TableCell className="text-center py-5 px-6">
-                    <Label className={`px-3 py-1 rounded-full text-[9px]  uppercase tracking-tight border transition-all duration-300 ${inv.status === 'Paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                    <Label className={`px-3 py-1 rounded-full text-[9px]  uppercase  border transition-all duration-300 ${inv.status === 'Paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                       inv.status === 'Partial' ? 'bg-amber-50 text-amber-600 border-amber-100' :
                         inv.status === 'Unpaid' ? 'bg-rose-50 text-rose-600 border-rose-100' :
                           'bg-gray-50 text-gray-400 border-gray-200'
@@ -410,15 +413,24 @@ export const KwitansisView: React.FC<Props> = ({ company }) => {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => handleDownloadPDF(inv)} className="!p-2 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors" title="Unduh PDF">
-                        <FileDown size={14} />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => router.push(`/dashboard/sales/kwitansis/${inv.id}`)} className="!p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
-                        <Edit2 size={14} />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setConfirmDelete({ isOpen: true, id: inv.id, number: inv.number })} className="!p-2 text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg" title="Hapus">
-                        <Trash2 size={14} />
-                      </Button>
+                      <ActionButton
+                        icon={FileDown}
+                        variant="emerald"
+                        onClick={() => handleDownloadPDF(inv)}
+                        title="Unduh PDF"
+                      />
+                      <ActionButton
+                        icon={Edit2}
+                        variant="blue"
+                        onClick={() => router.push(`/dashboard/sales/kwitansis/${inv.id}`)}
+                        title="Edit"
+                      />
+                      <ActionButton
+                        icon={Trash2}
+                        variant="rose"
+                        onClick={() => setConfirmDelete({ isOpen: true, id: inv.id, number: inv.number })}
+                        title="Hapus"
+                      />
                     </div>
                   </TableCell>
                 </TableRow>
@@ -439,14 +451,14 @@ export const KwitansisView: React.FC<Props> = ({ company }) => {
         title="Hapus Kwitansi"
         itemName={confirmDelete.number}
         isProcessing={isProcessing}
+        variant="horizontal"
       />
 
-      <NotificationModal
-        isOpen={notification.isOpen}
-        onClose={() => setNotification({ ...notification, isOpen: false })}
-        title={notification.title}
-        message={notification.message}
-        type={notification.type}
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

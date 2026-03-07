@@ -17,3 +17,5 @@ export * from './SearchInput';
 export * from './ComboBox';
 export * from './Checkbox';
 export * from './DateFilterDropdown';
+export * from './Toast';
+export * from './Toggle';

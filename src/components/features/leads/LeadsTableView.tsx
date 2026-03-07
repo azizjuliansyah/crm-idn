@@ -1,4 +1,5 @@
 import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, Subtext, Label, Badge, Checkbox } from '@/components/ui';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { Lead } from '@/lib/types';
 import { Table as TableIcon, Trash2, ChevronUp, ChevronDown, Clock } from 'lucide-react';
 
@@ -88,7 +89,7 @@ export const LeadsTableView: React.FC<Props> = ({
                 <TableCell>
                   {lead.salutation && <span className="!text-blue-400 mr-1">{lead.salutation}</span>}
                   {lead.name}
-                  <Subtext className="text-[10px] !text-gray-400 mt-1 uppercase tracking-tight">{lead.client_company?.name || 'Perorangan'}</Subtext>
+                  <Subtext className="text-[10px] !text-gray-400 mt-1 uppercase ">{lead.client_company?.name || 'Perorangan'}</Subtext>
                 </TableCell>
                 <TableCell className=" text-gray-600">{formatIDR(lead.expected_value)}</TableCell>
                 <TableCell className="py-4 w-[150px]">
@@ -101,22 +102,16 @@ export const LeadsTableView: React.FC<Props> = ({
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
+                    <ActionButton
+                      icon={TableIcon}
+                      variant="blue"
                       onClick={() => onEdit(lead)}
-                      className="!p-2 text-blue-500 hover:bg-blue-50"
-                    >
-                      <TableIcon size={14} />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
+                    />
+                    <ActionButton
+                      icon={Trash2}
+                      variant="rose"
                       onClick={(e) => { e.stopPropagation(); onDelete(lead.id); }}
-                      className="!p-2 text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg"
-                    >
-                      <Trash2 size={14} />
-                    </Button>
+                    />
                   </div>
                 </TableCell>
               </TableRow>

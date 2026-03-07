@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Input, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, Modal, Avatar, Badge, SearchInput, ComboBox } from '@/components/ui';
+import { Input, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, Modal, Avatar, Badge, SearchInput, ComboBox, Toast, ToastType } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -10,10 +10,12 @@ import { Task, TaskStage, Project, Company, CompanyMember, Profile } from '@/lib
 import {
   Plus, Search, Trello, Table as TableIcon, Loader2,
   CheckSquare, ArrowLeft, Calendar, Clock,
-  AlertTriangle, Trash2, Edit2, Save, X, CheckCircle2
+  AlertTriangle, Trash2, Edit2, Save, X, CheckCircle2, User as UserIcon
 } from 'lucide-react';
+import { KanbanBoard, KanbanItem, KanbanStage } from '@/components/shared/KanbanBoard/KanbanBoard';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
-import { NotificationModal } from '@/components/shared/modals/NotificationModal';
+// Removed legacy NotificationModal import
 import { useRouter } from 'next/navigation';
 
 interface Props {
@@ -35,6 +37,22 @@ const STAGE_COLORS = [
   'bg-rose-600',
 ];
 
+const getStageColor = (status: string) => {
+  switch (status.toLowerCase()) {
+    case 'todo':
+    case 'to do': return 'bg-sky-500';
+    case 'in progress':
+    case 'working': return 'bg-amber-500';
+    case 'done':
+    case 'completed': return 'bg-emerald-500';
+    case 'on hold': return 'bg-gray-500';
+    case 'cancelled': return 'bg-rose-500';
+    default: return 'bg-blue-500';
+  }
+};
+
+interface KanbanTask extends Task, KanbanItem { }
+
 export const TasksView: React.FC<Props> = ({ company, user, members, projectId }) => {
   const router = useRouter();
   const [project, setProject] = useState<Project | null>(null);
@@ -50,20 +68,23 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; title: string }>({ isOpen: false, id: null, title: '' });
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
-    isOpen: false, title: '', message: '', type: 'success'
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
   });
 
-  const [draggingId, setDraggingId] = useState<number | null>(null);
-  const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const showToast = (message: string, type: ToastType = 'success') => {
+    setToast({ isOpen: true, message, type });
+  };
 
   const [form, setForm] = useState<any>({
     title: '', description: '', stage_id: '', assigned_id: '',
     start_date: '', end_date: ''
   });
 
-  const fetchData = useCallback(async (showLoading = true) => {
-    if (showLoading) setLoading(true);
+  const fetchData = useCallback(async (isInitial = false) => {
+    if (isInitial) setLoading(true);
     try {
       const [projRes, stagesRes, tasksRes] = await Promise.all([
         supabase.from('projects').select('*').eq('id', projectId).single(),
@@ -75,12 +96,12 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
       if (stagesRes.data) setStages(stagesRes.data);
       if (tasksRes.data) setTasks(tasksRes.data as any);
     } finally {
-      if (showLoading) setLoading(false);
+      if (isInitial) setLoading(false);
     }
   }, [projectId, company.id]);
 
   useEffect(() => {
-    fetchData();
+    fetchData(true);
   }, [fetchData]);
 
   const handleOpenAdd = () => {
@@ -130,9 +151,9 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
       setIsAddModalOpen(false);
       setIsDetailModalOpen(false);
       fetchData(false);
-      setNotification({ isOpen: true, title: 'Berhasil', message: 'Data task berhasil disimpan.', type: 'success' });
+      showToast('Data task berhasil disimpan.');
     } catch (err: any) {
-      setNotification({ isOpen: true, title: 'Gagal', message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -150,20 +171,48 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
     }
   };
 
-  const handleStatusChange = async (newStageId: string, taskId?: number) => {
-    const targetId = taskId || draggingId;
-    if (!targetId || isProcessing) return;
+  const handleStatusChange = async (taskId: number, newStageId: string) => {
+    if (!taskId || isProcessing) return;
 
     setIsProcessing(true);
     try {
-      await supabase.from('tasks').update({ stage_id: newStageId }).eq('id', targetId);
+      await supabase.from('tasks').update({ stage_id: newStageId }).eq('id', taskId);
       fetchData(false);
     } finally {
       setIsProcessing(false);
-      setDraggingId(null);
-      setDropTarget(null);
     }
   };
+
+  const renderTaskCard = (t: KanbanTask, isDragged: boolean) => (
+    <div
+      onClick={() => handleOpenEdit(t)}
+      className={`group p-3.5 bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-lg hover:border-emerald-200 transition-all cursor-pointer relative ${isDragged ? 'opacity-30' : ''}`}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <Badge variant="ghost" className="px-1.5 py-0 border border-gray-100 text-[7px] text-gray-400 uppercase bg-gray-50">T-{String(t.id).padStart(3, '0')}</Badge>
+        <ActionButton
+          icon={Trash2}
+          variant="rose"
+          onClick={(e) => { e.stopPropagation(); setConfirmDelete({ isOpen: true, id: t.id, title: t.title }); }}
+          className="opacity-0 group-hover:opacity-100 !p-1 h-fit"
+          iconSize={12}
+        />
+      </div>
+      <H2 className="text-[12px] font-semibold text-gray-800 mb-3 leading-tight group-hover:text-emerald-600 transition-colors uppercase line-clamp-2">{t.title}</H2>
+      <div className="flex items-center justify-between pt-3 border-t border-gray-50">
+        <div className="flex items-center gap-1.5">
+          <Avatar name={t.assigned_profile?.full_name} src={t.assigned_profile?.avatar_url} size="sm" className="w-5 h-5 ring-2 ring-white shadow-sm " />
+          <Label className="text-[8px] text-gray-400 uppercase ">{t.assigned_profile?.full_name?.split(' ')[0] || 'TBD'}</Label>
+        </div>
+        {t.end_date && (
+          <div className={`flex items-center gap-1 text-[8px] uppercase ${new Date(t.end_date) < new Date() ? 'text-rose-500' : 'text-gray-400'}`}>
+            <Calendar size={10} />
+            {new Date(t.end_date).toLocaleDateString('id-ID', { month: 'short', day: 'numeric' })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   const filteredTasks = useMemo(() => {
     return tasks.filter(t =>
@@ -192,7 +241,7 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
   if (loading) return (
     <div className="flex flex-col items-center justify-center py-24">
       <Loader2 className="animate-spin text-emerald-600 mb-4" size={32} />
-      <Subtext className="!text-[10px]  uppercase tracking-tight text-gray-400">Sinkronisasi Task Proyek...</Subtext>
+      <Subtext className="!text-[10px]  uppercase  text-gray-400">Sinkronisasi Task Proyek...</Subtext>
     </div>
   );
 
@@ -209,8 +258,8 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
             <ArrowLeft size={16} />
           </Button>
           <div className="flex-1">
-            <H2 className="text-sm  text-gray-900 leading-none truncate uppercase tracking-tight">{project?.name}</H2>
-            <Subtext className="!text-[9px]  text-emerald-600 uppercase tracking-tight mt-1">Daftar Pekerjaan Proyek</Subtext>
+            <H2 className="text-sm  text-gray-900 leading-none truncate uppercase ">{project?.name}</H2>
+            <Subtext className="!text-[9px]  text-emerald-600 uppercase  mt-1">Daftar Pekerjaan Proyek</Subtext>
           </div>
         </div>
 
@@ -231,14 +280,14 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
             onClick={handleOpenAdd}
             leftIcon={<Plus size={14} />}
             variant="success"
-            className="!px-6 py-2.5  text-[10px] uppercase tracking-tight shadow-lg shadow-emerald-100"
+            size='sm'
           >
             Task Baru
           </Button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden flex flex-col">
+      <div className="h-[80vh] overflow-hidden flex flex-col">
         {viewMode === 'table' ? (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col flex-1 overflow-hidden">
             <div className="overflow-x-auto overflow-y-auto h-full scrollbar-hide">
@@ -256,13 +305,13 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
                   {filteredTasks.map(t => (
                     <TableRow key={t.id} className="hover:bg-gray-50/50 group transition-colors">
                       <TableCell>
-                        <H2 className="text-sm text-gray-900 tracking-tight">{t.title}</H2>
-                        {t.description && <Subtext className="text-[10px] text-gray-400 mt-0.5 line-clamp-1 italic tracking-tight">{t.description}</Subtext>}
+                        <H2 className="text-sm text-gray-900 ">{t.title}</H2>
+                        {t.description && <Subtext className="text-[10px] text-gray-400 mt-0.5 line-clamp-1 italic ">{t.description}</Subtext>}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Avatar name={t.assigned_profile?.full_name} src={t.assigned_profile?.avatar_url} size="sm" className="bg-emerald-50 text-emerald-600 border border-emerald-100 " />
-                          <Subtext className="text-[11px] text-gray-700 tracking-tight">{t.assigned_profile?.full_name || 'Unassigned'}</Subtext>
+                          <Subtext className="text-[11px] text-gray-700 ">{t.assigned_profile?.full_name || 'Unassigned'}</Subtext>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -277,9 +326,17 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
                         </Badge>
                       </TableCell>
                       <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(t)} className="!p-2 text-blue-500 hover:bg-blue-50 border border-transparent hover:border-blue-100"><Edit2 size={14} /></Button>
-                          <Button variant="ghost" size="sm" onClick={() => setConfirmDelete({ isOpen: true, id: t.id, title: t.title })} className="!p-2 text-rose-500 hover:bg-rose-50 border border-transparent hover:border-rose-100"><Trash2 size={14} /></Button>
+                        <div className="flex items-center justify-center gap-2">
+                          <ActionButton
+                            icon={Edit2}
+                            variant="blue"
+                            onClick={() => handleOpenEdit(t)}
+                          />
+                          <ActionButton
+                            icon={Trash2}
+                            variant="rose"
+                            onClick={() => setConfirmDelete({ isOpen: true, id: t.id, title: t.title })}
+                          />
                         </div>
                       </TableCell>
                     </TableRow>
@@ -292,54 +349,16 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
             </div>
           </div>
         ) : (
-          <div className="flex gap-4 items-start h-full overflow-x-auto pb-4 scrollbar-hide">
-            {stages.map((stage, sIdx) => (
-              <div key={stage.id} className="flex flex-col gap-3 min-w-[300px] w-[300px] h-full">
-                <div className={`p-4 ${STAGE_COLORS[sIdx % STAGE_COLORS.length]} rounded-2xl shadow-lg shadow-black/5 flex items-center justify-between border-b-4 border-black/10`}>
-                  <Badge variant="ghost" className="!p-0 text-[10px] uppercase tracking-tight text-white">{stage.name}</Badge>
-                  <div className="flex items-center justify-center bg-white/20 px-2.5 py-1 rounded-lg border border-white/20">
-                    <Label className="text-[10px] text-white tracking-tight">{tasksByStage[stage.id]?.length || 0}</Label>
-                  </div>
-                </div>
-                <div
-                  onDragOver={(e) => { e.preventDefault(); setDropTarget(stage.id); }}
-                  onDrop={(e) => { e.preventDefault(); const id = parseInt(e.dataTransfer.getData('text/plain')); if (id) handleStatusChange(stage.id, id); }}
-                  className={`flex-1 space-y-3 p-3 rounded-2xl border-2 border-dashed transition-all overflow-y-auto scrollbar-hide ${dropTarget === stage.id ? 'bg-emerald-50/50 border-emerald-300' : 'bg-gray-50/50 border-transparent'}`}
-                >
-                  {tasksByStage[stage.id]?.map(t => (
-                    <div
-                      key={t.id}
-                      draggable
-                      onDragStart={(e) => { setDraggingId(t.id); e.dataTransfer.setData('text/plain', t.id.toString()); }}
-                      onClick={() => handleOpenEdit(t)}
-                      className="group p-5 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-xl hover:shadow-emerald-900/5 hover:border-emerald-200 transition-all cursor-pointer transform hover:-translate-y-1 active:scale-[0.98]"
-                    >
-                      <div className="flex items-center justify-between mb-4">
-                        <Badge variant="ghost" className="px-2 py-0.5 border border-gray-100 text-[8px]  text-gray-400 uppercase tracking-tight bg-gray-50">T-{String(t.id).padStart(3, '0')}</Badge>
-                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setConfirmDelete({ isOpen: true, id: t.id, title: t.title }); }} className="!p-1.5 text-gray-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all border-none"><Trash2 size={12} /></Button>
-                      </div>
-                      <H2 className=" text-[13px] text-gray-800 mb-3 leading-tight tracking-tight group-hover:text-emerald-600 transition-colors uppercase">{t.title}</H2>
-                      <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                        <div className="flex items-center gap-2">
-                          <Avatar name={t.assigned_profile?.full_name} src={t.assigned_profile?.avatar_url} size="sm" className="ring-2 ring-white shadow-sm " />
-                          <Label className="text-[9px]  text-gray-400 uppercase tracking-tight">{t.assigned_profile?.full_name?.split(' ')[0] || 'TBD'}</Label>
-                        </div>
-                        {t.end_date && (
-                          <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[9px]  uppercase tracking-tight ${new Date(t.end_date) < new Date() ? 'bg-rose-50 text-rose-500' : 'bg-gray-50 text-gray-400'}`}>
-                            <Calendar size={10} />
-                            {new Date(t.end_date).toLocaleDateString('id-ID', { month: 'short', day: 'numeric' })}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {tasksByStage[stage.id]?.length === 0 && (
-                    <div className="h-24 flex items-center justify-center border-2 border-dashed border-gray-100 rounded-2xl text-[9px]  uppercase text-gray-200 tracking-[0.2em]">Kosong</div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+          <KanbanBoard<KanbanTask>
+            stages={stages.map(s => ({
+              id: s.id,
+              name: s.name,
+              colorClass: getStageColor(s.name)
+            }))}
+            itemsByStatus={tasksByStage as Record<string, KanbanTask[]>}
+            renderCard={renderTaskCard as any}
+            onReorder={handleStatusChange}
+          />
         )}
       </div>
 
@@ -351,14 +370,14 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
         size="lg"
         footer={
           <div className="flex w-full gap-3">
-            <Button variant="ghost" onClick={() => { setIsAddModalOpen(false); setIsDetailModalOpen(false); }} className="flex-1  text-xs uppercase tracking-tight">Batal</Button>
+            <Button variant="ghost" onClick={() => { setIsAddModalOpen(false); setIsDetailModalOpen(false); }} className="flex-1  text-xs uppercase ">Batal</Button>
             <Button
               onClick={handleSave}
               disabled={isProcessing}
               isLoading={isProcessing}
               leftIcon={<Save size={14} />}
               variant="success"
-              className="flex-1  text-xs uppercase tracking-tight shadow-lg shadow-emerald-100"
+              className="flex-1  text-xs uppercase  shadow-lg shadow-emerald-100"
             >
               Simpan Data
             </Button>
@@ -421,12 +440,11 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
         </div>
       </Modal>
 
-      <NotificationModal
-        isOpen={notification.isOpen}
-        onClose={() => setNotification({ ...notification, isOpen: false })}
-        title={notification.title}
-        message={notification.message}
-        type={notification.type === 'success' ? 'success' : 'error'}
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
       />
 
       <ConfirmDeleteModal

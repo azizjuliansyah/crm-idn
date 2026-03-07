@@ -2,18 +2,19 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Button, Table, TableHeader, TableBody, TableRow, TableCell, H3, Subtext, Label } from '@/components/ui';
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, H2, Subtext, Label, Toast, ToastType } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
 import { Company, ClientCompanyCategory, ClientCompany } from '@/lib/types';
 import {
   Plus, Search, Edit2, Trash2, Loader2, Tags,
-  Save, AlertTriangle, List, Building2, CheckCircle2, X
+  Save, AlertTriangle, List, Building2, CheckCircle2, X, ArrowUp, ArrowDown
 } from 'lucide-react';
 
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
-import { NotificationModal } from '@/components/shared/modals/NotificationModal';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
+// Removed legacy NotificationModal import
 import { ClientCompanyCategoryFormModal } from './components/ClientCompanyCategoryFormModal';
 
 
@@ -32,12 +33,18 @@ export const ClientCompanyCategoriesSettingsView: React.FC<Props> = ({ company }
   });
 
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; name: string }>({ isOpen: false, id: null, name: '' });
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
-    isOpen: false, title: '', message: '', type: 'success'
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
   });
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const showToast = (message: string, type: ToastType = 'success') => {
+    setToast({ isOpen: true, message, type });
+  };
+
+  const fetchData = useCallback(async (isInitial = false) => {
+    if (isInitial) setLoading(true);
     try {
       const { data: catsData } = await supabase
         .from('client_company_categories')
@@ -53,12 +60,12 @@ export const ClientCompanyCategoriesSettingsView: React.FC<Props> = ({ company }
       if (catsData) setCategories(catsData);
       if (cosData) setClientCompanies(cosData as ClientCompany[]);
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   }, [company.id]);
 
   useEffect(() => {
-    fetchData();
+    fetchData(true);
   }, [fetchData]);
 
   const categoriesWithCounts = useMemo(() => {
@@ -74,15 +81,17 @@ export const ClientCompanyCategoriesSettingsView: React.FC<Props> = ({ company }
     setIsProcessing(true);
     try {
       if (form.id) {
-        await supabase.from('client_company_categories').update({ name: form.name }).eq('id', form.id);
+        const { error } = await supabase.from('client_company_categories').update({ name: form.name }).eq('id', form.id);
+        if (error) throw error;
       } else {
-        await supabase.from('client_company_categories').insert({ name: form.name, company_id: company.id });
+        const { error } = await supabase.from('client_company_categories').insert({ name: form.name, company_id: company.id });
+        if (error) throw error;
       }
       setIsModalOpen(false);
       fetchData();
-      setNotification({ isOpen: true, title: 'Berhasil', message: 'Kategori telah disimpan.', type: 'success' });
+      showToast('Kategori telah disimpan.');
     } catch (err: any) {
-      setNotification({ isOpen: true, title: 'Gagal', message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -101,29 +110,32 @@ export const ClientCompanyCategoriesSettingsView: React.FC<Props> = ({ company }
       setConfirmDelete({ isOpen: false, id: null, name: '' });
       fetchData();
     } catch (err: any) {
-      setNotification({ isOpen: true, title: 'Gagal Menghapus', message: 'Kategori tidak dapat dihapus karena masih digunakan oleh data perusahaan.', type: 'error' });
+      showToast('Kategori tidak dapat dihapus karena masih digunakan oleh data perusahaan.', 'error');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-blue-600 mb-4" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Memuat Kategori...</Subtext></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-blue-600 mb-4" /><Subtext className="text-[10px]  uppercase  text-gray-400">Memuat Kategori...</Subtext></div>;
 
   return (
-    <div className="max-w-3xl space-y-8">
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="p-10 border-b border-gray-50 flex items-center justify-between">
-          <div>
-            <H3 className="text-2xl  text-gray-900 tracking-tight">Kategori Perusahaan Client</H3>
-            <Subtext className="text-sm text-gray-400 font-medium mt-1">Kelola kategori untuk mengelompokkan klien bisnis Anda.</Subtext>
-          </div>
-          <Button
-            onClick={() => { setForm({ name: '' }); setIsModalOpen(true); }}
-            variant="primary"
-          >
-            <Plus size={16} /> Kategori Baru
-          </Button>
+    <div className="max-w-4xl flex flex-col space-y-6">
+      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+        <div>
+          <H2 className="text-xl ">Kategori Client</H2>
+          <Subtext className="text-[10px] uppercase font-semibold text-gray-400">Kelola kategori untuk mengelompokkan klien bisnis Anda.</Subtext>
         </div>
+        <Button
+          onClick={() => { setForm({ name: '' }); setIsModalOpen(true); }}
+          leftIcon={<Plus size={14} strokeWidth={3} />}
+          variant='primary'
+          size='sm'
+        >
+          Kategori Baru
+        </Button>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
         <div className="overflow-x-auto">
           <Table className="w-full text-left">
@@ -142,7 +154,7 @@ export const ClientCompanyCategoriesSettingsView: React.FC<Props> = ({ company }
                       <div className="w-9 h-9 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600">
                         <Tags size={16} />
                       </div>
-                      <Label className="text-sm text-gray-900 tracking-tight">{item.name}</Label>
+                      <Label className="text-sm text-gray-900 ">{item.name}</Label>
                     </div>
                   </TableCell>
                   <TableCell className="px-10 py-6 text-center">
@@ -154,9 +166,17 @@ export const ClientCompanyCategoriesSettingsView: React.FC<Props> = ({ company }
                     </div>
                   </TableCell>
                   <TableCell className="px-10 py-6 text-center">
-                    <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button onClick={() => { setForm(item); setIsModalOpen(true); }} className="p-2 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-all"><Edit2 size={16} /></Button>
-                      <Button onClick={() => handleDeleteClick(item)} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-all"><Trash2 size={16} /></Button>
+                    <div className="flex items-center justify-center gap-1">
+                      <ActionButton
+                        icon={Edit2}
+                        variant="blue"
+                        onClick={() => { setForm(item); setIsModalOpen(true); }}
+                      />
+                      <ActionButton
+                        icon={Trash2}
+                        variant="rose"
+                        onClick={() => handleDeleteClick(item)}
+                      />
                     </div>
                   </TableCell>
                 </TableRow>
@@ -166,7 +186,7 @@ export const ClientCompanyCategoriesSettingsView: React.FC<Props> = ({ company }
           {categoriesWithCounts.length === 0 && (
             <div className="py-20 text-center text-gray-300">
               <Tags size={48} className="mx-auto mb-4 opacity-10" />
-              <Subtext className="text-xs  uppercase tracking-tight">Belum ada kategori yang ditambahkan</Subtext>
+              <Subtext className="text-xs  uppercase ">Belum ada kategori yang ditambahkan</Subtext>
             </div>
           )}
         </div>
@@ -188,14 +208,14 @@ export const ClientCompanyCategoriesSettingsView: React.FC<Props> = ({ company }
         itemName={confirmDelete.name}
         description="Seluruh data perusahaan yang terhubung dengan kategori ini akan kehilangan referensinya."
         isProcessing={isProcessing}
+        variant="horizontal"
       />
 
-      <NotificationModal
-        isOpen={notification.isOpen}
-        onClose={() => setNotification({ ...notification, isOpen: false })}
-        title={notification.title}
-        message={notification.message}
-        type={notification.type}
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

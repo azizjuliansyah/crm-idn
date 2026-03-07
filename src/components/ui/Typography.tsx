@@ -7,25 +7,25 @@ interface TextProps {
 }
 
 export const H1: React.FC<TextProps> = ({ children, className = '', title }) => (
-  <h1 title={title} className={`text-4xl font-medium tracking-tight text-gray-900 ${className}`}>
+  <h1 title={title} className={`text-4xl font-medium  text-gray-900 ${className}`}>
     {children}
   </h1>
 );
 
 export const H2: React.FC<TextProps> = ({ children, className = '', title }) => (
-  <h2 title={title} className={`text-2xl font-medium tracking-tight text-gray-900 ${className}`}>
+  <h2 title={title} className={`text-2xl font-medium  text-gray-900 ${className}`}>
     {children}
   </h2>
 );
 
 export const H3: React.FC<TextProps> = ({ children, className = '', title }) => (
-  <h3 title={title} className={`text-lg font-medium text-gray-900 uppercase tracking-tight ${className}`}>
+  <h3 title={title} className={`text-lg font-medium text-gray-900 uppercase  ${className}`}>
     {children}
   </h3>
 );
 
 export const H4: React.FC<TextProps> = ({ children, className = '', title }) => (
-  <h4 title={title} className={`text-[11px] font-medium uppercase tracking-tight text-gray-900 ${className}`}>
+  <h4 title={title} className={`text-[11px] font-medium uppercase  text-gray-900 ${className}`}>
     {children}
   </h4>
 );
@@ -37,7 +37,7 @@ export const Subtext: React.FC<TextProps> = ({ children, className = '', title }
 );
 
 export const Label: React.FC<TextProps> = ({ children, className = '', title }) => (
-  <span title={title} className={`text-[10px] font-medium text-gray-400 uppercase tracking-tight ${className}`}>
+  <span title={title} className={`text-[10px] font-medium text-gray-400 uppercase  ${className}`}>
     {children}
   </span>
 );
@@ -59,7 +59,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({ icon, title, subte
         </div>
       )}
       <div>
-        <h3 className="text-base font-medium text-gray-800 tracking-tight">{title}</h3>
+        <h3 className="text-base font-medium text-gray-800 ">{title}</h3>
         {subtext && <p className="text-[11px] font-medium text-gray-400 mt-0.5">{subtext}</p>}
       </div>
     </div>

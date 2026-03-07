@@ -24,7 +24,7 @@ export default function CreateInvoicePage() {
       initialProformaId={proformaId ? parseInt(proformaId) : undefined}
       initialQuotationId={quotationId ? parseInt(quotationId) : undefined}
       initialRequestId={requestId ? parseInt(requestId) : undefined}
-      onSaveSuccess={() => router.push(requestId ? '/dashboard/sales/invoice-requests' : '/dashboard/sales/invoices')}
+      onSaveSuccess={() => router.push(requestId ? '/dashboard/sales/invoice-requests?success=created' : '/dashboard/sales/invoices?success=created')}
     />
   );
 }

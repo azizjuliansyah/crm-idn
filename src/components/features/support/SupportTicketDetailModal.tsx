@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Input, Textarea, Button, H2, H3, Subtext, Label, Modal, Badge, Timeline, TimelineItem, TimelineIcon, TimelineContent, ComboBox } from '@/components/ui';
+import { Input, Textarea, Button, H2, H3, Subtext, Label, Modal, Badge, Timeline, TimelineItem, TimelineIcon, TimelineContent, ComboBox, ToastType, SectionHeader } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { SupportTicket, Profile, Company, CompanyMember, SupportStage, Client, LogActivity, TicketTopic, ClientCompany, ClientCompanyCategory } from '@/lib/types';
 import {
@@ -7,6 +7,7 @@ import {
   ArrowUp, MessageSquare, RefreshCw, Layers,
   Clock, ShieldAlert, Check
 } from 'lucide-react';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ClientFormModal } from '@/components/features/clients/components/ClientFormModal';
 
 interface Props {
@@ -21,10 +22,11 @@ interface Props {
   topics: TicketTopic[];
   onUpdate: () => void;
   onDelete: (id: number) => void;
+  setToast: (toast: { isOpen: boolean; message: string; type: ToastType }) => void;
 }
 
 export const SupportTicketDetailModal: React.FC<Props> = ({
-  isOpen, onClose, ticket, company, user, members, stages, clients, topics, onUpdate, onDelete
+  isOpen, onClose, ticket, company, user, members, stages, clients, topics, onUpdate, onDelete, setToast
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activities, setActivities] = useState<LogActivity[]>([]);
@@ -95,8 +97,11 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
       });
 
       setForm(prev => ({ ...prev, status: newStatus.toLowerCase() }));
+      setToast({ isOpen: true, message: `Status diubah ke ${newStatus.toUpperCase()}`, type: 'success' });
       onUpdate();
       await fetchActivities();
+    } catch (err: any) {
+      setToast({ isOpen: true, message: err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -114,7 +119,10 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
       });
       if (error) throw error;
       setNewComment('');
+      setToast({ isOpen: true, message: 'Komentar berhasil ditambahkan!', type: 'success' });
       await fetchActivities();
+    } catch (err: any) {
+      setToast({ isOpen: true, message: err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -133,9 +141,11 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
         status: form.status,
         type: form.type
       }).eq('id', ticket.id);
-      if (error) throw error;
+      setToast({ isOpen: true, message: 'Ticket berhasil diperbarui!', type: 'success' });
       onUpdate();
       onClose();
+    } catch (err: any) {
+      setToast({ isOpen: true, message: err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -159,8 +169,10 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
       setIsAddingClient(false);
       setNewClientForm({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
       onUpdate();
+      setToast({ isOpen: true, message: 'Client baru berhasil ditambahkan!', type: 'success' });
+      onUpdate();
     } catch (err: any) {
-      alert("Gagal menambah client: " + err.message);
+      setToast({ isOpen: true, message: "Gagal menambah client: " + err.message, type: 'error' });
     } finally {
       setIsProcessingQuick(false);
     }
@@ -194,8 +206,9 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
       setForm({ ...form, topic_id: data.id });
       setNewTopicName('');
       setIsAddingTopic(false);
+      setToast({ isOpen: true, message: 'Topik baru berhasil ditambahkan!', type: 'success' });
     } catch (err: any) {
-      alert(err.message);
+      setToast({ isOpen: true, message: err.message, type: 'error' });
     }
   };
 
@@ -220,12 +233,17 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
               <div className="w-9 h-9 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-rose-100 group">
                 <Headset size={18} className="group-hover:rotate-12 transition-transform" />
               </div>
-              <H2 className="text-base tracking-tight  uppercase">{form.title}</H2>
+              <H2 className="text-base   uppercase">{form.title}</H2>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" onClick={() => onDelete(ticket.id)} className="!p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all border-none shadow-none"><Trash2 size={18} /></Button>
-            <Button onClick={handleSave} disabled={isProcessing} isLoading={isProcessing} leftIcon={<Save size={14} />} variant="danger" className="h-10 px-6  text-xs uppercase tracking-[0.1em] shadow-lg shadow-rose-100">
+            <ActionButton
+              icon={Trash2}
+              variant="rose"
+              onClick={() => onDelete(ticket.id)}
+              title="Hapus Tiket"
+            />
+            <Button onClick={handleSave} disabled={isProcessing} isLoading={isProcessing} leftIcon={<Save size={14} />} variant="danger" size='sm'>
               UPDATE TICKET
             </Button>
             <Button variant="ghost" onClick={onClose} className="!p-1.5 text-gray-400 ml-2 hover:text-gray-900 rounded-xl"><X size={20} /></Button>
@@ -234,15 +252,15 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
 
         <div className="px-8 py-4 flex items-center justify-between border-b border-gray-100 bg-gray-50/50 shrink-0">
           <div className="flex items-center gap-6">
-            <Badge variant="ghost" className="px-2.5 py-1 border border-gray-200 text-[9px]  text-gray-600 bg-white uppercase tracking-tight ring-1 ring-inset ring-gray-100">ID TICKET: {ticket.id}</Badge>
-            <div className="flex items-center gap-1.5 text-[10px]  text-gray-400 uppercase tracking-tight"><Clock size={14} className="text-gray-300" /> Dibuat {new Date(ticket.created_at).toLocaleDateString('id-ID', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+            <Badge variant="ghost" className="px-2.5 py-1 border border-gray-200 text-[9px]  text-gray-600 bg-white uppercase  ring-1 ring-inset ring-gray-100">ID TICKET: {ticket.id}</Badge>
+            <div className="flex items-center gap-1.5 text-[10px]  text-gray-400 uppercase "><Clock size={14} className="text-gray-300" /> Dibuat {new Date(ticket.created_at).toLocaleDateString('id-ID', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
             <Badge variant={form.type === 'complaint' ? 'danger' : 'primary'} className="flex items-center gap-1.5 px-3 py-1 text-[9px]  uppercase tracking-[0.2em] border-none ring-1 ring-inset shadow-sm">
               <Layers size={10} /> {form.type === 'complaint' ? 'COMPLAINT' : 'STANDARD TICKET'}
             </Badge>
           </div>
           <div className="flex items-center gap-2">
-            <Label className="text-[10px]  text-gray-400 uppercase tracking-tight">Urgensi:</Label>
-            <Badge variant={form.priority === 'urgent' ? 'danger' : 'secondary'} className="text-[10px] py-1 px-3  uppercase tracking-tight ring-1 ring-inset">{form.priority}</Badge>
+            <Label className="text-[10px]  text-gray-400 uppercase ">Urgensi:</Label>
+            <Badge variant={form.priority === 'urgent' ? 'danger' : 'secondary'} className="text-[10px] py-1 px-3  uppercase  ring-1 ring-inset">{form.priority}</Badge>
           </div>
         </div>
 
@@ -263,10 +281,12 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
 
         <div className="flex-1 flex overflow-hidden px-8 py-6 gap-10">
           <div className="w-1/2 flex flex-col border-r border-gray-100 pr-10">
-            <H3 className="text-[10px]  text-gray-400 uppercase tracking-[0.25em] mb-6 flex items-center gap-2"><MessageSquare size={12} className="text-gray-300" /> Log Percakapan & Status</H3>
+            <SectionHeader
+              title="Log Percakapan & Status"
+              className="mb-6 shrink-0 uppercase"
+            />
             <div className="flex-1 flex flex-col overflow-hidden">
               <div className="flex items-start gap-4 mb-8">
-                <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center  text-[12px] shrink-0 uppercase shadow-lg shadow-rose-100">{user.full_name?.charAt(0)}</div>
                 <div className="flex-1 relative">
                   <Textarea
                     value={newComment}
@@ -279,7 +299,7 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
                       variant="danger"
                       onClick={handleAddComment}
                       disabled={!newComment.trim()}
-                      className="!p-2 !h-auto rounded-xl shadow-lg shadow-rose-100 hover:-translate-y-0.5 transition-all"
+                      className="!p-2 mb-1 !h-auto !rounded-md"
                     >
                       <ArrowUp size={16} />
                     </Button>
@@ -304,8 +324,8 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
                       </TimelineIcon>
                       <TimelineContent>
                         <div className="flex items-center gap-3 mb-1.5">
-                          <Label className="text-[11px]  text-gray-900 tracking-tight">{act.profile?.full_name}</Label>
-                          <Label className="text-[8px]  text-gray-300 uppercase tracking-tight bg-gray-50 px-1.5 py-0.5 rounded">{new Date(act.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} • {new Date(act.created_at).toLocaleDateString('id-ID', { month: 'short', day: 'numeric' })}</Label>
+                          <Label className="text-[11px]  text-gray-900 ">{act.profile?.full_name}</Label>
+                          <Label className="text-[8px]  text-gray-300 uppercase  bg-gray-50 px-1.5 py-0.5 rounded">{new Date(act.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} • {new Date(act.created_at).toLocaleDateString('id-ID', { month: 'short', day: 'numeric' })}</Label>
                         </div>
                         <Subtext className={`text-[12px] font-medium leading-relaxed ${act.activity_type === 'status_change' ? 'text-gray-400 italic ' : 'text-gray-600'}`}>{act.content}</Subtext>
                       </TimelineContent>
@@ -317,7 +337,11 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
           </div>
 
           <div className="w-1/2 flex flex-col space-y-8 overflow-y-auto scrollbar-hide pr-2">
-            <H3 className="text-[10px]  text-gray-400 uppercase tracking-[0.25em] flex items-center gap-2"><Layers size={12} className="text-gray-300" /> Konfigurasi Data Tiket</H3>
+            <SectionHeader
+              title="Konfigurasi Data Tiket"
+              className="mb-6 shrink-0 uppercase"
+            />
+
             <div className="space-y-6">
               <ComboBox
                 label="Klasifikasi Masalah"

@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Input, Button, H2, Subtext, Label, Modal, Badge } from '@/components/ui';
+import { Input, Button, H2, Subtext, Label, Modal, Badge, Toast, ToastType } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { LeadStage, Company } from '@/lib/types';
 import {
   Plus, Edit2, Trash2, Loader2, ArrowUp, ArrowDown, Save,
-  CheckCircle2, AlertTriangle, Target, X
+  CheckCircle2, AlertTriangle, Target, X, Kanban
 } from 'lucide-react';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
-import { NotificationModal } from '@/components/shared/modals/NotificationModal';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
 
 interface Props {
   company: Company;
@@ -22,13 +22,15 @@ export const LeadStagesSettingsView: React.FC<Props> = ({ company }) => {
   const [form, setForm] = useState({ id: '', name: '' });
 
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: string | null; name: string }>({ isOpen: false, id: null, name: '' });
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' | 'warning' }>({
-    isOpen: false, title: '', message: '', type: 'success'
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
   });
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (isInitial = false) => {
     if (!company) return;
-    setLoading(true);
+    if (isInitial) setLoading(true);
     try {
       const { data: stagesData } = await supabase
         .from('lead_stages')
@@ -47,12 +49,12 @@ export const LeadStagesSettingsView: React.FC<Props> = ({ company }) => {
         setUsedStatuses(distinct);
       }
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
-  }, [company.id, supabase]);
+  }, [company.id]);
 
   useEffect(() => {
-    fetchData();
+    fetchData(true);
   }, [fetchData]);
 
   const handleSave = async (e?: React.FormEvent) => {
@@ -73,9 +75,9 @@ export const LeadStagesSettingsView: React.FC<Props> = ({ company }) => {
       }
       setIsModalOpen(false);
       fetchData();
-      setNotification({ isOpen: true, title: 'Berhasil', message: 'Tahapan pipeline telah disimpan.', type: 'success' });
+      setToast({ isOpen: true, message: 'Tahapan pipeline telah disimpan.', type: 'success' });
     } catch (err: any) {
-      setNotification({ isOpen: true, title: 'Gagal', message: err.message, type: 'error' });
+      setToast({ isOpen: true, message: err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -97,12 +99,18 @@ export const LeadStagesSettingsView: React.FC<Props> = ({ company }) => {
       sort_order: i + 1,
       is_system: s.is_system
     }));
-    await supabase.from('lead_stages').upsert(updates);
+    const { error } = await supabase.from('lead_stages').upsert(updates);
+    if (error) {
+      setToast({ isOpen: true, message: 'Gagal merubah urutan: ' + error.message, type: 'error' });
+      fetchData();
+    } else {
+      setToast({ isOpen: true, message: 'Urutan tahapan berhasil diperbarui.', type: 'success' });
+    }
   };
 
   const handleDeleteClick = (stage: LeadStage) => {
     if (usedStatuses.includes(stage.name.toLowerCase())) {
-      setNotification({ isOpen: true, title: 'Akses Ditolak', message: 'Tahapan ini sedang digunakan oleh data prospek dan tidak dapat dihapus.', type: 'warning' });
+      setToast({ isOpen: true, message: 'Tahapan ini sedang digunakan dan tidak dapat dihapus.', type: 'error' });
       return;
     }
     setConfirmDelete({ isOpen: true, id: stage.id, name: stage.name });
@@ -115,6 +123,9 @@ export const LeadStagesSettingsView: React.FC<Props> = ({ company }) => {
       await supabase.from('lead_stages').delete().eq('id', confirmDelete.id);
       setConfirmDelete({ isOpen: false, id: null, name: '' });
       fetchData();
+      setToast({ isOpen: true, message: 'Tahapan berhasil dihapus.', type: 'success' });
+    } catch (err: any) {
+      setToast({ isOpen: true, message: 'Gagal menghapus: ' + err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -123,66 +134,76 @@ export const LeadStagesSettingsView: React.FC<Props> = ({ company }) => {
   if (loading) return (
     <div className="flex flex-col items-center justify-center py-24">
       <Loader2 className="animate-spin text-blue-600 mb-4" />
-      <Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Memuat Lead Pipeline...</Subtext>
+      <Subtext className="text-[10px] uppercase font-bold text-gray-400">Memuat Lead Pipeline...</Subtext>
     </div>
   );
 
   return (
-    <div className="space-y-8 max-w-2xl">
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-        <div className="p-8 border-b border-gray-50 flex items-center justify-between">
-          <div>
-            <H2 className="text-xl  tracking-tight">Manajemen Lead Pipeline</H2>
-            <Subtext className="text-xs mt-1">Atur alur kualifikasi prospek baru ke dalam sistem.</Subtext>
-          </div>
-          <Button
-            onClick={() => { setForm({ id: '', name: '' }); setIsModalOpen(true); }}
-            leftIcon={<Plus size={14} />}
-            size="md"
-            variant='primary'
-          >
-            Tambah Stage
-          </Button>
+    <div className="flex flex-col space-y-6 max-w-4xl">
+      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+        <div>
+          <H2 className="text-xl ">Manajemen Lead Pipeline</H2>
+          <Subtext className="text-[10px] uppercase font-semibold text-gray-400">Atur alur kualifikasi prospek baru ke dalam sistem.</Subtext>
         </div>
-        <div className="p-6 space-y-3">
-          {stages.map((stage, idx) => {
-            const isUsed = usedStatuses.includes(stage.name.toLowerCase());
-            return (
-              <div key={stage.id} className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-xl hover:border-blue-200 transition-all group">
-                <div className="flex items-center gap-4">
-                  <div className="w-8 h-8 bg-white border border-gray-100 rounded-lg flex items-center justify-center text-[10px]  text-gray-400">{idx + 1}</div>
-                  <Label className="text-sm  text-gray-700 tracking-tight">{stage.name}</Label>
-                  {stage.is_system && <Badge variant="neutral" className="!px-2 !py-0.5 !text-[8px]">Sistem</Badge>}
-                  {isUsed && <Badge variant="primary" className="!px-2 !py-0.5 !text-[8px]">Aktif</Badge>}
+        <Button
+          onClick={() => { setForm({ id: '', name: '' }); setIsModalOpen(true); }}
+          leftIcon={<Plus size={14} strokeWidth={3} />}
+          variant='primary'
+          size='sm'
+        >
+          Tambah Stage
+        </Button>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm p-6 space-y-3">
+        {stages.map((stage, idx) => {
+          const isUsed = usedStatuses.includes(stage.name.toLowerCase());
+          return (
+            <div key={stage.id} className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-xl hover:border-blue-200 transition-all group">
+              <div className="flex items-center gap-4">
+                <div className="w-8 h-8 bg-white border border-gray-100 rounded-lg flex items-center justify-center text-[10px] font-bold text-gray-400 shadow-sm">
+                  {idx + 1}
                 </div>
-                <div className="flex items-center gap-1">
-                  <div className="flex items-center gap-1 mr-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button variant="ghost" size="sm" onClick={() => { setForm({ id: stage.id, name: stage.name }); setIsModalOpen(true); }} className="!p-2 bg-white border border-gray-200 text-blue-500">
-                      <Edit2 size={14} />
-                    </Button>
-                    {!stage.is_system && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteClick(stage)}
-                        disabled={isUsed}
-                        className={`!p-2 bg-white border border-gray-200 ${isUsed ? 'text-gray-200 opacity-50' : 'text-red-400'}`}
-                      >
-                        <Trash2 size={14} />
-                      </Button>
-                    )}
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={() => handleMove(stage.id, 'up')} disabled={idx === 0} className="!p-2 bg-white border border-gray-200 text-gray-400">
-                    <ArrowUp size={14} />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleMove(stage.id, 'down')} disabled={idx === stages.length - 1} className="!p-2 bg-white border border-gray-200 text-gray-400">
-                    <ArrowDown size={14} />
-                  </Button>
+                <div className="flex items-center gap-2">
+                  <Label className="text-[13px] font-semibold text-gray-700">{stage.name}</Label>
+                  {stage.is_system && <Badge variant="neutral" className="!px-2 !py-0.5 !text-[8px] uppercase font-bold bg-gray-200 text-gray-500">Sistem</Badge>}
+                  {isUsed && <Badge variant="primary" className="!px-2 !py-0.5 !text-[8px] uppercase font-bold">Aktif</Badge>}
                 </div>
               </div>
-            );
-          })}
-        </div>
+              <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1">
+                  <ActionButton
+                    icon={ArrowUp}
+                    variant="gray"
+                    onClick={() => handleMove(stage.id, 'up')}
+                    disabled={idx === 0}
+                  />
+                  <ActionButton
+                    icon={ArrowDown}
+                    variant="gray"
+                    onClick={() => handleMove(stage.id, 'down')}
+                    disabled={idx === stages.length - 1}
+                  />
+                </div>
+                <div className="flex items-center gap-1 pl-3 ml-2 border-l border-gray-200">
+                  <ActionButton
+                    icon={Edit2}
+                    variant="blue"
+                    onClick={() => { setForm({ id: stage.id, name: stage.name }); setIsModalOpen(true); }}
+                  />
+                  {!stage.is_system && (
+                    <ActionButton
+                      icon={Trash2}
+                      variant="rose"
+                      onClick={() => handleDeleteClick(stage)}
+                      disabled={isUsed}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <Modal
@@ -190,21 +211,25 @@ export const LeadStagesSettingsView: React.FC<Props> = ({ company }) => {
         onClose={() => setIsModalOpen(false)}
         title={form.id ? "Edit Tahapan Leads" : "Tambah Tahapan Leads"}
         footer={
-          <Button
-            onClick={handleSave}
-            isLoading={isProcessing}
-            className="w-full justify-center"
-          >
-            Simpan Tahapan
-          </Button>
+          <div className="flex w-full gap-3">
+            <Button variant="ghost" onClick={() => setIsModalOpen(false)} className="flex-1 text-[10px] uppercase font-bold">Batal</Button>
+            <Button
+              onClick={handleSave}
+              isLoading={isProcessing}
+              variant='primary'
+            >
+              Simpan Tahapan
+            </Button>
+          </div>
         }
       >
-        <div className="space-y-4">
+        <div className="space-y-4 py-2">
           <Input
             label="Nama Tahapan"
             value={form.name}
             onChange={e => setForm({ ...form, name: e.target.value })}
             placeholder="Misal: Hot Prospect..."
+            className="!py-3"
           />
         </div>
       </Modal>
@@ -216,14 +241,14 @@ export const LeadStagesSettingsView: React.FC<Props> = ({ company }) => {
         title="Hapus Tahapan"
         itemName={confirmDelete.name}
         isProcessing={isProcessing}
+        variant="horizontal"
       />
 
-      <NotificationModal
-        isOpen={notification.isOpen}
-        onClose={() => setNotification({ ...notification, isOpen: false })}
-        title={notification.title}
-        message={notification.message}
-        type={notification.type}
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

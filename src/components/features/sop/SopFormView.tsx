@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 
-import { Input, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, H1, H2, Subtext, Label, ComboBox, Card, SectionHeader, Breadcrumb, Modal } from '@/components/ui';
+import { Input, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, H1, H2, Subtext, Label, ComboBox, Card, SectionHeader, Breadcrumb, Modal, Toast, ToastType } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -12,6 +12,7 @@ import {
   List, Activity, ShieldCheck, Split,
   ArrowUp, ArrowDown
 } from 'lucide-react';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { useRouter } from 'next/navigation';
 
 interface Props {
@@ -38,6 +39,11 @@ export const SopFormView: React.FC<Props> = ({ company, sopId }) => {
 
   const [isInstructionModalOpen, setIsInstructionModalOpen] = useState(false);
   const [activeInstructionIdx, setActiveInstructionIdx] = useState<number | null>(null);
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
+  });
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -113,7 +119,7 @@ export const SopFormView: React.FC<Props> = ({ company, sopId }) => {
 
   const handleSave = async () => {
     if (!form.title || !form.document_number) {
-      alert("Judul dan Nomor Dokumen wajib diisi.");
+      setToast({ isOpen: true, message: "Judul dan Nomor Dokumen wajib diisi.", type: 'error' });
       return;
     }
 
@@ -163,10 +169,11 @@ export const SopFormView: React.FC<Props> = ({ company, sopId }) => {
         if (stepsErr) throw stepsErr;
       }
 
-      router.push('/dashboard/sops');
+      const successParam = sopId ? 'updated' : 'created';
+      router.push(`/dashboard/sops?success=${successParam}`);
     } catch (err: any) {
       console.error("Save Error:", err);
-      alert("Gagal menyimpan: " + err.message);
+      setToast({ isOpen: true, message: "Gagal menyimpan: " + err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -176,7 +183,7 @@ export const SopFormView: React.FC<Props> = ({ company, sopId }) => {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4">
         <Loader2 className="animate-spin text-blue-600" size={32} />
-        <Subtext className="text-xs  uppercase tracking-tight text-gray-400">Menyiapkan Editor...</Subtext>
+        <Subtext className="text-xs  uppercase  text-gray-400">Menyiapkan Editor...</Subtext>
       </div>
     );
   }
@@ -201,7 +208,7 @@ export const SopFormView: React.FC<Props> = ({ company, sopId }) => {
                   { label: sopId ? 'Edit Prosedur' : 'SOP Baru', active: true }
                 ]}
               />
-              <Subtext className="text-[11px] font-medium text-blue-600 uppercase tracking-tight mt-0.5">{form.document_number || 'IDENTITAS DOKUMEN BARU'}</Subtext>
+              <Subtext className="text-[11px] font-medium text-blue-600 uppercase  mt-0.5">{form.document_number || 'IDENTITAS DOKUMEN BARU'}</Subtext>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -227,11 +234,11 @@ export const SopFormView: React.FC<Props> = ({ company, sopId }) => {
           />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
             <div className="space-y-1.5">
-              <Label className="ml-1 tracking-wider">Judul SOP*</Label>
+              <Label className="ml-1 ">Judul SOP*</Label>
               <Input type="text" value={form.title} onChange={(e: any) => setForm({ ...form, title: e.target.value })} className="!py-3" placeholder="Misal: Prosedur Pengadaan Barang" />
             </div>
             <div className="space-y-1.5">
-              <Label className="ml-1 tracking-wider">Nomor Dokumen*</Label>
+              <Label className="ml-1 ">Nomor Dokumen*</Label>
               <Input type="text" value={form.document_number} onChange={(e: any) => setForm({ ...form, document_number: e.target.value })} className="!py-3" placeholder="Misal: SOP/PROC/001" />
             </div>
             <div className="space-y-1.5">
@@ -246,7 +253,7 @@ export const SopFormView: React.FC<Props> = ({ company, sopId }) => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="ml-1 tracking-wider">Revisi ke-</Label>
+                <Label className="ml-1 ">Revisi ke-</Label>
                 <Input type="number" value={form.revision_number} onChange={(e: any) => setForm({ ...form, revision_number: Number(e.target.value) })} className="!py-3" />
               </div>
               <div className="space-y-1.5">
@@ -280,7 +287,7 @@ export const SopFormView: React.FC<Props> = ({ company, sopId }) => {
               { id: 'kpi_indicator', label: 'V. Indikator Kinerja (KPI)', placeholder: 'Target atau ukuran keberhasilan prosedur ini...' }
             ].map(field => (
               <div key={field.id} className="space-y-1.5">
-                <Label className="ml-1 tracking-wider">{field.label}</Label>
+                <Label className="ml-1 ">{field.label}</Label>
                 <Textarea
                   value={(form as any)[field.id] || ''}
                   onChange={(e: any) => setForm({ ...form, [field.id]: e.target.value })}
@@ -452,14 +459,12 @@ export const SopFormView: React.FC<Props> = ({ company, sopId }) => {
                             </div>
                           </TableCell>
                           <TableCell className="!px-4 !py-4 border-l border-gray-100">
-                            <Button
-                              variant="ghost"
-                              size="sm"
+                            <ActionButton
+                              icon={Trash2}
+                              variant="rose"
                               onClick={() => handleRemoveStep(idx)}
-                              className="!p-2 text-rose-300 hover:text-rose-600 shadow-none"
-                            >
-                              <Trash2 size={16} />
-                            </Button>
+                              title="Hapus"
+                            />
                           </TableCell>
                         </TableRow>
 
@@ -470,7 +475,7 @@ export const SopFormView: React.FC<Props> = ({ company, sopId }) => {
                               <div className="flex items-center gap-8">
                                 <div className="flex items-center gap-2 shrink-0">
                                   <Split size={14} className="text-indigo-600" />
-                                  <Label className="text-[10px]  text-indigo-900 uppercase tracking-tight">Branching Logic:</Label>
+                                  <Label className="text-[10px]  text-indigo-900 uppercase ">Branching Logic:</Label>
                                 </div>
                                 <div className="flex-1 grid grid-cols-2 gap-6">
                                   <div className="flex items-center gap-3">
@@ -528,7 +533,7 @@ export const SopFormView: React.FC<Props> = ({ company, sopId }) => {
               </Table>
             </div>
             <div className="flex items-center gap-3 mt-4">
-              <Button onClick={handleAddStep} variant="ghost" size="sm" leftIcon={<Plus size={14} />} className="!text-[#4F46E5] hover:bg-indigo-50 font-bold tracking-tight uppercase text-[10px]">
+              <Button onClick={handleAddStep} variant="ghost" size="sm" leftIcon={<Plus size={14} />} className="!text-[#4F46E5] hover:bg-indigo-50 font-bold  uppercase text-[10px]">
                 Sisipkan Langkah Di Akhir
               </Button>
             </div>
@@ -543,15 +548,15 @@ export const SopFormView: React.FC<Props> = ({ company, sopId }) => {
           />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
             <div className="space-y-1.5">
-              <Label className="ml-1 tracking-wider">Disiapkan Oleh</Label>
+              <Label className="ml-1 ">Disiapkan Oleh</Label>
               <Input type="text" value={form.prepared_by} onChange={(e: any) => setForm({ ...form, prepared_by: e.target.value })} className="!py-3" placeholder="Nama / Jabatan" />
             </div>
             <div className="space-y-1.5">
-              <Label className="ml-1 tracking-wider">Diperiksa Oleh</Label>
+              <Label className="ml-1 ">Diperiksa Oleh</Label>
               <Input type="text" value={form.checked_by} onChange={(e: any) => setForm({ ...form, checked_by: e.target.value })} className="!py-3" placeholder="Nama / Jabatan" />
             </div>
             <div className="space-y-1.5">
-              <Label className="ml-1 tracking-wider">Disahkan Oleh</Label>
+              <Label className="ml-1 ">Disahkan Oleh</Label>
               <Input type="text" value={form.approved_by} onChange={(e: any) => setForm({ ...form, approved_by: e.target.value })} className="!py-3" placeholder="Nama / Jabatan" />
             </div>
           </div>
@@ -570,7 +575,7 @@ export const SopFormView: React.FC<Props> = ({ company, sopId }) => {
         }
       >
         <div className="space-y-4 pb-4">
-          <Label className="uppercase tracking-tight ml-1 text-gray-400 text-xs">Deskripsi Detail Instruksi Kerja</Label>
+          <Label className="uppercase  ml-1 text-gray-400 text-xs">Deskripsi Detail Instruksi Kerja</Label>
           <Textarea
             value={activeInstructionIdx !== null ? steps[activeInstructionIdx]?.description || '' : ''}
             onChange={(e: any) => {
@@ -584,6 +589,13 @@ export const SopFormView: React.FC<Props> = ({ company, sopId }) => {
           />
         </div>
       </Modal>
+
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 };

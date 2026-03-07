@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Button, Table, TableHeader, TableBody, TableRow, TableCell, H1, Subtext, Label } from '@/components/ui';
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, H1, Subtext, Label, Toast, ToastType } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -41,7 +41,7 @@ const FlowShape: React.FC<{
     return (
       <div className="relative flex flex-col items-center">
         {NumberBadge}
-        <div className="w-24 h-10 border border-gray-900 rounded-full flex items-center justify-center text-[8px]  uppercase tracking-tight bg-white px-2 text-center shadow-sm">
+        <div className="w-24 h-10 border border-gray-900 rounded-full flex items-center justify-center text-[8px]  uppercase  bg-white px-2 text-center shadow-sm">
           {displayLabel}
         </div>
       </div>
@@ -90,6 +90,11 @@ export const SopDetailView: React.FC<Props> = ({ company, sopId }) => {
   const [sop, setSop] = useState<Sop | null>(null);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
+  });
 
   const fetchSop = useCallback(async () => {
     setLoading(true);
@@ -162,7 +167,7 @@ export const SopDetailView: React.FC<Props> = ({ company, sopId }) => {
 
       router.push(`/dashboard/sops/${savedNew.id}/edit`);
     } catch (err: any) {
-      alert(err.message);
+      setToast({ isOpen: true, message: "Gagal membuat revisi: " + err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -291,11 +296,11 @@ export const SopDetailView: React.FC<Props> = ({ company, sopId }) => {
             <ArrowLeft size={20} />
           </Button>
           <div>
-            <H1 className="text-xl  text-gray-900 tracking-tight">{sop.title}</H1>
+            <H1 className="text-xl  text-gray-900 ">{sop.title}</H1>
             <div className="flex items-center gap-3 mt-0.5">
-              <Subtext className="text-[10px]  text-blue-600 uppercase tracking-tight">{sop.document_number}</Subtext>
+              <Subtext className="text-[10px]  text-blue-600 uppercase ">{sop.document_number}</Subtext>
               <Label className="w-1 h-1 rounded-full bg-gray-300"></Label>
-              <Subtext className="text-[10px]  text-gray-400 uppercase tracking-tight">Rev {String(sop.revision_number).padStart(2, '0')}</Subtext>
+              <Subtext className="text-[10px]  text-gray-400 uppercase ">Rev {String(sop.revision_number).padStart(2, '0')}</Subtext>
             </div>
           </div>
         </div>
@@ -339,7 +344,7 @@ export const SopDetailView: React.FC<Props> = ({ company, sopId }) => {
             <div key={sec.id} className="space-y-3">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center opacity-70">{sec.icon}</div>
-                <h4 className="text-sm  text-gray-900 uppercase tracking-tight">{sec.label}</h4>
+                <h4 className="text-sm  text-gray-900 uppercase ">{sec.label}</h4>
               </div>
               <Subtext className="text-sm text-gray-600 font-medium leading-relaxed pl-11 whitespace-pre-wrap">{(sop as any)[sec.id] || '-'}</Subtext>
             </div>
@@ -348,15 +353,15 @@ export const SopDetailView: React.FC<Props> = ({ company, sopId }) => {
 
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="p-8 border-b border-gray-50 bg-gray-50/20">
-            <h4 className="text-sm  text-gray-900 uppercase tracking-tight">Visualisasi Alur & Instruksi Kerja</h4>
+            <h4 className="text-sm  text-gray-900 uppercase ">Visualisasi Alur & Instruksi Kerja</h4>
           </div>
           <Table className="border-collapse table-fixed">
             <TableHeader>
               <TableRow className="bg-gray-50/50">
-                <TableCell isHeader className="px-8 py-5 text-[10px] uppercase tracking-tight text-center w-[340px]">Diagram Alir</TableCell>
-                <TableCell isHeader className="px-8 py-5 text-[10px] uppercase tracking-tight text-left w-48">Pelaksana</TableCell>
-                <TableCell isHeader className="px-8 py-5 text-[10px] uppercase tracking-tight text-left min-w-[400px]">Instruksi Pekerjaan</TableCell>
-                <TableCell isHeader className="px-8 py-5 text-[10px] uppercase tracking-tight text-left w-48">Dokumen</TableCell>
+                <TableCell isHeader className="px-8 py-5 text-[10px] uppercase  text-center w-[340px]">Diagram Alir</TableCell>
+                <TableCell isHeader className="px-8 py-5 text-[10px] uppercase  text-left w-48">Pelaksana</TableCell>
+                <TableCell isHeader className="px-8 py-5 text-[10px] uppercase  text-left min-w-[400px]">Instruksi Pekerjaan</TableCell>
+                <TableCell isHeader className="px-8 py-5 text-[10px] uppercase  text-left w-48">Dokumen</TableCell>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -608,7 +613,7 @@ export const SopDetailView: React.FC<Props> = ({ company, sopId }) => {
                       {(!isEnd && !isAlurBaru) && step.responsible_role && (
                         <div className="flex items-center gap-2 mt-2">
                           <User size={12} className="text-blue-500" />
-                          <Label className="text-xs  text-gray-900 uppercase tracking-tight leading-tight">{step.responsible_role}</Label>
+                          <Label className="text-xs  text-gray-900 uppercase  leading-tight">{step.responsible_role}</Label>
                         </div>
                       )}
                     </TableCell>
@@ -631,7 +636,7 @@ export const SopDetailView: React.FC<Props> = ({ company, sopId }) => {
                     <TableCell className="px-8 py-10 align-top">
                       {!isEnd && !isAlurBaru && step.related_documents && (
                         <div className="mt-2">
-                          <Subtext className="text-[10px]  text-gray-400 uppercase tracking-tight flex items-center gap-2">
+                          <Subtext className="text-[10px]  text-gray-400 uppercase  flex items-center gap-2">
                             <FileText size={12} className="text-emerald-500 shrink-0" />
                             {step.related_documents}
                           </Subtext>
@@ -646,23 +651,30 @@ export const SopDetailView: React.FC<Props> = ({ company, sopId }) => {
         </div>
 
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 overflow-hidden">
-          <h4 className="text-sm  text-gray-900 uppercase tracking-tight mb-8 text-center">Lembar Otorisasi</h4>
+          <h4 className="text-sm  text-gray-900 uppercase  mb-8 text-center">Lembar Otorisasi</h4>
           <div className="grid grid-cols-3 divide-x divide-gray-100 border border-gray-100 rounded-2xl overflow-hidden">
             <div className="p-6 text-center">
-              <Label className="uppercase tracking-tight mb-10 block">Disiapkan Oleh</Label>
+              <Label className="uppercase  mb-10 block">Disiapkan Oleh</Label>
               <Subtext className="text-xs  text-gray-900">{sop.prepared_by || '-'}</Subtext>
             </div>
             <div className="p-6 text-center">
-              <Label className="uppercase tracking-tight mb-10 block">Diperiksa Oleh</Label>
+              <Label className="uppercase  mb-10 block">Diperiksa Oleh</Label>
               <Subtext className="text-xs  text-gray-900">{sop.checked_by || '-'}</Subtext>
             </div>
             <div className="p-6 text-center">
-              <Label className="uppercase tracking-tight mb-10 block">Disahkan Oleh</Label>
+              <Label className="uppercase  mb-10 block">Disahkan Oleh</Label>
               <Subtext className="text-xs  text-gray-900">{sop.approved_by || '-'}</Subtext>
             </div>
           </div>
         </div>
       </div>
+
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 };

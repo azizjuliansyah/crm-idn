@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, Label, Badge } from '@/components/ui';
 import { Deal, Pipeline } from '@/lib/types';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { User, Trash2, Edit2, FileText, Plus, FilePlus, ChevronUp, ChevronDown, Clock } from 'lucide-react';
 
 interface Props {
@@ -88,13 +89,13 @@ export const DealsTableView: React.FC<Props> = ({
                 <TableCell>
                   <div className="font-bold text-gray-900 mb-1">{d.name}</div>
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <Label className="text-[10px] text-indigo-600 !capitalize !tracking-tight font-medium">{d.contact_name}</Label>
+                    <Label className="text-[10px] text-indigo-600 !capitalize ! font-medium">{d.contact_name}</Label>
                     <Label className="text-[10px] text-gray-300">•</Label>
-                    <Label className="text-[10px] text-gray-400 !capitalize !tracking-tight">{d.customer_company || 'Perorangan'}</Label>
+                    <Label className="text-[10px] text-gray-400 !capitalize !">{d.customer_company || 'Perorangan'}</Label>
                     {(d.follow_up || 0) > 0 && (
                       <>
                         <Label className="text-[10px] text-gray-300">•</Label>
-                        <Label className="px-1.5 py-0.5 bg-amber-50 !text-amber-600 border border-amber-100 rounded text-[9px] font-bold !capitalize !tracking-tight inline-flex items-center gap-1 whitespace-nowrap" title={`${d.follow_up} kali di-follow up`}>
+                        <Label className="px-1.5 py-0.5 bg-amber-50 !text-amber-600 border border-amber-100 rounded text-[9px] font-bold !capitalize ! inline-flex items-center gap-1 whitespace-nowrap" title={`${d.follow_up} kali di-follow up`}>
                           FU {d.follow_up}
                         </Label>
                       </>
@@ -102,7 +103,7 @@ export const DealsTableView: React.FC<Props> = ({
                     {d.follow_up_date && (
                       <>
                         <Label className="text-[10px] text-gray-300">•</Label>
-                        <Label className="px-1.5 py-0.5 bg-blue-50 !text-blue-600 border border-blue-100 rounded text-[9px] font-bold !capitalize !tracking-tight inline-flex items-center gap-1 whitespace-nowrap">
+                        <Label className="px-1.5 py-0.5 bg-blue-50 !text-blue-600 border border-blue-100 rounded text-[9px] font-bold !capitalize ! inline-flex items-center gap-1 whitespace-nowrap">
                           TGL FU: {new Date(d.follow_up_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
                         </Label>
                       </>
@@ -111,7 +112,7 @@ export const DealsTableView: React.FC<Props> = ({
                 </TableCell>
 
                 <TableCell className="text-center w-[120px]">
-                  <Badge variant={d.probability && d.probability >= 75 ? 'success' : d.probability && d.probability >= 50 ? 'warning' : 'neutral'} className="!capitalize !tracking-tight text-[10px]">
+                  <Badge variant={d.probability && d.probability >= 75 ? 'success' : d.probability && d.probability >= 50 ? 'warning' : 'neutral'} className="!capitalize ! text-[10px]">
                     {d.probability || 0}%
                   </Badge>
                 </TableCell>
@@ -144,7 +145,7 @@ export const DealsTableView: React.FC<Props> = ({
                 </TableCell>
 
                 <TableCell className="text-center py-4 w-[150px]">
-                  <Badge variant={getStatusVariant(stageName)} className="!capitalize !tracking-tight">
+                  <Badge variant={getStatusVariant(stageName)} className="!capitalize !">
                     {stageName}
                   </Badge>
                 </TableCell>
@@ -158,24 +159,36 @@ export const DealsTableView: React.FC<Props> = ({
                 <TableCell className="text-center py-4 w-[120px]">
                   <div className="flex items-center justify-center gap-1">
                     {quotation ? (
-                      <Button onClick={() => onEditQuotation?.(quotation.id)} variant='ghost' size='sm' className="!p-2 text-emerald-700 !bg-transparent hover:!bg-emerald-50 shadow-none hover:border-emerald-200 transition-all border border-transparent rounded-lg" title="Dokumen Penawaran">
-                        <FileText size={15} strokeWidth={2} />
-                      </Button>
+                      <ActionButton
+                        icon={FileText}
+                        variant="emerald"
+                        onClick={() => onEditQuotation?.(quotation.id)}
+                        title="Dokumen Penawaran"
+                      />
                     ) : (
                       onCreateQuotation && d.client_id ? (
-                        <Button onClick={() => onCreateQuotation(d.client_id!, d.id)} variant='ghost' size='sm' className="!p-2 text-indigo-700 !bg-transparent hover:!bg-indigo-50 shadow-none hover:border-indigo-200 transition-all border border-transparent rounded-lg" title="Buat Penawaran">
-                          <FilePlus size={15} strokeWidth={2} />
-                        </Button>
+                        <ActionButton
+                          icon={FilePlus}
+                          variant="indigo"
+                          onClick={() => onCreateQuotation(d.client_id!, d.id)}
+                          title="Buat Penawaran"
+                        />
                       ) : (
                         <div className="w-[15px]"></div>
                       )
                     )}
-                    <Button onClick={() => onEdit(d)} variant='ghost' size='sm' className="!p-2 text-blue-700 !bg-transparent hover:!bg-blue-50 shadow-none hover:border-blue-200 transition-all border border-transparent rounded-lg" title="Edit Transaksi">
-                      <Edit2 size={15} strokeWidth={2} />
-                    </Button>
-                    <Button onClick={() => onDelete(d.id)} variant='ghost' size='sm' className="!p-2 text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg" title="Hapus Transaksi">
-                      <Trash2 size={15} strokeWidth={2} />
-                    </Button>
+                    <ActionButton
+                      icon={Edit2}
+                      variant="blue"
+                      onClick={() => onEdit(d)}
+                      title="Edit Transaksi"
+                    />
+                    <ActionButton
+                      icon={Trash2}
+                      variant="rose"
+                      onClick={() => onDelete(d.id)}
+                      title="Hapus Transaksi"
+                    />
                   </div>
                 </TableCell>
               </TableRow>

@@ -18,10 +18,9 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items, className = '' })
       {items.map((item, idx) => (
         <React.Fragment key={idx}>
           <div className="flex items-center gap-2">
-            <span 
-              className={`font-medium tracking-tight ${
-                item.active ? 'text-gray-900 ' : 'text-gray-400'
-              }`}
+            <span
+              className={`font-medium  ${item.active ? 'text-gray-900 ' : 'text-gray-400'
+                }`}
             >
               {item.label}
             </span>

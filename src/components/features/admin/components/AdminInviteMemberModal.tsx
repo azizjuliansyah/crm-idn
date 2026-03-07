@@ -39,7 +39,7 @@ export const AdminInviteMemberModal: React.FC<AdminInviteMemberModalProps> = ({
             ...roles.map(r => ({ value: r.id, label: r.name }))
           ]}
         />
-        <Button onClick={onInvite} isLoading={isProcessing} className="w-full">
+        <Button onClick={onInvite} isLoading={isProcessing} variant='primary' className="w-full">
           Undang Sekarang
         </Button>
       </div>

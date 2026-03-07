@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Input, Button, H2, Subtext, Label, SearchInput, DateFilterDropdown, ComboBox } from '@/components/ui';
+import { Input, Button, H2, Subtext, Label, SearchInput, DateFilterDropdown, ComboBox, Toast, ToastType } from '@/components/ui';
 
 import { supabase } from '@/lib/supabase';
 import { Company, CompanyMember, LeadStage, Lead, ClientCompany, ClientCompanyCategory, LeadSource } from '@/lib/types';
@@ -41,6 +41,11 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
 
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
+  });
 
   // Format IDR
   const formatIDR = (value?: number) => {
@@ -99,11 +104,20 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
   const handleCreateSuccess = () => {
     setIsAddModalOpen(false);
     fetchData();
+    setToast({
+      isOpen: true,
+      message: 'Lead baru berhasil didaftarkan!',
+      type: 'success'
+    });
   };
 
   const handleUpdate = () => {
-    setSelectedLead(null);
     fetchData();
+    setToast({
+      isOpen: true,
+      message: 'Perubahan berhasil disimpan!',
+      type: 'success'
+    });
   };
 
   const handleDelete = (id: number) => {
@@ -111,14 +125,22 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
   };
 
   const executeDelete = async () => {
-    if (!confirmDelete.id) return;
     try {
       await supabase.from('leads').delete().eq('id', confirmDelete.id);
       fetchData();
+      setToast({
+        isOpen: true,
+        message: 'Lead berhasil dihapus!',
+        type: 'success'
+      });
       if (selectedLead?.id === confirmDelete.id) setSelectedLead(null);
       setConfirmDelete({ isOpen: false, id: null });
-    } catch (error) {
-      console.error('Error deleting lead:', error);
+    } catch (error: any) {
+      setToast({
+        isOpen: true,
+        message: 'Gagal menghapus lead: ' + error.message,
+        type: 'error'
+      });
     }
   };
 
@@ -229,8 +251,22 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
       ));
 
       // Network update
-      await supabase.from('leads').update({ status: newStatus.toLowerCase(), kanban_order: newOrder }).eq('id', leadId);
-    } catch (err) { console.error(err); }
+      const { error } = await supabase.from('leads').update({ status: newStatus.toLowerCase(), kanban_order: newOrder }).eq('id', leadId);
+      if (error) throw error;
+
+      setToast({
+        isOpen: true,
+        message: `Status lead berhasil diubah ke ${newStatus.toUpperCase()}`,
+        type: 'success'
+      });
+    } catch (err: any) {
+      setToast({
+        isOpen: true,
+        message: 'Gagal mengubah status: ' + err.message,
+        type: 'error'
+      });
+      fetchData(); // Rollback on error
+    }
   };
 
   if (!activeCompany) return <div className="p-8 text-center text-gray-400">Pilih workspace terlebih dahulu.</div>;
@@ -241,7 +277,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
         <div className="flex items-center justify-between">
           <div>
             <H2 className="text-xl ">Leads Pipeline</H2>
-            <Subtext className="text-[10px]  uppercase tracking-tight">Kelola prospek dan konversi penjualan Anda.</Subtext>
+            <Subtext className="text-[10px]  uppercase">Kelola prospek dan konversi penjualan Anda.</Subtext>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex bg-gray-50 border border-gray-100 p-1 rounded-xl">
@@ -265,7 +301,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
             <Button
               onClick={() => setIsAddModalOpen(true)}
               leftIcon={<Plus size={14} strokeWidth={3} />}
-              className="!px-6 py-2.5  text-[10px] uppercase tracking-tight shadow-lg shadow-blue-100"
+              className="!px-6 py-2.5  text-[10px] uppercase  shadow-lg shadow-blue-100"
               variant='primary'
               size='sm'
             >
@@ -300,7 +336,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
               ]}
               className="w-40"
               hideSearch
-              placeholderSize="text-[10px] font-bold text-gray-900 uppercase tracking-tight"
+              placeholderSize="text-[10px] font-bold text-gray-900 uppercase "
             />
             <ComboBox
               value={assigneeFilter}
@@ -313,7 +349,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
                 }))
               ]}
               className="w-40"
-              placeholderSize="text-[10px] font-bold text-gray-900 uppercase tracking-tight"
+              placeholderSize="text-[10px] font-bold text-gray-900 uppercase "
             />
           </div>
         </div>
@@ -361,6 +397,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
           categories={categories}
           setClientCompanies={setClientCompanies}
           setCategories={setCategories}
+          setToast={setToast}
         />
       )}
 
@@ -441,11 +478,19 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
               // 4. Delete the lead
               await supabase.from('leads').delete().eq('id', selectedLead.id);
 
-              alert('Berhasil mengonversi Lead menjadi Deal!');
+              setToast({
+                isOpen: true,
+                message: 'Berhasil mengonversi Lead menjadi Deal!',
+                type: 'success',
+              });
               setSelectedLead(null);
               fetchData();
             } catch (err: any) {
-              alert('Gagal mengonversi ke Deal: ' + err.message);
+              setToast({
+                isOpen: true,
+                message: 'Gagal mengonversi ke Deal: ' + err.message,
+                type: 'error',
+              });
             }
           }}
           user={members.find(m => m.user_id === selectedLead.sales_id)?.profile as any}
@@ -454,6 +499,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
           categories={categories}
           setClientCompanies={setClientCompanies}
           setCategories={setCategories}
+          setToast={setToast}
         />
       )}
 
@@ -464,6 +510,14 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
         title="Hapus Lead"
         itemName="Lead ini"
         description="Apakah Anda yakin ingin menghapus data lead ini dari sistem?"
+        variant="horizontal"
+      />
+
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

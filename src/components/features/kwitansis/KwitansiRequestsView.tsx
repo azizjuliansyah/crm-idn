@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, Badge, SearchInput, ComboBox } from '@/components/ui';
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, Badge, SearchInput, ComboBox, Toast, ToastType } from '@/components/ui';
 
 import { supabase } from '@/lib/supabase';
 import { Company, KwitansiRequest } from '@/lib/types';
@@ -13,9 +13,10 @@ import {
     FileText, Clock, User, Building,
     FileCheck, Check, Trash2, FilePlus, ExternalLink
 } from 'lucide-react';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
-import { NotificationModal } from '@/components/shared/modals/NotificationModal';
-import { useRouter } from 'next/navigation';
+// Removed legacy NotificationModal import
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useDashboard } from '@/app/dashboard/DashboardContext';
 
 interface Props {
@@ -27,6 +28,7 @@ type SortConfig = { key: SortKey; direction: 'asc' | 'desc' } | null;
 
 export const KwitansiRequestsView: React.FC<Props> = ({ company }) => {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { activeCompanyMembers, user } = useDashboard();
     const [requests, setRequests] = useState<KwitansiRequest[]>([]);
     const [loading, setLoading] = useState(true);
@@ -36,13 +38,15 @@ export const KwitansiRequestsView: React.FC<Props> = ({ company }) => {
     const [isProcessing, setIsProcessing] = useState(false);
 
     const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null }>({ isOpen: false, id: null });
-    const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
-        isOpen: false, title: '', message: '', type: 'success'
+    const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+        isOpen: false,
+        message: '',
+        type: 'success',
     });
 
-    const fetchData = useCallback(async () => {
+    const fetchData = useCallback(async (isInitial = false) => {
         if (!company?.id) return;
-        setLoading(true);
+        if (isInitial) setLoading(true);
         try {
             const { data, error } = await supabase
                 .from('kwitansi_requests')
@@ -55,13 +59,24 @@ export const KwitansiRequestsView: React.FC<Props> = ({ company }) => {
         } catch (err) {
             console.error(err);
         } finally {
-            setLoading(false);
+            if (isInitial) setLoading(false);
         }
     }, [company?.id]);
 
     useEffect(() => {
-        fetchData();
+        fetchData(true);
     }, [fetchData]);
+
+    useEffect(() => {
+        const success = searchParams.get('success');
+        if (success) {
+            setToast({ isOpen: true, message: 'Request baru berhasil diajukan', type: 'success' });
+
+            // Clean up the URL
+            const newUrl = window.location.pathname;
+            window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
+        }
+    }, [searchParams]);
 
     const filteredRequests = useMemo(() => {
         let result = requests.filter(r => {
@@ -108,10 +123,10 @@ export const KwitansiRequestsView: React.FC<Props> = ({ company }) => {
                 .eq('id', id);
 
             if (error) throw error;
-            setNotification({ isOpen: true, title: 'Berhasil', message: `Request telah di-${newStatus.toLowerCase()}.`, type: 'success' });
+            setToast({ isOpen: true, message: `Request telah di-${newStatus.toLowerCase()}.`, type: 'success' });
             fetchData();
         } catch (err: any) {
-            setNotification({ isOpen: true, title: 'Gagal', message: err.message, type: 'error' });
+            setToast({ isOpen: true, message: err.message, type: 'error' });
         } finally {
             setIsProcessing(false);
         }
@@ -126,7 +141,7 @@ export const KwitansiRequestsView: React.FC<Props> = ({ company }) => {
             setConfirmDelete({ isOpen: false, id: null });
             fetchData();
         } catch (err: any) {
-            setNotification({ isOpen: true, title: 'Gagal', message: err.message, type: 'error' });
+            setToast({ isOpen: true, message: err.message, type: 'error' });
         } finally {
             setIsProcessing(false);
         }
@@ -146,7 +161,7 @@ export const KwitansiRequestsView: React.FC<Props> = ({ company }) => {
         return currentMember?.company_roles?.permissions.includes('Persetujuan Request Kwitansi') || false;
     }, [user, activeCompanyMembers]);
 
-    if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4 bg-white rounded-2xl border border-gray-100 min-h-[400px]"><Loader2 className="animate-spin text-indigo-600" size={32} /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Memuat Request Kwitansi...</Subtext></div>;
+    if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4 bg-white rounded-2xl border border-gray-100 min-h-[400px]"><Loader2 className="animate-spin text-indigo-600" size={32} /><Subtext className="text-[10px]  uppercase  text-gray-400">Memuat Request Kwitansi...</Subtext></div>;
 
     return (
         <div className="flex flex-col gap-6 text-gray-900">
@@ -154,13 +169,13 @@ export const KwitansiRequestsView: React.FC<Props> = ({ company }) => {
                 <div className="flex items-center justify-between">
                     <div>
                         <H2 className="text-xl ">Daftar Request Kwitansi</H2>
-                        <Subtext className="text-[10px]  uppercase tracking-tight">Kelola dan pantau seluruh permintaan pembuatan kwitansi pelanggan.</Subtext>
+                        <Subtext className="text-[10px]  uppercase ">Kelola dan pantau seluruh permintaan pembuatan kwitansi pelanggan.</Subtext>
                     </div>
                     <div className="flex items-center gap-3">
                         <Button
                             onClick={() => router.push('/dashboard/sales/kwitansi-requests/create')}
                             leftIcon={<Plus size={14} strokeWidth={3} />}
-                            className="!px-6 py-2.5 text-[10px] uppercase tracking-tight shadow-lg shadow-blue-100"
+                            className="!px-6 py-2.5 text-[10px] uppercase  shadow-lg shadow-blue-100"
                             variant="primary"
                             size="sm"
                         >
@@ -191,7 +206,7 @@ export const KwitansiRequestsView: React.FC<Props> = ({ company }) => {
                             ]}
                             className="w-40"
                             hideSearch={true}
-                            placeholderSize="text-[10px] font-bold text-gray-900 uppercase tracking-tight"
+                            placeholderSize="text-[10px] font-bold text-gray-900 uppercase "
                         />
                     </div>
                 </div>
@@ -224,8 +239,8 @@ export const KwitansiRequestsView: React.FC<Props> = ({ company }) => {
                                     <div className="flex items-center gap-3">
                                         <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center  text-[10px] uppercase shadow-sm border border-indigo-100">{r.client?.name.charAt(0)}</div>
                                         <div>
-                                            <Subtext className="text-xs text-gray-900 tracking-tight">{r.client?.name}</Subtext>
-                                            <Subtext className="text-[10px] !text-gray-400 mt-1 uppercase tracking-tight italic">{r.client?.client_company?.name || 'Personal'}</Subtext>
+                                            <Subtext className="text-xs text-gray-900 ">{r.client?.name}</Subtext>
+                                            <Subtext className="text-[10px] !text-gray-400 mt-1 uppercase  italic">{r.client?.client_company?.name || 'Personal'}</Subtext>
                                         </div>
                                     </div>
                                 </TableCell>
@@ -264,23 +279,48 @@ export const KwitansiRequestsView: React.FC<Props> = ({ company }) => {
                                     <div className="flex items-center justify-center gap-2">
                                         {r.status === 'Pending' && hasApprovalPermission && (
                                             <>
-                                                <Button variant="ghost" size="sm" onClick={() => handleUpdateStatus(r.id, 'Approved')} className="!p-2 !text-emerald-500 hover:!bg-emerald-50 rounded-lg transition-colors" title="Approve"><Check size={16} strokeWidth={3} /></Button>
-                                                <Button variant="ghost" size="sm" onClick={() => handleUpdateStatus(r.id, 'Rejected')} className="!p-2 !text-rose-500 hover:!bg-rose-50 rounded-lg transition-colors" title="Reject"><X size={16} strokeWidth={3} /></Button>
+                                                <ActionButton
+                                                    icon={Check}
+                                                    variant="emerald"
+                                                    onClick={() => handleUpdateStatus(r.id, 'Approved')}
+                                                    title="Approve"
+                                                />
+                                                <ActionButton
+                                                    icon={X}
+                                                    variant="rose"
+                                                    onClick={() => handleUpdateStatus(r.id, 'Rejected')}
+                                                    title="Reject"
+                                                />
                                             </>
                                         )}
                                         {r.status === 'Approved' && !r.kwitansi_id && (
-                                            <Button variant="ghost" size="sm" onClick={() => {
-                                                const params = new URLSearchParams();
-                                                params.set('requestId', r.id.toString());
-                                                params.set('clientId', r.client_id.toString());
-                                                if (r.invoice_id) params.set('invoiceId', r.invoice_id.toString());
-                                                router.push(`/dashboard/sales/kwitansis/create?${params.toString()}`);
-                                            }} className="!p-2 !text-indigo-500 hover:!bg-indigo-50 rounded-lg transition-colors" title="Buat Kwitansi"><FilePlus size={16} strokeWidth={3} /></Button>
+                                            <ActionButton
+                                                icon={FilePlus}
+                                                variant="indigo"
+                                                onClick={() => {
+                                                    const params = new URLSearchParams();
+                                                    params.set('requestId', r.id.toString());
+                                                    params.set('clientId', r.client_id.toString());
+                                                    if (r.invoice_id) params.set('invoiceId', r.invoice_id.toString());
+                                                    router.push(`/dashboard/sales/kwitansis/create?${params.toString()}`);
+                                                }}
+                                                title="Buat Kwitansi"
+                                            />
                                         )}
                                         {r.status === 'Approved' && r.kwitansi_id && (
-                                            <Button variant="ghost" size="sm" onClick={() => router.push(`/dashboard/sales/kwitansis/${r.kwitansi_id}`)} className="!p-2 !text-emerald-600 hover:!bg-emerald-50 rounded-lg transition-colors" title={`Sudah di convert ke Kwitansi ${r.kwitansi?.number || ''}`}><ExternalLink size={16} strokeWidth={3} /></Button>
+                                            <ActionButton
+                                                icon={ExternalLink}
+                                                variant="emerald"
+                                                onClick={() => router.push(`/dashboard/sales/kwitansis/${r.kwitansi_id}`)}
+                                                title={`Sudah di convert ke Kwitansi ${r.kwitansi?.number || ''}`}
+                                            />
                                         )}
-                                        <Button variant="ghost" size="sm" onClick={() => setConfirmDelete({ isOpen: true, id: r.id })} className="!p-2 !text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg" title="Hapus"><Trash2 size={14} /></Button>
+                                        <ActionButton
+                                            icon={Trash2}
+                                            variant="rose"
+                                            onClick={() => setConfirmDelete({ isOpen: true, id: r.id })}
+                                            title="Hapus"
+                                        />
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -300,14 +340,14 @@ export const KwitansiRequestsView: React.FC<Props> = ({ company }) => {
                 itemName="Request Kwitansi ini"
                 isProcessing={isProcessing}
                 description="Apakah Anda yakin ingin menghapus catatan permintaan kwitansi ini?"
+                variant="horizontal"
             />
 
-            <NotificationModal
-                isOpen={notification.isOpen}
-                onClose={() => setNotification({ ...notification, isOpen: false })}
-                title={notification.title}
-                message={notification.message}
-                type={notification.type}
+            <Toast
+                isOpen={toast.isOpen}
+                message={toast.message}
+                type={toast.type}
+                onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
             />
         </div>
     );

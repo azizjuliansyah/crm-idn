@@ -8,7 +8,8 @@ import {
   Layout, Palette, Check, Star, Settings2, Image as ImageIcon,
   Upload, X, Eye, ExternalLink
 } from 'lucide-react';
-import { Modal } from '@/components/ui';
+import { Modal, Toast, ToastType, H2, Subtext } from '@/components/ui';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { jsPDF } from 'jspdf';
 import { generateTemplate1, generateTemplate5, generateTemplate6 } from '@/lib/pdf-templates';
 
@@ -77,9 +78,19 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
     finance_email: ''
   });
 
-  const fetchData = useCallback(async () => {
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
+  });
+
+  const showToast = (message: string, type: ToastType = 'success') => {
+    setToast({ isOpen: true, message, type });
+  };
+
+  const fetchData = useCallback(async (isInitial = false) => {
     if (!company?.id) return;
-    setLoading(true);
+    if (isInitial) setLoading(true);
     try {
       const { data, error } = await supabase
         .from('document_template_settings')
@@ -91,12 +102,12 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   }, [company.id]);
 
   useEffect(() => {
-    fetchData();
+    fetchData(true);
   }, [fetchData]);
 
   const handleUpdateTemplate = async (docType: 'quotation' | 'invoice' | 'kwitansi', templateId: string) => {
@@ -115,8 +126,9 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
 
       if (error) throw error;
       await fetchData();
+      showToast('Template dokumen berhasil diperbarui.');
     } catch (err: any) {
-      alert(err.message);
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -195,8 +207,9 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
 
       await fetchData();
       setIsConfiguring(null);
+      showToast('Konfigurasi konten berhasil disimpan.');
     } catch (err: any) {
-      alert(err.message);
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -216,8 +229,9 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
 
       const { data: { publicUrl } } = supabase.storage.from('platform').getPublicUrl(fileName);
       setConfigForm({ ...configForm, [field]: publicUrl });
+      showToast('Gambar berhasil diunggah.');
     } catch (err: any) {
-      alert(err.message);
+      showToast(err.message, 'error');
     } finally {
       setUploading(null);
     }
@@ -319,19 +333,18 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
   };
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-500 pb-20">
-      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="p-10 border-b border-gray-50 bg-gray-50/30">
-          <div className="flex items-center gap-6">
-            <div className="w-16 h-16 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-xl shadow-blue-100">
-              <Palette size={32} />
-            </div>
-            <div>
-              <h3 className="text-2xl font-medium text-gray-900 tracking-tight">Katalog Template Dokumen</h3>
-              <p className="text-sm text-gray-400 font-medium">Pilih gaya visual untuk penawaran dan invoice perusahaan Anda.</p>
-            </div>
-          </div>
+    <div className="space-y-6 animate-in fade-in duration-500 pb-20 max-w-6xl">
+      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+        <div>
+          <H2 className="text-xl ">Katalog Template Dokumen</H2>
+          <Subtext className="text-[10px] uppercase font-semibold text-gray-400">Pilih gaya visual untuk penawaran dan invoice perusahaan Anda.</Subtext>
         </div>
+        <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shadow-sm">
+          <Palette size={20} />
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
         <div className="p-10 space-y-12">
           {['quotation', 'invoice', 'kwitansi'].map((type) => (
@@ -348,7 +361,7 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
                 </div>
                 <button
                   onClick={() => openConfig(type)}
-                  className="px-5 py-2.5 bg-white border border-gray-200 rounded-xl text-[10px] font-medium uppercase tracking-widest text-gray-600 hover:bg-gray-50 transition-all flex items-center gap-2"
+                  className="px-5 py-2.5 bg-white border border-gray-200 rounded-xl text-[10px] font-medium uppercase tracking-widest text-gray-600 hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm"
                 >
                   <Settings2 size={14} /> Konfigurasi Konten
                 </button>
@@ -375,7 +388,7 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
 
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <h6 className="font-medium text-gray-900 tracking-tight">{tmpl.name}</h6>
+                          <h6 className="font-medium text-gray-900 ">{tmpl.name}</h6>
                           {tmpl.id === 'template5' && <Star size={14} className="text-amber-400 fill-amber-400" />}
                         </div>
                         <p className="text-[11px] text-gray-400 leading-relaxed">{tmpl.desc}</p>
@@ -540,6 +553,13 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
           </div>
         </div>
       </Modal>
-    </div>
+
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
+      />
+    </div >
   );
 };

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Textarea, Button, H1, Subtext, Label, ComboBox } from '@/components/ui';
+import { Textarea, Button, H1, Subtext, Label, ComboBox, Toast, ToastType } from '@/components/ui';
 
 import { supabase } from '@/lib/supabase';
 import { Company, Profile, Client, Invoice } from '@/lib/types';
@@ -30,6 +30,11 @@ export const KwitansiRequestFormView: React.FC<Props> = ({ company, user, onNavi
     const [docId, setDocId] = useState('');
     const [notes, setNotes] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
+    const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+        isOpen: false,
+        message: '',
+        type: 'success',
+    });
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -82,18 +87,18 @@ export const KwitansiRequestFormView: React.FC<Props> = ({ company, user, onNavi
 
             if (error) throw error;
             if (onNavigate) {
-                onNavigate('request_kwitansi');
+                onNavigate('request_kwitansi?success=created');
             } else {
-                router.push('/dashboard/sales/kwitansi-requests');
+                router.push('/dashboard/sales/kwitansi-requests?success=created');
             }
         } catch (err: any) {
-            alert(err.message);
+            setToast({ isOpen: true, message: err.message, type: 'error' });
         } finally {
             setIsProcessing(false);
         }
     };
 
-    if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4 bg-white rounded-2xl border border-gray-100 min-h-[400px]"><Loader2 className="animate-spin text-indigo-600" size={32} /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Menyiapkan Form Request...</Subtext></div>;
+    if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4 bg-white rounded-2xl border border-gray-100 min-h-[400px]"><Loader2 className="animate-spin text-indigo-600" size={32} /><Subtext className="text-[10px]  uppercase  text-gray-400">Menyiapkan Form Request...</Subtext></div>;
 
     return (
         <div className="max-w-4xl p-6 md:p-8 space-y-8">
@@ -127,7 +132,7 @@ export const KwitansiRequestFormView: React.FC<Props> = ({ company, user, onNavi
                         />
 
                         <div className="space-y-3">
-                            <Label className="uppercase tracking-tight ml-1">Referensi Invoice Asal</Label>
+                            <Label className="uppercase  ml-1">Referensi Invoice Asal</Label>
                             <div className="flex gap-4">
                                 <Button
                                     type="button"
@@ -184,6 +189,13 @@ export const KwitansiRequestFormView: React.FC<Props> = ({ company, user, onNavi
                     </div>
                 </form>
             </div>
+
+            <Toast
+                isOpen={toast.isOpen}
+                message={toast.message}
+                type={toast.type}
+                onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
+            />
         </div>
     );
 };

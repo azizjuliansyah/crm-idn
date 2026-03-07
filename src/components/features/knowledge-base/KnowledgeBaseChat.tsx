@@ -198,10 +198,10 @@ export const KnowledgeBaseChat: React.FC<Props> = ({
             <Bot size={28} />
           </div>
           <div>
-            <h5 className=" text-sm uppercase tracking-tight leading-none mb-1.5">Knowledge Assistant</h5>
+            <h5 className=" text-sm uppercase  leading-none mb-1.5">Knowledge Assistant</h5>
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full animate-pulse shadow-sm ${isApiKeyActive ? 'bg-emerald-400 shadow-emerald-400' : 'bg-rose-400 shadow-rose-400'}`}></div>
-              <Subtext className="text-[10px] opacity-80  uppercase tracking-tight">
+              <Subtext className="text-[10px] opacity-80  uppercase ">
                 {isApiKeyActive ? 'Active (Private Key)' : 'AI Not Configured'}
               </Subtext>
             </div>
@@ -255,7 +255,7 @@ export const KnowledgeBaseChat: React.FC<Props> = ({
                 <div className="w-2 h-2 bg-indigo-700 rounded-full animate-bounce [animation-delay:0.4s]"></div>
               </div>
               {retrievalStatus && (
-                <Subtext className="text-[10px]  text-gray-400 uppercase tracking-tight animate-pulse flex items-center gap-2">
+                <Subtext className="text-[10px]  text-gray-400 uppercase  animate-pulse flex items-center gap-2">
                   <SearchCode size={12} className="text-indigo-400" /> {retrievalStatus}
                 </Subtext>
               )}
@@ -270,7 +270,7 @@ export const KnowledgeBaseChat: React.FC<Props> = ({
           <div className="bg-amber-50 p-5 rounded-3xl border border-amber-100 space-y-4">
             <div className="flex items-center gap-3">
               <ShieldCheck size={20} className="text-amber-600" />
-              <Subtext className="text-[11px]  text-amber-900 uppercase tracking-tight leading-none">Aktivasi AI Diperlukan</Subtext>
+              <Subtext className="text-[11px]  text-amber-900 uppercase  leading-none">Aktivasi AI Diperlukan</Subtext>
             </div>
             <Subtext className="text-[10px] text-amber-700 leading-relaxed font-medium">
               Chatbot belum aktif karena **Gemini API Key** khusus workspace ini belum diatur.
@@ -278,7 +278,7 @@ export const KnowledgeBaseChat: React.FC<Props> = ({
             {onNavigate && (
               <Button
                 onClick={() => onNavigate('pengaturan_ai')}
-                className="w-full py-4 bg-amber-600 text-white rounded-2xl  text-[10px] uppercase tracking-tight shadow-lg shadow-amber-200 flex items-center justify-center gap-2 hover:bg-amber-700 active:scale-95 transition-all"
+                className="w-full py-4 bg-amber-600 text-white rounded-2xl  text-[10px] uppercase  shadow-lg shadow-amber-200 flex items-center justify-center gap-2 hover:bg-amber-700 active:scale-95 transition-all"
               >
                 Konfigurasi AI Sekarang <ArrowRight size={12} />
               </Button>

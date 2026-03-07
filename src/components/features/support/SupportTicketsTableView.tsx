@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, Label, Badge } from '@/components/ui';
 import { SupportTicket } from '@/lib/types';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { Trash2, Edit2 } from 'lucide-react';
 
 interface Props {
@@ -29,16 +30,16 @@ export const SupportTicketsTableView: React.FC<Props> = ({ tickets, onEdit, onDe
             <TableRow key={t.id} className="group">
               <TableCell className="text-gray-400 font-mono">#{String(t.id).padStart(4, '0')}</TableCell>
               <TableCell className="">
-                <Badge variant={t.type === 'complaint' ? 'danger' : 'primary'} className="uppercase tracking-tight text-[8px] py-0.5">
+                <Badge variant={t.type === 'complaint' ? 'danger' : 'primary'} className="uppercase  text-[8px] py-0.5">
                   {t.type || 'ticket'}
                 </Badge>
               </TableCell>
               <TableCell>
                 {t.title}
                 <div className="flex items-center gap-2 mt-1">
-                  <Label className="text-[9px] text-gray-600 uppercase tracking-tight">{t.client?.name || 'Umum'}</Label>
+                  <Label className="text-[9px] text-gray-600 uppercase ">{t.client?.name || 'Umum'}</Label>
                   <Label className="text-gray-200 ">•</Label>
-                  <Label className={`!p-0 text-[8px] uppercase tracking-tight ${t.priority === 'urgent' ? 'text-rose-500' : 'text-gray-400'}`}>
+                  <Label className={`!p-0 text-[8px] uppercase  ${t.priority === 'urgent' ? 'text-rose-500' : 'text-gray-400'}`}>
                     URGENSI: {t.priority}
                   </Label>
                 </div>
@@ -55,34 +56,28 @@ export const SupportTicketsTableView: React.FC<Props> = ({ tickets, onEdit, onDe
                   <div className="w-7 h-7 rounded-full bg-rose-50 text-rose-600 border border-rose-100 flex items-center justify-center text-[10px]  uppercase shadow-sm">
                     {t.assigned_profile?.full_name?.charAt(0) || '?'}
                   </div>
-                  <Label className="truncate text-gray-600 tracking-tight">{t.assigned_profile?.full_name || '-'}</Label>
+                  <Label className="truncate text-gray-600 ">{t.assigned_profile?.full_name || '-'}</Label>
                 </div>
               </TableCell>
               <TableCell className="text-center">
-                <Badge variant="danger" className="w-20 justify-center text-[8px] py-1 uppercase tracking-tight ">
+                <Badge variant="danger" className="w-20 justify-center text-[8px] py-1 uppercase  ">
                   {t.status}
                 </Badge>
               </TableCell>
               <TableCell>
                 <div className="flex items-center justify-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
+                  <ActionButton
+                    icon={Edit2}
+                    variant="blue"
                     onClick={() => onEdit(t)}
-                    className="!p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
                     title="Edit Tiket"
-                  >
-                    <Edit2 size={14} />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
+                  />
+                  <ActionButton
+                    icon={Trash2}
+                    variant="rose"
                     onClick={() => onDelete(t.id)}
-                    className="!p-2 text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg"
                     title="Hapus Tiket"
-                  >
-                    <Trash2 size={14} />
-                  </Button>
+                  />
                 </div>
               </TableCell>
             </TableRow>

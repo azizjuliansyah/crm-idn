@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Input, Button, H2, Subtext, Label, Modal, Badge } from '@/components/ui';
+import { Input, Button, H2, Subtext, Label, Modal, Badge, Toast, ToastType } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { TaskStage, Company } from '@/lib/types';
 import {
@@ -7,7 +7,7 @@ import {
   CheckCircle2, AlertTriangle, Target, X
 } from 'lucide-react';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
-import { NotificationModal } from '@/components/shared/modals/NotificationModal';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
 
 interface Props {
   company: Company;
@@ -22,13 +22,19 @@ export const TaskSettingsView: React.FC<Props> = ({ company }) => {
   const [form, setForm] = useState({ id: '', name: '' });
 
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: string | null; name: string }>({ isOpen: false, id: null, name: '' });
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' | 'warning' }>({
-    isOpen: false, title: '', message: '', type: 'success'
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
   });
 
-  const fetchData = useCallback(async () => {
+  const showToast = (message: string, type: ToastType = 'success') => {
+    setToast({ isOpen: true, message, type });
+  };
+
+  const fetchData = useCallback(async (isInitial = false) => {
     if (!company) return;
-    setLoading(true);
+    if (isInitial) setLoading(true);
     try {
       const { data: stagesData } = await supabase.from('task_stages').select('*').eq('company_id', company.id).order('sort_order', { ascending: true });
       const { data: tasksData } = await supabase.from('tasks').select('stage_id').eq('company_id', company.id);
@@ -39,12 +45,12 @@ export const TaskSettingsView: React.FC<Props> = ({ company }) => {
         setUsedStatuses(distinct);
       }
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   }, [company.id]);
 
   useEffect(() => {
-    fetchData();
+    fetchData(true);
   }, [fetchData]);
 
   const handleSave = async (e: React.FormEvent) => {
@@ -53,16 +59,18 @@ export const TaskSettingsView: React.FC<Props> = ({ company }) => {
     setIsProcessing(true);
     try {
       if (form.id) {
-        await supabase.from('task_stages').update({ name: form.name }).eq('id', form.id);
+        const { error } = await supabase.from('task_stages').update({ name: form.name }).eq('id', form.id);
+        if (error) throw error;
       } else {
         const nextSort = stages.length > 0 ? Math.max(...stages.map(s => s.sort_order)) + 1 : 1;
-        await supabase.from('task_stages').insert({ company_id: company.id, name: form.name, sort_order: nextSort });
+        const { error } = await supabase.from('task_stages').insert({ company_id: company.id, name: form.name, sort_order: nextSort });
+        if (error) throw error;
       }
       setIsModalOpen(false);
       fetchData();
-      setNotification({ isOpen: true, title: 'Berhasil', message: 'Tahapan task telah disimpan.', type: 'success' });
+      showToast('Tahapan task telah disimpan.');
     } catch (err: any) {
-      setNotification({ isOpen: true, title: 'Gagal', message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -83,7 +91,7 @@ export const TaskSettingsView: React.FC<Props> = ({ company }) => {
 
   const handleDeleteClick = (stage: TaskStage) => {
     if (usedStatuses.includes(stage.id)) {
-      setNotification({ isOpen: true, title: 'Akses Ditolak', message: 'Tahapan ini sedang digunakan oleh beberapa task dan tidak dapat dihapus.', type: 'warning' });
+      showToast('Tahapan ini sedang digunakan oleh beberapa task dan tidak dapat dihapus.', 'info');
       return;
     }
     setConfirmDelete({ isOpen: true, id: stage.id, name: stage.name });
@@ -104,94 +112,102 @@ export const TaskSettingsView: React.FC<Props> = ({ company }) => {
   if (loading) return (
     <div className="flex flex-col items-center justify-center py-24 min-h-[400px]">
       <Loader2 className="animate-spin text-emerald-600 mb-4" size={32} />
-      <Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Memuat Task Pipeline...</Subtext>
+      <Subtext className="text-[10px] uppercase font-bold text-gray-400">Memuat Task Pipeline...</Subtext>
     </div>
   );
 
   return (
-    <div className="space-y-8 max-w-2xl">
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-        <div className="p-8 border-b border-gray-50 flex items-center justify-between">
-          <div>
-            <H2 className="text-lg uppercase tracking-tight ">Manajemen Task Pipeline</H2>
-            <Subtext className="tracking-tight">Atur status pengerjaan untuk alur operasional tim.</Subtext>
-          </div>
-          <Button
-            onClick={() => { setForm({ id: '', name: '' }); setIsModalOpen(true); }}
-            leftIcon={<Plus size={14} />}
-            variant="success"
-            className="shadow-lg shadow-emerald-100"
-          >
-            Tahapan Baru
-          </Button>
+    <div className="flex flex-col space-y-6 max-w-4xl">
+      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+        <div>
+          <H2 className="text-xl ">Manajemen Task Pipeline</H2>
+          <Subtext className="text-[10px] uppercase font-semibold text-gray-400">Atur status pengerjaan untuk alur operasional tim.</Subtext>
         </div>
-        <div className="p-6 space-y-3">
-          {stages.map((stage, idx) => {
-            const isUsed = usedStatuses.includes(stage.id);
-            return (
-              <div key={stage.id} className="flex items-center justify-between p-4 bg-gray-50/50 border border-gray-100 rounded-2xl hover:border-emerald-200 transition-all group">
-                <div className="flex items-center gap-4">
-                  <div className="w-9 h-9 bg-white border border-gray-100 rounded-xl flex items-center justify-center text-[10px]  text-gray-400 uppercase tracking-tight shadow-sm">{idx + 1}</div>
-                  <Label className="text-xs text-gray-700 tracking-tight uppercase">{stage.name}</Label>
-                  {isUsed && <Badge variant="primary" className="text-[8px] py-0.5  uppercase tracking-tight px-2">Aktif</Badge>}
+        <Button
+          onClick={() => { setForm({ id: '', name: '' }); setIsModalOpen(true); }}
+          leftIcon={<Plus size={14} strokeWidth={3} />}
+          variant="primary"
+          size='sm'
+        >
+          Tahapan Baru
+        </Button>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm p-6 space-y-3">
+        {stages.map((stage, idx) => {
+          const isUsed = usedStatuses.includes(stage.id);
+          return (
+            <div key={stage.id} className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-xl hover:border-emerald-200 transition-all group">
+              <div className="flex items-center gap-4">
+                <div className="w-9 h-9 bg-white border border-gray-100 rounded-lg flex items-center justify-center text-[10px] font-bold text-gray-400 shadow-sm">
+                  {idx + 1}
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="flex items-center gap-1.5 mr-4 opacity-0 group-hover:opacity-100 transition-all">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => { setForm({ id: stage.id, name: stage.name }); setIsModalOpen(true); }}
-                      className="!p-2 text-blue-500 hover:bg-blue-50 border-gray-100 rounded-xl shadow-none"
-                    >
-                      <Edit2 size={14} />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteClick(stage)}
-                      className={`!p-2 border-gray-100 rounded-xl transition-all shadow-none ${isUsed ? 'text-gray-200 pointer-events-none' : 'text-red-400 hover:bg-red-50'}`}
-                    >
-                      <Trash2 size={14} />
-                    </Button>
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={() => handleMove(stage.id, 'up')} disabled={idx === 0} className="!p-2 text-gray-400 border-gray-100 rounded-xl shadow-none"><ArrowUp size={14} /></Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleMove(stage.id, 'down')} disabled={idx === stages.length - 1} className="!p-2 text-gray-400 border-gray-100 rounded-xl shadow-none"><ArrowDown size={14} /></Button>
+                <div className="flex items-center gap-2">
+                  <Label className="text-[13px] font-semibold text-gray-700">{stage.name}</Label>
+                  {isUsed && <Badge variant="primary" className="text-[8px] py-0.5 uppercase font-bold px-2">Aktif</Badge>}
                 </div>
               </div>
-            );
-          })}
-        </div>
+              <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1">
+                  <ActionButton
+                    icon={ArrowUp}
+                    variant="gray"
+                    onClick={() => handleMove(stage.id, 'up')}
+                    disabled={idx === 0}
+                  />
+                  <ActionButton
+                    icon={ArrowDown}
+                    variant="gray"
+                    onClick={() => handleMove(stage.id, 'down')}
+                    disabled={idx === stages.length - 1}
+                  />
+                </div>
+                <div className="flex items-center gap-1 pl-3 ml-2 border-l border-gray-200">
+                  <ActionButton
+                    icon={Edit2}
+                    variant="blue"
+                    onClick={() => { setForm({ id: stage.id, name: stage.name }); setIsModalOpen(true); }}
+                  />
+                  <ActionButton
+                    icon={Trash2}
+                    variant="rose"
+                    onClick={() => handleDeleteClick(stage)}
+                    disabled={isUsed}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={form.id ? "Edit Tahapan Task" : "Tambah Tahapan Task"}
-        size="sm"
         footer={
           <div className="flex w-full gap-3">
-            <Button variant="ghost" onClick={() => setIsModalOpen(false)} className="flex-1  text-xs uppercase tracking-tight">Batal</Button>
+            <Button variant="ghost" onClick={() => setIsModalOpen(false)} className="flex-1 text-[10px] uppercase font-bold">Batal</Button>
             <Button
               onClick={handleSave}
               disabled={isProcessing}
               isLoading={isProcessing}
               leftIcon={<Save size={14} />}
-              variant="success"
-              className="flex-1  text-xs uppercase tracking-tight shadow-lg shadow-emerald-100"
+              variant="primary"
             >
               Simpan
             </Button>
           </div>
         }
       >
-        <div className="py-2">
+        <div className="py-2 space-y-4">
           <Input
             label="Nama Tahapan"
             type="text"
             value={form.name}
             onChange={e => setForm({ ...form, name: e.target.value })}
             placeholder="Misal: Review Client..."
-            className="rounded-md"
+            className="!py-3"
             required
           />
         </div>
@@ -204,14 +220,14 @@ export const TaskSettingsView: React.FC<Props> = ({ company }) => {
         title="Hapus Tahapan Task"
         itemName={confirmDelete.name}
         isProcessing={isProcessing}
+        variant="horizontal"
       />
 
-      <NotificationModal
-        isOpen={notification.isOpen}
-        onClose={() => setNotification({ ...notification, isOpen: false })}
-        title={notification.title}
-        message={notification.message}
-        type={notification.type}
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

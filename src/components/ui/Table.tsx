@@ -26,7 +26,7 @@ export const TableBody: React.FC<TableProps> = ({ children, className = '' }) =>
 );
 
 export const TableRow: React.FC<React.HTMLAttributes<HTMLTableRowElement>> = ({ children, className = '', ...props }) => (
-  <tr className={`hover:bg-gray-50/30 group transition-colors ${className}`} {...props}>
+  <tr className={`hover:bg-gray-100/40 even:bg-gray-50 group transition-colors ${className}`} {...props}>
     {children}
   </tr>
 );
@@ -42,7 +42,7 @@ export const TableCell = React.forwardRef<HTMLTableCellElement, TableCellProps>(
       return (
         <th
           ref={ref as any}
-          className={`px-4 py-3 text-[12px] font-bold text-gray-400 uppercase tracking-tight border-b border-gray-100 ${className}`}
+          className={`px-4 py-3 text-[12px] font-bold text-gray-600 uppercase  border-b border-gray-100 ${className}`}
           {...props}
         >
           {children}
@@ -52,7 +52,7 @@ export const TableCell = React.forwardRef<HTMLTableCellElement, TableCellProps>(
     return (
       <td
         ref={ref}
-        className={`px-4 py-3 uppercase font-bold text-[12px] ${className}`}
+        className={`px-4 py-3 font-bold text-[12px] ${className}`}
         {...props}
       >
         {children}
@@ -66,7 +66,7 @@ export const TableEmpty: React.FC<{ colSpan: number; message?: string; icon?: Re
   <tr>
     <td colSpan={colSpan} className="py-20 text-center">
       {icon && <div className="mb-4 opacity-10 flex justify-center">{icon}</div>}
-      <p className="text-gray-300 font-medium uppercase text-[10px] tracking-tight italic opacity-30">
+      <p className="text-gray-300 font-medium uppercase text-[10px]  italic opacity-30">
         {message}
       </p>
     </td>

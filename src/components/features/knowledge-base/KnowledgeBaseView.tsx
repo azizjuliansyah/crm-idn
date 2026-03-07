@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, SearchInput } from '@/components/ui';
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, SearchInput, Toast, ToastType, Badge } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -16,6 +16,7 @@ import { KnowledgeBaseArticleModal } from './KnowledgeBaseArticleModal';
 import { KnowledgeBaseCategoryModal } from './KnowledgeBaseCategoryModal';
 import { useRouter } from 'next/navigation';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
 
 interface Props {
   company: Company;
@@ -34,6 +35,11 @@ export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean, id: number | null, title: string }>({ isOpen: false, id: null, title: '' });
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
+  });
 
   const [aiSetting, setAiSetting] = useState<AiSetting | null>(null);
 
@@ -66,9 +72,15 @@ export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
   }, [articles, searchTerm]);
 
   const handleDeleteArticle = async (id: number) => {
-    setConfirmDelete({ isOpen: false, id: null, title: '' });
-    await supabase.from('kb_articles').delete().eq('id', id);
-    fetchData();
+    try {
+      setConfirmDelete({ isOpen: false, id: null, title: '' });
+      const { error } = await supabase.from('kb_articles').delete().eq('id', id);
+      if (error) throw error;
+      setToast({ isOpen: true, message: 'Artikel telah dihapus.', type: 'success' });
+      fetchData();
+    } catch (err: any) {
+      setToast({ isOpen: true, message: err.message, type: 'error' });
+    }
   };
 
   const handleOpenArticle = (article: KbArticle) => {
@@ -81,7 +93,7 @@ export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
     setIsArticleModalOpen(true);
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-blue-600 mb-4" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Sinkronisasi Basis Pengetahuan...</Subtext></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-blue-600 mb-4" /><Subtext className="text-[10px]  uppercase  text-gray-400">Sinkronisasi Basis Pengetahuan...</Subtext></div>;
 
   return (
     <div className="flex flex-col gap-6 text-gray-900">
@@ -89,14 +101,14 @@ export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
         <div className="flex items-center justify-between">
           <div>
             <H2 className="text-xl">Knowledge Base</H2>
-            <Subtext className="text-[10px] uppercase tracking-tight">Kelola materi panduan dan artikel basis pengetahuan.</Subtext>
+            <Subtext className="text-[10px] uppercase ">Kelola materi panduan dan artikel basis pengetahuan.</Subtext>
           </div>
           <div className="flex items-center gap-3">
             <Button
               onClick={() => setIsCategoryModalOpen(true)}
               variant="ghost"
               leftIcon={<Tags size={14} strokeWidth={2.5} />}
-              className="!px-4 py-2 text-[10px] uppercase tracking-tight text-gray-500 bg-gray-50 border border-gray-100 shadow-none hover:bg-gray-100 rounded-xl"
+              className="!px-4 py-2 text-[10px] uppercase  text-gray-500 bg-gray-50 border border-gray-100 shadow-none hover:bg-gray-100 rounded-xl"
               size="sm"
             >
               Kelola Kategori
@@ -104,7 +116,7 @@ export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
             <Button
               onClick={handleNewArticle}
               leftIcon={<Plus size={14} strokeWidth={3} />}
-              className="!px-6 py-2.5 text-[10px] uppercase tracking-tight shadow-lg shadow-blue-100"
+              className="!px-6 py-2.5 text-[10px] uppercase  shadow-lg shadow-blue-100"
               variant="primary"
               size="sm"
             >
@@ -129,68 +141,56 @@ export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableCell isHeader className="w-20">ID</TableCell>
                 <TableCell isHeader>Artikel & Konten</TableCell>
                 <TableCell isHeader>Kategori</TableCell>
-                <TableCell isHeader>Tanggal Dibuat</TableCell>
                 <TableCell isHeader className="text-center">Aksi</TableCell>
               </TableRow>
             </TableHeader>
             <TableBody className="divide-y divide-gray-50">
               {filteredArticles.map(article => (
                 <TableRow key={article.id} className="hover:bg-gray-50/30 group transition-all">
-                  <TableCell className="px-8 py-6 max-w-md">
-                    <div className="flex items-start gap-4">
+                  <TableCell className="py-5 px-6">
+                    #{article.id}
+                  </TableCell>
+                  <TableCell className="py-5 px-6 max-w-md">
+                    <div className="flex items-center gap-4">
                       <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-indigo-100/50">
-                        <FileText size={18} />
+                        <FileText size={20} strokeWidth={2.5} />
                       </div>
                       <div className="overflow-hidden">
-                        <span className="tracking-tight uppercase font-medium">{article.title}</span>
-                        <Subtext className="text-xs text-gray-400 mt-1 line-clamp-1 leading-relaxed italic tracking-tight">
+                        <Subtext className="text-sm text-gray-900 font-medium ">{article.title}</Subtext>
+                        <Subtext className="!text-[10px] text-gray-400  uppercase  italic line-clamp-1">
                           {article.content}
                         </Subtext>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className="px-8 py-6">
-                    <Label className="px-3 py-1 bg-white border border-indigo-100 rounded-full text-[9px] text-indigo-600 uppercase tracking-tight shadow-sm">
+                    <Label className="px-3 py-1 bg-white border border-indigo-100 rounded-full text-[9px] text-indigo-600 uppercase  shadow-sm">
                       {article.kb_categories?.name || 'UMUM'}
                     </Label>
                   </TableCell>
-                  <TableCell className="px-8 py-6 text-xs text-gray-500 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      <Calendar size={12} className="opacity-40" />
-                      {new Date(article.created_at || '').toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </div>
-                  </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      <ActionButton
+                        icon={Eye}
+                        variant="emerald"
                         onClick={() => handleOpenArticle(article)}
-                        className="!p-2 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors"
                         title="Baca Artikel"
-                      >
-                        <Eye size={14} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      />
+                      <ActionButton
+                        icon={Edit2}
+                        variant="blue"
                         onClick={() => handleOpenArticle(article)}
-                        className="!p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
                         title="Edit Artikel"
-                      >
-                        <Edit2 size={14} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      />
+                      <ActionButton
+                        icon={Trash2}
+                        variant="rose"
                         onClick={() => setConfirmDelete({ isOpen: true, id: article.id, title: article.title })}
-                        className="!p-2 text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg"
                         title="Hapus Artikel"
-                      >
-                        <Trash2 size={14} />
-                      </Button>
+                      />
                     </div>
                   </TableCell>
                 </TableRow>
@@ -199,7 +199,7 @@ export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
                 <TableRow>
                   <TableCell className="text-center py-32">
                     <TableEmpty
-                      colSpan={4}
+                      colSpan={5}
                       icon={<BookOpen size={32} />}
                       message="Basis pengetahuan belum tersedia"
                     />
@@ -227,6 +227,7 @@ export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
             categories={categories}
             article={selectedArticle}
             onSuccess={fetchData}
+            setToast={setToast}
           />
         )}
 
@@ -237,6 +238,7 @@ export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
             company={company}
             categories={categories}
             onSuccess={fetchData}
+            setToast={setToast}
           />
         )}
 
@@ -251,6 +253,13 @@ export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
           title="Hapus Artikel"
           itemName={confirmDelete.title}
           description="Apakah Anda yakin ingin menghapus artikel ini dari basis pengetahuan?"
+          variant="horizontal"
+        />
+        <Toast
+          isOpen={toast.isOpen}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
         />
       </div>
     </div>

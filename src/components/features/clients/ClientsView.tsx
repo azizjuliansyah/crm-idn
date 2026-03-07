@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Label, SearchInput, Checkbox, H2 } from '@/components/ui';
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Label, SearchInput, Checkbox, H2, Toast, ToastType } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -12,10 +12,12 @@ import {
   MapPin, Mail, Phone, ChevronRight, X, Save, Building, Tags, Info,
   ChevronUp, ChevronDown, AlertTriangle, ArrowUpDown, CheckCircle2
 } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { ConfirmBulkDeleteModal } from '@/components/shared/modals/ConfirmBulkDeleteModal';
-import { NotificationModal } from '@/components/shared/modals/NotificationModal';
+// Removed legacy NotificationModal import
 import { ClientFormModal } from './components/ClientFormModal';
 
 interface Props {
@@ -26,6 +28,7 @@ type SortKey = 'name' | 'company' | 'email' | 'whatsapp' | 'id';
 type SortConfig = { key: SortKey; direction: 'asc' | 'desc' } | null;
 
 export const ClientsView: React.FC<Props> = ({ company }) => {
+  const searchParams = useSearchParams();
   const [items, setItems] = useState<Client[]>([]);
   const [rawCompanies, setRawCompanies] = useState<ClientCompany[]>([]);
   const [categories, setCategories] = useState<ClientCompanyCategory[]>([]);
@@ -39,20 +42,22 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
   // Custom Modal States
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; name: string }>({ isOpen: false, id: null, name: '' });
   const [isConfirmBulkOpen, setIsConfirmBulkOpen] = useState(false);
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
-    isOpen: false, title: '', message: '', type: 'success'
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
   });
 
   const [form, setForm] = useState<Partial<Client>>({
     salutation: '', name: '', client_company_id: null, email: '', whatsapp: ''
   });
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (isInitial = false) => {
     if (!company?.id) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    if (isInitial) setLoading(true);
     try {
       const [clientsRes, cosRes, catsRes] = await Promise.all([
         supabase.from('clients').select('*').eq('company_id', company.id).order('id', { ascending: false }),
@@ -67,13 +72,24 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
     } catch (error) {
       console.error("Fetch Data Error:", error);
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   }, [company?.id]);
 
   useEffect(() => {
-    fetchData();
+    fetchData(true);
   }, [fetchData]);
+
+  useEffect(() => {
+    const success = searchParams.get('success');
+    if (success) {
+      setToast({ isOpen: true, message: 'Data Berhasil Disimpan', type: 'success' });
+
+      // Clean up the URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
+    }
+  }, [searchParams]);
 
   const clientCompanies = useMemo(() => {
     return rawCompanies.map(co => ({
@@ -134,8 +150,8 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
     else setSelectedIds(clientsWithData.map(i => i.id));
   };
 
-  const showNotification = (title: string, message: string, type: 'success' | 'error' = 'success') => {
-    setNotification({ isOpen: true, title, message, type });
+  const showNotification = (message: string, type: ToastType = 'success') => {
+    setToast({ isOpen: true, message, type });
   };
 
   const handleBulkDelete = async () => {
@@ -146,9 +162,9 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
       if (error) throw error;
       await fetchData();
       setIsConfirmBulkOpen(false);
-      showNotification('Berhasil', `Berhasil menghapus ${selectedIds.length} data client.`);
+      showNotification(`Berhasil menghapus ${selectedIds.length} data client.`);
     } catch (err: any) {
-      showNotification('Gagal', err.message, 'error');
+      showNotification(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -166,7 +182,7 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
       setCategories(prev => [...prev, data as any].sort((a, b) => a.name.localeCompare(b.name)));
       return data;
     } catch (err: any) {
-      showNotification('Gagal', err.message, 'error');
+      showNotification(err.message, 'error');
       return null;
     }
   };
@@ -183,14 +199,14 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
       setRawCompanies(prev => [...prev, data as any].sort((a, b) => a.name.localeCompare(b.name)));
       return data;
     } catch (err: any) {
-      showNotification('Gagal', err.message, 'error');
+      showNotification(err.message, 'error');
       return null;
     }
   };
 
   const handleSave = async (formData: Partial<Client>) => {
     if (!formData.name) {
-      showNotification('Nama Wajib Diisi', 'Silakan masukkan nama client.', 'error');
+      showNotification('Silakan masukkan nama client.', 'error');
       return;
     }
     setIsProcessing(true);
@@ -211,9 +227,9 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
       }
       setIsModalOpen(false);
       await fetchData();
-      showNotification('Tersimpan', `Profil ${formData.name} telah diperbarui.`, 'success');
+      showNotification(`Profil ${formData.name} telah diperbarui.`, 'success');
     } catch (err: any) {
-      showNotification('Gagal Menyimpan', err.message, 'error');
+      showNotification(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -227,9 +243,9 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
       if (error) throw error;
       await fetchData();
       setConfirmDelete({ isOpen: false, id: null, name: '' });
-      showNotification('Berhasil', `Data client ${confirmDelete.name} telah dihapus.`);
+      showNotification(`Data client ${confirmDelete.name} telah dihapus.`);
     } catch (err: any) {
-      showNotification('Gagal Menghapus', err.message, 'error');
+      showNotification(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -240,7 +256,7 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
     return sortConfig.direction === 'asc' ? <ChevronUp size={12} className="ml-1 text-blue-600" /> : <ChevronDown size={12} className="ml-1 text-blue-600" />;
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-emerald-600 mb-4" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Mensinkronisasi Data Client...</Subtext></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-emerald-600 mb-4" /><Subtext className="text-[10px]  uppercase  text-gray-400">Mensinkronisasi Data Client...</Subtext></div>;
 
   return (
     <div className="flex flex-col gap-6 text-gray-900">
@@ -248,7 +264,7 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
         <div className="flex items-center justify-between">
           <div>
             <H2 className="text-xl">Kontak Client</H2>
-            <Subtext className="text-[10px] uppercase tracking-tight">Kelola daftar kontak person client.</Subtext>
+            <Subtext className="text-[10px] uppercase ">Kelola daftar kontak person client.</Subtext>
           </div>
           <div className="flex items-center gap-3">
             <Button
@@ -257,7 +273,7 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
                 setIsModalOpen(true);
               }}
               leftIcon={<Plus size={14} strokeWidth={3} />}
-              className="!px-6 py-2.5 text-[10px] uppercase tracking-tight shadow-lg shadow-emerald-100"
+              className="!px-6 py-2.5 text-[10px] uppercase  shadow-lg shadow-emerald-100"
               variant="success"
               size="sm"
             >
@@ -278,7 +294,7 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
             {selectedIds.length > 0 && (
               <Button
                 onClick={() => setIsConfirmBulkOpen(true)}
-                className="px-4 py-2.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl text-[10px] uppercase tracking-tight flex items-center gap-2 hover:bg-rose-600 hover:text-white transition-all shadow-sm"
+                className="px-4 py-2.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl text-[10px] uppercase  flex items-center gap-2 hover:bg-rose-600 hover:text-white transition-all shadow-sm"
               >
                 <Trash2 size={14} /> Hapus {selectedIds.length} Client
               </Button>
@@ -312,47 +328,47 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
             <TableBody className="divide-y divide-gray-50">
               {clientsWithData.map(item => (
                 <TableRow key={item.id} className={`hover:bg-gray-50/30 group transition-colors ${selectedIds.includes(item.id) ? 'bg-emerald-50/30' : ''}`}>
-                  <TableCell className="px-6 py-6 text-center">
+                  <TableCell className="px-6 py-4 text-center">
                     <Checkbox
                       checked={selectedIds.includes(item.id)}
                       onChange={() => toggleSelect(item.id)}
                       variant="emerald"
                     />
                   </TableCell>
-                  <TableCell className="px-6 py-6">
+                  <TableCell className="px-6 py-4">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center  text-[10px]">
                         {item.name.charAt(0)}
                       </div>
                       <div>
-                        <Subtext className="text-sm text-gray-900 tracking-tight">
-                          {item.salutation && <Label className="text-emerald-500 mr-1 tracking-tight">{item.salutation}</Label>}
+                        <Subtext className="text-sm text-gray-900 ">
+                          {item.salutation && <Label className="text-emerald-500 mr-1 ">{item.salutation}</Label>}
                           {item.name}
                         </Subtext>
-                        <Subtext className="text-[10px] text-gray-500 font-mono mt-1 tracking-tight">#{String(item.id).padStart(4, '0')}</Subtext>
+                        <Subtext className="text-[10px] text-gray-500 font-mono mt-1 ">#{String(item.id).padStart(4, '0')}</Subtext>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="px-6 py-6">
+                  <TableCell className="px-6 py-4">
                     {item.client_company ? (
                       <div className="flex items-center gap-2">
                         <Building size={12} className="text-indigo-400" />
-                        <Label className="text-[11px]  text-indigo-600 uppercase tracking-tight">{item.client_company.name}</Label>
+                        <Label className="text-[11px]  text-indigo-600 uppercase ">{item.client_company.name}</Label>
                       </div>
                     ) : (
-                      <Label className="text-[9px]  uppercase tracking-tight text-gray-300 italic">Personal</Label>
+                      <Label className="text-[9px]  uppercase  text-gray-300 italic">Personal</Label>
                     )}
                   </TableCell>
-                  <TableCell className="px-6 py-6">
+                  <TableCell className="px-6 py-4">
                     <div className="space-y-1">
-                      <Subtext className="text-[10px] text-gray-600 flex items-center gap-2 tracking-tight"><Mail size={12} className="text-gray-300" /> {item.email || '-'}</Subtext>
-                      <Subtext className="text-[10px] text-gray-600 flex items-center gap-2 tracking-tight"><Phone size={12} className="text-gray-300" /> {item.whatsapp || '-'}</Subtext>
+                      <Subtext className="text-[10px] text-gray-600 flex items-center gap-2 "><Mail size={12} className="text-gray-300" /> {item.email || '-'}</Subtext>
+                      <Subtext className="text-[10px] text-gray-600 flex items-center gap-2 "><Phone size={12} className="text-gray-300" /> {item.whatsapp || '-'}</Subtext>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-center gap-2">
-                      <Button onClick={() => { setForm(item); setIsModalOpen(true); }} variant="ghost" size='sm' className="!p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" title="Edit"><Edit2 size={14} /></Button>
-                      <Button onClick={() => setConfirmDelete({ isOpen: true, id: item.id, name: item.name })} variant="ghost" size='sm' className="!p-2 text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg" title="Hapus"><Trash2 size={14} /></Button>
+                      <ActionButton icon={Edit2} variant="blue" onClick={() => { setForm(item); setIsModalOpen(true); }} title="Edit" />
+                      <ActionButton icon={Trash2} variant="rose" onClick={() => setConfirmDelete({ isOpen: true, id: item.id, name: item.name })} title="Hapus" />
                     </div>
                   </TableCell>
                 </TableRow>
@@ -361,7 +377,7 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
                 <TableRow>
                   <TableCell colSpan={5} className="py-24 text-center">
                     <Contact size={48} className="mx-auto mb-4 opacity-10 text-gray-400" />
-                    <Subtext className="text-xs  uppercase tracking-tight text-gray-300">Belum ada data client</Subtext>
+                    <Subtext className="text-xs  uppercase  text-gray-300">Belum ada data client</Subtext>
                   </TableCell>
                 </TableRow>
               )}
@@ -391,6 +407,7 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
         itemName={`Data client ${confirmDelete.name}`}
         description="Anda akan menghapus data ini secara permanen. Seluruh riwayat transaksi yang terhubung dengan client ini mungkin terpengaruh."
         isProcessing={isProcessing}
+        variant="horizontal"
       />
 
       <ConfirmBulkDeleteModal
@@ -400,14 +417,14 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
         count={selectedIds.length}
         description={`Apakah Anda yakin ingin menghapus seluruh client yang dipilih secara permanen? Tindakan ini tidak dapat dibatalkan.`}
         isProcessing={isProcessing}
+        variant="horizontal"
       />
 
-      <NotificationModal
-        isOpen={notification.isOpen}
-        onClose={() => setNotification({ ...notification, isOpen: false })}
-        title={notification.title}
-        message={notification.message}
-        type={notification.type}
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
       />
 
       <style>{`

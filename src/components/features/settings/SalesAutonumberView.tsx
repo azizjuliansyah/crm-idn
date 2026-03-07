@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 
-import { Input, Button, H3, Subtext, Label, Modal, ComboBox } from '@/components/ui';
+import { Input, Button, Table, TableHeader, TableBody, TableRow, TableCell, H2, Subtext, Label, Modal, ComboBox, Toast, ToastType } from '@/components/ui';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
 
 
 import { supabase } from '@/lib/supabase';
@@ -48,9 +49,19 @@ export const SalesAutonumberView: React.FC<Props> = ({ company }) => {
     format_pattern: '', next_number: 1, digit_count: 4, reset_period: 'never', reset_day: 1, reset_month: 1
   });
 
-  const fetchData = useCallback(async () => {
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
+  });
+
+  const showToast = (message: string, type: ToastType = 'success') => {
+    setToast({ isOpen: true, message, type });
+  };
+
+  const fetchData = useCallback(async (isInitial = false) => {
     if (!company?.id) return;
-    setLoading(true);
+    if (isInitial) setLoading(true);
     try {
       const { data, error } = await supabase.from('autonumber_settings').select('*').eq('company_id', company.id).order('document_type');
       if (error) throw error;
@@ -83,10 +94,12 @@ export const SalesAutonumberView: React.FC<Props> = ({ company }) => {
       } else {
         setSettings(data || []);
       }
-    } catch (err) { console.error(err); } finally { setLoading(false); }
+    } catch (err) { console.error(err); } finally {
+      if (isInitial) setLoading(false);
+    }
   }, [company.id]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { fetchData(true); }, [fetchData]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -116,8 +129,11 @@ export const SalesAutonumberView: React.FC<Props> = ({ company }) => {
         reset_month: form.reset_month
       }).eq('id', form.id);
       setIsModalOpen(false);
-      fetchData();
-    } catch (err: any) { alert(err.message); } finally { setIsProcessing(false); }
+      await fetchData();
+      showToast('Konfigurasi penomoran berhasil diperbarui.');
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally { setIsProcessing(false); }
   };
 
   const getPreview = (pattern: string = '', nextNum: number = 1, digitCount: number = 4) => {
@@ -170,7 +186,7 @@ export const SalesAutonumberView: React.FC<Props> = ({ company }) => {
     switch (type) {
       case 'quotation':
         return {
-          icon: <FileText size={24} />,
+          icon: <FileText size={18} />,
           label: 'Penawaran',
           gradient: 'from-emerald-500 to-teal-600',
           shadow: 'shadow-emerald-100',
@@ -178,7 +194,7 @@ export const SalesAutonumberView: React.FC<Props> = ({ company }) => {
         };
       case 'proforma':
         return {
-          icon: <FileCheck size={24} />,
+          icon: <FileCheck size={18} />,
           label: 'Proforma Invoice',
           gradient: 'from-indigo-500 to-purple-600',
           shadow: 'shadow-indigo-100',
@@ -186,7 +202,7 @@ export const SalesAutonumberView: React.FC<Props> = ({ company }) => {
         };
       case 'delivery_order':
         return {
-          icon: <Truck size={24} />,
+          icon: <Truck size={18} />,
           label: 'Delivery Order',
           gradient: 'from-amber-500 to-orange-600',
           shadow: 'shadow-amber-100',
@@ -194,7 +210,7 @@ export const SalesAutonumberView: React.FC<Props> = ({ company }) => {
         };
       case 'kwitansi':
         return {
-          icon: <FileText size={24} />,
+          icon: <FileText size={18} />,
           label: 'Kwitansi',
           gradient: 'from-fuchsia-500 to-pink-600',
           shadow: 'shadow-fuchsia-100',
@@ -202,7 +218,7 @@ export const SalesAutonumberView: React.FC<Props> = ({ company }) => {
         };
       default:
         return {
-          icon: <FileCheck size={24} />,
+          icon: <FileCheck size={18} />,
           label: 'Invoice',
           gradient: 'from-blue-500 to-sky-600',
           shadow: 'shadow-blue-100',
@@ -211,42 +227,68 @@ export const SalesAutonumberView: React.FC<Props> = ({ company }) => {
     }
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-blue-600 mb-4" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Memuat Pengaturan...</Subtext></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-blue-600 mb-4" /><Subtext className="text-[10px]  uppercase  text-gray-400">Memuat Pengaturan...</Subtext></div>;
 
   return (
-    <div className="max-w-5xl space-y-10">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {settings.map(s => {
-          const style = getDocStyles(s.document_type);
-          return (
-            <div
-              key={s.id}
-              onClick={() => handleOpenEdit(s)}
-              className={`bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-2xl hover:border-transparent transition-all cursor-pointer group relative overflow-hidden`}
-            >
-              <div className={`absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity`}>
-                {style.icon}
-              </div>
+    <div className="max-w-5xl flex flex-col space-y-6">
+      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+        <div>
+          <H2 className="text-xl ">Format Nomor Otomatis</H2>
+          <Subtext className="text-[10px] uppercase font-semibold text-gray-400">Atur pola penomoran dokumen untuk Quotation, Proforma, Invoice, dan Kwitansi.</Subtext>
+        </div>
+        <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shadow-sm">
+          <Hash size={20} />
+        </div>
+      </div>
 
-              <div className="flex items-center gap-5 mb-6">
-                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${style.gradient} text-white flex items-center justify-center transition-all duration-500 shadow-lg ${style.shadow} group-hover:scale-110`}>
-                  {style.icon}
-                </div>
-                <div>
-                  <h4 className="text-[10px]  text-gray-400 uppercase tracking-[0.2em] mb-0.5">Automated Numbering</h4>
-                  <H3 className="text-lg  text-gray-900">{style.label}</H3>
-                </div>
-              </div>
-
-              <div className={`p-5 ${style.bg} border border-transparent group-hover:border-white rounded-2xl transition-all`}>
-                <Subtext className="text-[12px]  text-gray-600 group-hover:text-blue-700 tracking-tight flex items-center gap-2">
-                  <Sparkles size={14} className="opacity-50" />
-                  {getPreview(s.format_pattern, s.next_number, s.digit_count)}
-                </Subtext>
-              </div>
-            </div>
-          );
-        })}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableCell isHeader>Tipe Dokumen</TableCell>
+              <TableCell isHeader>Contoh Output (Preview)</TableCell>
+              <TableCell isHeader className="text-center">Aksi</TableCell>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {settings.map(s => {
+              const style = getDocStyles(s.document_type);
+              return (
+                <TableRow key={s.id} className="group cursor-pointer" onClick={() => handleOpenEdit(s)}>
+                  <TableCell className="px-6 py-4">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${style.gradient} text-white flex items-center justify-center shadow-md ${style.shadow}`}>
+                        {style.icon}
+                      </div>
+                      <div>
+                        <Label className="text-sm font-semibold text-gray-900">{style.label}</Label>
+                        <Subtext className="text-[10px] text-gray-400 uppercase tracking-wider block">ID: {s.document_type}</Subtext>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-6 py-4">
+                    <div className={`inline-flex items-center gap-2 px-4 py-2 ${style.bg} border border-transparent rounded-xl transition-all`}>
+                      <Sparkles size={12} className="text-blue-400 opacity-70" />
+                      <span className="text-[13px] font-mono font-medium text-gray-700">
+                        {getPreview(s.format_pattern, s.next_number, s.digit_count)}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-6 py-4 text-center">
+                    <div className="flex items-center justify-center">
+                      <ActionButton
+                        icon={Save}
+                        variant="blue"
+                        title="Edit Konfigurasi"
+                        onClick={(e) => { e.stopPropagation(); handleOpenEdit(s); }}
+                      />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
       </div>
 
       <Modal
@@ -290,7 +332,7 @@ export const SalesAutonumberView: React.FC<Props> = ({ company }) => {
                       type="text"
                       value={form.format_pattern || ''}
                       onChange={(e: any) => setForm({ ...form, format_pattern: e.target.value })}
-                      className="!h-12 !px-4 shadow-inner"
+                      className="!h-12 !px-4"
                       placeholder="Contoh: QT/[NUMBER]/[MM]/[YYYY]"
                     />
                   </div>
@@ -299,7 +341,7 @@ export const SalesAutonumberView: React.FC<Props> = ({ company }) => {
                     <Button
                       variant="ghost"
                       onClick={() => setIsCodeDropdownOpen(!isCodeDropdownOpen)}
-                      className="w-full !h-11 !px-5 bg-white border border-gray-200 !text-gray-600 !text-[10px]  uppercase tracking-tight !justify-between shadow-sm"
+                      className="w-full !h-11 !px-5 bg-white border border-gray-200 !text-gray-600 !text-[10px]  uppercase  !justify-between shadow-sm"
                       rightIcon={<ChevronDown size={14} className={`transition-transform duration-300 ${isCodeDropdownOpen ? 'rotate-180' : ''}`} />}
                     >
                       <Label>Tambah Tag Kode</Label>
@@ -312,7 +354,7 @@ export const SalesAutonumberView: React.FC<Props> = ({ company }) => {
                               key={t.tag}
                               variant="ghost"
                               onClick={() => appendTag(t.tag)}
-                              className="w-full !justify-start !px-4 !py-2.5 !text-[10px]  !text-gray-500 hover:!bg-blue-50 hover:!text-blue-600 !rounded-lg border-b border-gray-50 last:border-none uppercase tracking-tight"
+                              className="w-full !justify-start !px-4 !py-2.5 !text-[10px]  !text-gray-500 hover:!bg-blue-50 hover:!text-blue-600 !rounded-lg border-b border-gray-50 last:border-none uppercase "
                             >
                               {t.label}
                             </Button>
@@ -326,7 +368,7 @@ export const SalesAutonumberView: React.FC<Props> = ({ company }) => {
 
               <div className="p-5 bg-blue-50 rounded-2xl border border-blue-100/50 space-y-2">
                 <Label className="!text-blue-400">Contoh Output Saat Ini</Label>
-                <Subtext className="text-[13px]  text-blue-700 tracking-tight break-all">
+                <Subtext className="text-[13px]  text-blue-700  break-all">
                   {getPreview(form.format_pattern, form.next_number, form.digit_count)}
                 </Subtext>
               </div>
@@ -343,7 +385,7 @@ export const SalesAutonumberView: React.FC<Props> = ({ company }) => {
                   type="number"
                   value={form.next_number}
                   onChange={(e: any) => setForm({ ...form, next_number: Number(e.target.value) })}
-                  className="!h-12 !px-5 !text-blue-600 shadow-inner"
+                  className="!h-12 !px-5 !text-blue-600"
                 />
               </div>
 
@@ -407,6 +449,12 @@ export const SalesAutonumberView: React.FC<Props> = ({ company }) => {
           </div>
         </div>
       </Modal>
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 };

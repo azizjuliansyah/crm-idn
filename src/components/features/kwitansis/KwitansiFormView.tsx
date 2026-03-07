@@ -572,7 +572,7 @@ export const KwitansiFormView: React.FC<Props> = ({ company, editingId, kwitansi
   };
 
 
-  if (loading && !items.length) return <div className="flex flex-col items-center justify-center py-24 gap-4 bg-white min-h-screen font-sans"><Loader2 className="animate-spin text-indigo-600" size={32} /><p className="text-[10px] font-bold uppercase tracking-tight text-gray-400">Menyiapkan Kwitansi...</p></div>;
+  if (loading && !items.length) return <div className="flex flex-col items-center justify-center py-24 gap-4 bg-white min-h-screen font-sans"><Loader2 className="animate-spin text-indigo-600" size={32} /><p className="text-[10px] font-bold uppercase  text-gray-400">Menyiapkan Kwitansi...</p></div>;
 
   return (
     <div className="bg-[#F9FAFB] min-h-screen pb-24 font-sans relative">
@@ -583,8 +583,8 @@ export const KwitansiFormView: React.FC<Props> = ({ company, editingId, kwitansi
               <ArrowLeft size={20} />
             </Button>
             <div>
-              <h1 className="text-xl font-bold text-gray-900 tracking-tight">{(editingId || kwitansiId) ? 'Ubah Kwitansi' : 'Kwitansi Penjualan Baru'}</h1>
-              <Subtext className="text-indigo-600 font-bold uppercase tracking-tight mt-0.5">{KwitansiNumber}</Subtext>
+              <h1 className="text-xl font-bold text-gray-900 ">{(editingId || kwitansiId) ? 'Ubah Kwitansi' : 'Kwitansi Penjualan Baru'}</h1>
+              <Subtext className="text-indigo-600 font-bold uppercase  mt-0.5">{KwitansiNumber}</Subtext>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -725,7 +725,7 @@ export const KwitansiFormView: React.FC<Props> = ({ company, editingId, kwitansi
                     />
                   </TableCell>
                   <TableCell className="px-4 text-center">
-                    <div className="w-full px-2 py-2 bg-gray-50 border border-gray-100 rounded-[4px] text-[10px] text-center text-gray-400 font-bold uppercase tracking-tight">
+                    <div className="w-full px-2 py-2 bg-gray-50 border border-gray-100 rounded-[4px] text-[10px] text-center text-gray-400 font-bold uppercase ">
                       {item.unit}
                     </div>
                   </TableCell>
@@ -750,7 +750,7 @@ export const KwitansiFormView: React.FC<Props> = ({ company, editingId, kwitansi
             </TableBody>
           </Table>
           <div className="flex items-center gap-3 mt-4">
-            <Button onClick={handleAddItem} variant="ghost" size="sm" leftIcon={<Plus size={14} />} className="!text-[#4F46E5] hover:bg-indigo-50 font-bold tracking-tight uppercase text-[10px]">
+            <Button onClick={handleAddItem} variant="ghost" size="sm" leftIcon={<Plus size={14} />} className="!text-[#4F46E5] hover:bg-indigo-50 font-bold  uppercase text-[10px]">
               Tambah Baris
             </Button>
           </div>
@@ -778,12 +778,12 @@ export const KwitansiFormView: React.FC<Props> = ({ company, editingId, kwitansi
               className="mb-4"
             />
             <div className="flex items-center justify-between border-b border-gray-50 pb-4">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">Subtotal</span>
+              <span className="text-xs font-bold text-gray-400 uppercase ">Subtotal</span>
               <span className="text-sm font-bold text-gray-900">{formatIDRVal(subtotal)}</span>
             </div>
             <div className="flex items-center justify-between border-b border-gray-50 pb-4">
               <div className="flex items-center gap-4">
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">Diskon</span>
+                <span className="text-xs font-bold text-gray-400 uppercase ">Diskon</span>
                 <div className="flex bg-white rounded border border-gray-200 overflow-hidden h-11">
                   <ComboBox
                     value={discountType}
@@ -811,7 +811,7 @@ export const KwitansiFormView: React.FC<Props> = ({ company, editingId, kwitansi
 
             <div className="space-y-4 border-b border-gray-50 pb-4">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">Pajak</span>
+                <span className="text-xs font-bold text-gray-400 uppercase ">Pajak</span>
                 <div className="relative">
                   <ComboBox
                     value=""
@@ -845,7 +845,7 @@ export const KwitansiFormView: React.FC<Props> = ({ company, editingId, kwitansi
             </div>
 
             <div className="flex items-center justify-between py-4 mt-2 border-t-2 border-gray-100">
-              <span className="text-md font-bold text-gray-900 uppercase tracking-tight">Total Tagihan</span>
+              <span className="text-md font-bold text-gray-900 uppercase ">Total Tagihan</span>
               <span className="text-2xl font-bold text-blue-600">{formatIDRVal(total)}</span>
             </div>
 
@@ -867,7 +867,7 @@ export const KwitansiFormView: React.FC<Props> = ({ company, editingId, kwitansi
         <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] fade-in duration-500">
           <div className="bg-emerald-600 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border border-emerald-500">
             <CheckCircle2 size={20} />
-            <Label className="text-sm uppercase tracking-tight">Data Kwitansi Berhasil Disimpan</Label>
+            <Label className="text-sm uppercase ">Data Kwitansi Berhasil Disimpan</Label>
           </div>
         </div>
       )}

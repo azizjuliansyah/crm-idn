@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Input, Textarea, Button, H2, Subtext, Modal, Avatar, Badge, Timeline, TimelineItem, TimelineIcon, TimelineContent, ComboBox, Label } from '@/components/ui';
+import { Input, Textarea, Button, H2, H3, Subtext, Label, Modal, Badge, Timeline, TimelineItem, TimelineIcon, TimelineContent, ComboBox, ToastType, SectionHeader } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { SupportTicket, Profile, Company, CompanyMember, SupportStage, Client, LogActivity, TicketTopic, ClientCompany, ClientCompanyCategory } from '@/lib/types';
 import {
-  ChevronLeft, Trash2, Loader2, Save, X,
-  ArrowUp, MessageSquare, RefreshCw,
+  ChevronLeft, Headset, Trash2, Loader2, Save, X,
+  ArrowUp, MessageSquare, RefreshCw, Layers,
   Clock, ShieldAlert, Check
 } from 'lucide-react';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ClientFormModal } from '@/components/features/clients/components/ClientFormModal';
 
 interface Props {
@@ -21,10 +22,11 @@ interface Props {
   topics: TicketTopic[];
   onUpdate: () => void;
   onDelete: (id: number) => void;
+  setToast: (toast: { isOpen: boolean; message: string; type: ToastType }) => void;
 }
 
 export const ComplaintDetailModal: React.FC<Props> = ({
-  isOpen, onClose, ticket, company, user, members, stages, clients, topics, onUpdate, onDelete
+  isOpen, onClose, ticket, company, user, members, stages, clients, topics, onUpdate, onDelete, setToast
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activities, setActivities] = useState<LogActivity[]>([]);
@@ -95,8 +97,11 @@ export const ComplaintDetailModal: React.FC<Props> = ({
       });
 
       setForm(prev => ({ ...prev, status: newStatus.toLowerCase() }));
+      setToast({ isOpen: true, message: `Status keluhan diubah ke ${newStatus.toUpperCase()}`, type: 'success' });
       onUpdate();
       await fetchActivities();
+    } catch (err: any) {
+      setToast({ isOpen: true, message: err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -114,7 +119,10 @@ export const ComplaintDetailModal: React.FC<Props> = ({
       });
       if (error) throw error;
       setNewComment('');
+      setToast({ isOpen: true, message: 'Komentar berhasil ditambahkan!', type: 'success' });
       await fetchActivities();
+    } catch (err: any) {
+      setToast({ isOpen: true, message: err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -130,11 +138,14 @@ export const ComplaintDetailModal: React.FC<Props> = ({
         topic_id: form.topic_id,
         assigned_id: form.assigned_id,
         priority: form.priority,
-        status: form.status
+        status: form.status,
+        type: form.type
       }).eq('id', ticket.id);
-      if (error) throw error;
+      setToast({ isOpen: true, message: 'Data keluhan berhasil diperbarui!', type: 'success' });
       onUpdate();
       onClose();
+    } catch (err: any) {
+      setToast({ isOpen: true, message: err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -158,8 +169,10 @@ export const ComplaintDetailModal: React.FC<Props> = ({
       setIsAddingClient(false);
       setNewClientForm({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
       onUpdate();
+      setToast({ isOpen: true, message: 'Client baru berhasil ditambahkan!', type: 'success' });
+      onUpdate();
     } catch (err: any) {
-      alert("Gagal menambah client: " + err.message);
+      setToast({ isOpen: true, message: "Gagal menambah client: " + err.message, type: 'error' });
     } finally {
       setIsProcessingQuick(false);
     }
@@ -193,8 +206,9 @@ export const ComplaintDetailModal: React.FC<Props> = ({
       setForm({ ...form, topic_id: data.id });
       setNewTopicName('');
       setIsAddingTopic(false);
+      setToast({ isOpen: true, message: 'Topik baru berhasil ditambahkan!', type: 'success' });
     } catch (err: any) {
-      alert(err.message);
+      setToast({ isOpen: true, message: err.message, type: 'error' });
     }
   };
 
@@ -211,59 +225,53 @@ export const ComplaintDetailModal: React.FC<Props> = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="" size="xl" hideClose noPadding noScroll>
-      <div className="flex flex-col h-[88vh] bg-white text-[#111827] overflow-hidden rounded-md border border-gray-200">
+      <div className="flex flex-col h-[90vh] bg-white text-gray-900 overflow-hidden rounded-2xl border border-gray-100 shadow-2xl">
         <header className="px-6 h-16 flex items-center justify-between border-b border-gray-100 bg-white shrink-0">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={onClose} className="!p-1.5 text-gray-400 hover:text-gray-900 border border-transparent hover:border-gray-100 rounded transition-all"><ChevronLeft size={20} /></Button>
+            <Button variant="ghost" onClick={onClose} className="!p-1.5 text-gray-400 border border-transparent hover:border-gray-100 hover:text-gray-900 transition-all rounded-xl"><ChevronLeft size={20} /></Button>
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded bg-rose-600 text-white flex items-center justify-center shadow-lg shadow-rose-100"><ShieldAlert size={18} /></div>
-              <H2 className="text-base tracking-tight text-gray-900 uppercase">{form.title}</H2>
+              <div className="w-9 h-9 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-rose-100 group">
+                <ShieldAlert size={18} className="group-hover:rotate-12 transition-transform" />
+              </div>
+              <H2 className="text-base   uppercase">{form.title}</H2>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => onDelete(ticket.id)} className="!p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50"><Trash2 size={18} /></Button>
-            <Button
-              onClick={handleSave}
-              disabled={isProcessing}
-              isLoading={isProcessing}
-              leftIcon={<Save size={14} />}
-              variant="danger"
-              size="sm"
-              className=" uppercase tracking-wider"
-            >
+            <ActionButton
+              icon={Trash2}
+              variant="rose"
+              onClick={() => onDelete(ticket.id)}
+              title="Hapus Keluhan"
+            />
+            <Button onClick={handleSave} disabled={isProcessing} isLoading={isProcessing} leftIcon={<Save size={14} />} variant="danger" size='sm'>
               UPDATE COMPLAINT
             </Button>
-            <Button variant="ghost" size="sm" onClick={onClose} className="!p-1.5 text-gray-400 hover:text-gray-900 ml-2"><X size={20} /></Button>
+            <Button variant="ghost" onClick={onClose} className="!p-1.5 text-gray-400 ml-2 hover:text-gray-900 rounded-xl"><X size={20} /></Button>
           </div>
         </header>
 
-        <div className="px-8 py-4 flex items-center justify-between border-b border-gray-50 bg-gray-50/30 shrink-0">
+        <div className="px-8 py-4 flex items-center justify-between border-b border-gray-100 bg-gray-50/50 shrink-0">
           <div className="flex items-center gap-6">
-            <Badge variant="ghost" className="text-gray-500 bg-white uppercase tracking-tight px-2 py-0.5 border border-gray-200">ID: {ticket.id}</Badge>
-            <Subtext className="flex items-center gap-1.5"><Clock size={14} /> Terdaftar {new Date(ticket.created_at).toLocaleDateString('id-ID', { month: 'short', day: 'numeric', year: 'numeric' })}</Subtext>
+            <Badge variant="ghost" className="px-2.5 py-1 border border-gray-200 text-[9px]  text-gray-600 bg-white uppercase  ring-1 ring-inset ring-gray-100">ID COMPLAINT: {ticket.id}</Badge>
+            <div className="flex items-center gap-1.5 text-[10px]  text-gray-400 uppercase "><Clock size={14} className="text-gray-300" /> Dibuat {new Date(ticket.created_at).toLocaleDateString('id-ID', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+            <Badge variant="danger" className="flex items-center gap-1.5 px-3 py-1 text-[9px]  uppercase tracking-[0.2em] border-none ring-1 ring-inset shadow-sm">
+              <ShieldAlert size={10} /> COMPLAINT / KELUHAN
+            </Badge>
           </div>
           <div className="flex items-center gap-2">
-            <Subtext className="text-[10px]  text-gray-400 uppercase tracking-tight mr-2">Prioritas:</Subtext>
-            <Badge variant={form.priority === 'urgent' ? 'danger' : 'warning'} className=" uppercase">{form.priority}</Badge>
+            <Label className="text-[10px]  text-gray-400 uppercase ">Urgensi:</Label>
+            <Badge variant={form.priority === 'urgent' ? 'danger' : 'secondary'} className="text-[10px] py-1 px-3  uppercase  ring-1 ring-inset">{form.priority}</Badge>
           </div>
         </div>
 
         <div className="px-8 pt-6 pb-2 shrink-0">
-          <div className="flex items-center h-10 w-full overflow-hidden rounded-sm border border-gray-200">
+          <div className="flex items-center h-11 w-full overflow-hidden rounded-xl border border-gray-200 p-1 bg-gray-50/50">
             {stages.map((stage, idx) => {
               const isActive = form.status?.toLowerCase() === stage.name.toLowerCase();
-              const isLast = idx === stages.length - 1;
-              const isFirst = idx === 0;
-              let bgColor = 'bg-white text-gray-400 hover:bg-gray-50';
-              if (isActive) bgColor = 'bg-rose-600 text-white shadow-inner';
+              let bgColor = 'bg-transparent text-gray-400 hover:text-gray-600';
+              if (isActive) bgColor = 'bg-white text-rose-600 shadow-sm ring-1 ring-gray-100';
               return (
-                <Button
-                  key={stage.id}
-                  variant={isActive ? 'danger' : 'ghost'}
-                  onClick={() => handleStatusChange(stage.name)}
-                  className={`relative flex-1 h-full flex items-center justify-center transition-all text-[10px]  uppercase tracking-tight ${isActive ? 'shadow-inner' : 'text-gray-400 hover:bg-gray-50'} border-r last:border-r-0`}
-                  style={{ clipPath: isLast ? 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 3% 50%)' : isFirst ? 'polygon(0% 0%, 97% 0%, 100% 50%, 97% 100%, 0% 100%)' : 'polygon(0% 0%, 97% 0%, 100% 50%, 97% 100%, 0% 100%, 3% 50%)' }}
-                >
+                <Button key={stage.id} onClick={() => handleStatusChange(stage.name)} className={`relative flex-1 h-full flex items-center justify-center transition-all text-[9px]  uppercase tracking-[0.15em] rounded-lg ${bgColor}`}>
                   {stage.name}
                 </Button>
               );
@@ -273,42 +281,80 @@ export const ComplaintDetailModal: React.FC<Props> = ({
 
         <div className="flex-1 flex overflow-hidden px-8 py-6 gap-10">
           <div className="w-1/2 flex flex-col border-r border-gray-100 pr-10">
-            <Subtext className="!text-[10px]  uppercase tracking-[0.2em] mb-6">Penanganan & Resolusi</Subtext>
+            <SectionHeader
+              title="Log Penanganan & Status"
+              className="mb-6 shrink-0 uppercase"
+            />
             <div className="flex-1 flex flex-col overflow-hidden">
               <div className="flex items-start gap-4 mb-8">
-                <Avatar name={user.full_name} src={user.avatar_url} size="sm" className="bg-rose-600 text-white shadow-md shadow-rose-100" />
                 <div className="flex-1 relative">
-                  <Textarea value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="Tulis langkah penyelesaian..." className="!min-h-[80px] !text-xs !bg-gray-50 !mb-0" />
-                  <div className="absolute right-2 bottom-2"><Button onClick={handleAddComment} disabled={!newComment.trim()} size="sm" className="!p-1.5 bg-gray-900 text-white rounded hover:bg-black transition-all disabled:opacity-20"><ArrowUp size={16} /></Button></div>
+                  <Textarea
+                    value={newComment}
+                    onChange={e => setNewComment(e.target.value)}
+                    placeholder="Tulis update penyelesaian di sini..."
+                    className="min-h-[90px] rounded-2xl border-gray-100 focus:border-rose-400 focus:ring-rose-400/10 transition-all text-xs font-medium placeholder:text-gray-300"
+                  />
+                  <div className="absolute right-2.5 bottom-2.5">
+                    <Button
+                      variant="danger"
+                      onClick={handleAddComment}
+                      disabled={!newComment.trim()}
+                      className="!p-2 mb-1 !h-auto !rounded-md"
+                    >
+                      <ArrowUp size={16} />
+                    </Button>
+                  </div>
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto custom-scrollbar pr-4">
-                {loadingActivities ? <div className="py-20 text-center animate-pulse text-[10px] uppercase  text-gray-300">Mensinkronisasi Aktivitas...</div> : activities.length === 0 ? <div className="py-20 text-center text-gray-300 italic text-[10px] uppercase tracking-tight">Belum ada progres tercatat</div> : (
-                  <Timeline>
-                    {activities.map((act) => (
-                      <TimelineItem key={act.id}>
-                        <TimelineIcon className={act.activity_type === 'status_change' ? 'bg-blue-50 text-blue-500' : 'bg-gray-50 text-gray-500'}>
-                          {act.activity_type === 'status_change' ? <RefreshCw size={14} /> : <MessageSquare size={14} />}
-                        </TimelineIcon>
-                        <TimelineContent>
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge variant="ghost" className="!p-0 text-xs  text-gray-900">{act.profile?.full_name}</Badge>
-                            <Badge variant="ghost" className="!p-0 text-[9px]  text-gray-300 uppercase">{new Date(act.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</Badge>
-                          </div>
-                          <Subtext className={`text-[12px] font-medium leading-relaxed ${act.activity_type === 'status_change' ? 'text-gray-400 italic' : 'text-gray-600'}`}>{act.content}</Subtext>
-                        </TimelineContent>
-                      </TimelineItem>
-                    ))}
-                  </Timeline>
-                )}
+              <div className="flex-1 overflow-y-auto scrollbar-hide pr-2">
+                <Timeline>
+                  {loadingActivities ? (
+                    <div className="py-20 flex flex-col items-center gap-3">
+                      <Loader2 className="animate-spin text-rose-600/20" size={24} />
+                      <Label className="text-[9px]  uppercase text-gray-300 tracking-[0.2em]">Memuat Log...</Label>
+                    </div>
+                  ) : activities.length === 0 ? (
+                    <div className="py-20 text-center text-gray-200 italic text-[9px]  uppercase tracking-[0.3em]">Belum Ada Aktivitas</div>
+                  ) : activities.map((act) => (
+                    <TimelineItem key={act.id} className="pb-8">
+                      <TimelineIcon>
+                        <div className={`w-full h-full rounded-lg bg-white flex items-center justify-center shadow-sm border ${act.activity_type === 'status_change' ? 'border-blue-50 text-blue-500' : 'border-gray-50 text-gray-400'}`}>
+                          {act.activity_type === 'status_change' ? <RefreshCw size={12} /> : <MessageSquare size={12} />}
+                        </div>
+                      </TimelineIcon>
+                      <TimelineContent>
+                        <div className="flex items-center gap-3 mb-1.5">
+                          <Label className="text-[11px]  text-gray-900 ">{act.profile?.full_name}</Label>
+                          <Label className="text-[8px]  text-gray-300 uppercase  bg-gray-50 px-1.5 py-0.5 rounded">{new Date(act.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} • {new Date(act.created_at).toLocaleDateString('id-ID', { month: 'short', day: 'numeric' })}</Label>
+                        </div>
+                        <Subtext className={`text-[12px] font-medium leading-relaxed ${act.activity_type === 'status_change' ? 'text-gray-400 italic ' : 'text-gray-600'}`}>{act.content}</Subtext>
+                      </TimelineContent>
+                    </TimelineItem>
+                  ))}
+                </Timeline>
               </div>
             </div>
           </div>
 
-          <div className="w-1/2 flex flex-col space-y-6 overflow-y-auto custom-scrollbar pr-2">
-            <Subtext className="!text-[10px]  uppercase tracking-[0.2em]">Data Pelaporan</Subtext>
-            <div className="space-y-4">
-              <Input label="Subjek / Masalah" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="!" />
+          <div className="w-1/2 flex flex-col space-y-8 overflow-y-auto scrollbar-hide pr-2">
+            <SectionHeader
+              title="Konfigurasi Data Keluhan"
+              className="mb-6 shrink-0 uppercase"
+            />
+
+            <div className="space-y-6">
+              <ComboBox
+                label="Klasifikasi Masalah"
+                value={form.type || 'complaint'}
+                onChange={(val: string | number) => setForm({ ...form, type: val as any })}
+                options={[
+                  { value: 'complaint', label: 'Complaint (Keluhan)' },
+                  { value: 'ticket', label: 'Standard Ticket (Support)' },
+                ]}
+              />
+
+              <Input label="Subjek / Judul Keluhan" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="rounded-ms" />
+
               <div className="grid grid-cols-2 gap-4">
                 <ComboBox
                   label="Pelapor (Client)"
@@ -319,7 +365,7 @@ export const ComplaintDetailModal: React.FC<Props> = ({
                     label: c.name,
                     sublabel: `${c.salutation || ''} ${c.whatsapp || c.email || ''}`.trim()
                   }))}
-                  className="rounded-md"
+                  className="rounded-ms"
                   onAddNew={() => setIsAddingClient(true)}
                   addNewLabel="Tambah Client Baru"
                 />
@@ -329,7 +375,12 @@ export const ComplaintDetailModal: React.FC<Props> = ({
                   label="PIC Penanggung Jawab"
                   value={form.assigned_id || ''}
                   onChange={(val: string | number) => setForm({ ...form, assigned_id: val.toString() })}
-                  options={members.map(m => ({ value: m.user_id.toString(), label: m.profile?.full_name || 'Tanpa Nama' }))}
+                  options={members.map(m => ({
+                    value: m.user_id.toString(),
+                    label: m.profile?.full_name || 'Tanpa Nama',
+                    sublabel: m.profile?.email
+                  }))}
+                  className="rounded-ms"
                 />
               </div>
 
@@ -375,12 +426,12 @@ export const ComplaintDetailModal: React.FC<Props> = ({
                     options={topics.map(t => ({ value: t.id.toString(), label: t.name }))}
                     onAddNew={() => setIsAddingTopic(true)}
                     addNewLabel="Tambah Topik Baru"
-                    className="rounded-md"
+                    className="rounded-ms"
                   />
                 )}
               </div>
 
-              <Textarea label="Kronologi Kejadian" value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} className="min-h-[140px]" />
+              <Textarea label="Kronologi Detail Kejadian" value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} className="min-h-[160px] rounded-2xl" />
             </div>
           </div>
         </div>
@@ -398,7 +449,6 @@ export const ComplaintDetailModal: React.FC<Props> = ({
         onQuickAddCompany={handleQuickAddCompany}
         onQuickAddCategory={handleQuickAddCategory}
       />
-      <style>{` .custom-scrollbar::-webkit-scrollbar { width: 4px; } .custom-scrollbar::-webkit-scrollbar-thumb { background: #eee; border-radius: 10px; } `}</style>
     </Modal>
   );
 };

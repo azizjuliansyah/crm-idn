@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Button, H2, H3, Subtext, Modal, SearchInput } from '@/components/ui';
+import { Button, H2, H3, Subtext, Modal, SearchInput, Toast, ToastType } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -11,6 +11,7 @@ import {
   Plus, Search, Trello, Table as TableIcon,
   AlertTriangle, CheckCircle2, Trash2, X, Loader2
 } from 'lucide-react';
+import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { SupportTicketAddModal } from '@/components/features/support/SupportTicketAddModal';
 import { SupportTicketDetailModal } from '@/components/features/support/SupportTicketDetailModal';
 import { SupportTicketsTableView } from '@/components/features/support/SupportTicketsTableView';
@@ -40,8 +41,10 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; name: string }>({ isOpen: false, id: null, name: '' });
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
-    isOpen: false, title: '', message: '', type: 'success'
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
   });
 
   const fetchData = useCallback(async (showLoading = true) => {
@@ -69,9 +72,7 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
     fetchData();
   }, [fetchData]);
 
-  const showNotification = (title: string, message: string, type: 'success' | 'error' = 'success') => {
-    setNotification({ isOpen: true, title, message, type });
-  };
+
 
   const handleDeleteClick = (id: number, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -85,11 +86,11 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
     try {
       const { error } = await supabase.from('support_tickets').delete().eq('id', confirmDelete.id);
       if (error) throw error;
-      showNotification('Berhasil', 'Ticket bantuan telah dihapus.');
+      setToast({ isOpen: true, message: 'Ticket bantuan telah dihapus.', type: 'success' });
       await fetchData(false);
       setConfirmDelete({ isOpen: false, id: null, name: '' });
     } catch (err: any) {
-      showNotification('Gagal', err.message, 'error');
+      setToast({ isOpen: true, message: err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -128,9 +129,12 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
       ));
 
       // Network Update
-      await supabase.from('support_tickets').update({ status: newStatus.toLowerCase(), kanban_order: newOrder }).eq('id', ticketId);
+      const { error } = await supabase.from('support_tickets').update({ status: newStatus.toLowerCase(), kanban_order: newOrder }).eq('id', ticketId);
+      if (error) throw error;
+      setToast({ isOpen: true, message: 'Status ticket diperbarui.', type: 'success' });
     } catch (err: any) {
-      showNotification('Gagal', err.message, 'error');
+      setToast({ isOpen: true, message: err.message, type: 'error' });
+      await fetchData(false); // Rollback optimistic state
     }
   };
 
@@ -165,7 +169,7 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
   if (loading) return (
     <div className="flex flex-col items-center justify-center py-24 bg-white rounded-2xl border border-gray-100 min-h-[400px]">
       <Loader2 className="animate-spin text-rose-600 mb-4" size={32} />
-      <Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Sinkronisasi Customer Support...</Subtext>
+      <Subtext className="text-[10px]  uppercase  text-gray-400">Sinkronisasi Customer Support...</Subtext>
     </div>
   );
 
@@ -175,7 +179,7 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
         <div className="flex items-center justify-between">
           <div>
             <H2 className="text-xl">Customer Support</H2>
-            <Subtext className="text-[10px] uppercase tracking-tight">Kelola bantuan dan tiket masalah pelanggan.</Subtext>
+            <Subtext className="text-[10px] uppercase ">Kelola bantuan dan tiket masalah pelanggan.</Subtext>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex bg-gray-50 border border-gray-100 p-1 rounded-xl">
@@ -199,7 +203,7 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
             <Button
               onClick={() => setIsAddModalOpen(true)}
               leftIcon={<Plus size={14} strokeWidth={3} />}
-              className="!px-6 py-2.5 text-[10px] uppercase tracking-tight shadow-lg shadow-rose-100"
+              className="!px-6 py-2.5 text-[10px] uppercase  shadow-lg shadow-rose-100"
               variant="danger"
               size="sm"
             >
@@ -246,7 +250,8 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
           stages={stages}
           clients={clients}
           topics={topics}
-          onSuccess={() => { fetchData(false); showNotification('Berhasil', 'Ticket baru telah dibuat.'); }}
+          onSuccess={() => fetchData(false)}
+          setToast={setToast}
         />
       )}
 
@@ -263,42 +268,27 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
           topics={topics}
           onUpdate={() => fetchData(false)}
           onDelete={handleDeleteClick}
+          setToast={setToast}
         />
       )}
 
-      {/* CONFIRM DELETE MODAL */}
-      <Modal
+      <ConfirmDeleteModal
         isOpen={confirmDelete.isOpen}
         onClose={() => setConfirmDelete({ isOpen: false, id: null, name: '' })}
+        onConfirm={executeDelete}
         title="Hapus Ticket"
-        size="sm"
-        footer={
-          <div className="flex w-full gap-3">
-            <Button variant="ghost" onClick={() => setConfirmDelete({ isOpen: false, id: null, name: '' })} className="flex-1">Batal</Button>
-            <Button variant="danger" onClick={executeDelete} isLoading={isProcessing} leftIcon={<Trash2 size={14} />} className="flex-1">Ya, Hapus</Button>
-          </div>
-        }
-      >
-        <div className="flex flex-col items-center py-6 text-center">
-          <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mb-6"><AlertTriangle size={32} /></div>
-          <Subtext className="text-lg  text-gray-900 tracking-tight">Hapus {confirmDelete.name}?</Subtext>
-          <Subtext className="text-sm text-gray-500 font-medium leading-relaxed mt-2">Tindakan ini permanen. Seluruh riwayat percakapan pada ticket ini akan hilang.</Subtext>
-        </div>
-      </Modal>
+        itemName={confirmDelete.name}
+        description="Apakah Anda yakin ingin menghapus data ticket bantuan ini dari sistem? Tindakan ini permanen."
+        isProcessing={isProcessing}
+        variant="horizontal"
+      />
 
-      <Modal
-        isOpen={notification.isOpen}
-        onClose={() => setNotification({ ...notification, isOpen: false })}
-        title=""
-        size="sm"
-        footer={<Button onClick={() => setNotification({ ...notification, isOpen: false })} className="w-full">Tutup</Button>}
-      >
-        <div className="flex flex-col items-center py-6 text-center">
-          <div className={`w-16 h-16 rounded-xl flex items-center justify-center mb-6 ${notification.type === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>{notification.type === 'success' ? <CheckCircle2 size={32} /> : <X size={32} />}</div>
-          <H3 className="text-lg  text-gray-900 mb-2">{notification.title}</H3>
-          <Subtext className="text-sm text-gray-500 font-medium leading-relaxed">{notification.message}</Subtext>
-        </div>
-      </Modal>
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 };

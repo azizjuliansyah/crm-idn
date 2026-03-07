@@ -27,14 +27,14 @@ export const ClientCompanyCategoryFormModal: React.FC<ClientCompanyCategoryFormM
       title={form.id ? "Edit Kategori" : "Tambah Kategori Baru"}
       size="md"
       footer={
-        <Button onClick={(e) => onSave(form)} disabled={isProcessing} className="px-10 py-4 bg-indigo-600 text-white rounded-xl  text-xs uppercase tracking-tight shadow-xl flex items-center gap-2">
+        <Button onClick={(e) => onSave(form)} disabled={isProcessing} variant="primary">
           {isProcessing && <Loader2 className="animate-spin" size={14} />} Simpan Kategori
         </Button>
       }
     >
       <div className="space-y-4 pb-2">
         <div className="space-y-2">
-          <Label className="text-[10px]  text-gray-400 uppercase tracking-tight ml-1">Nama Kategori</Label>
+          <Label className="text-[10px]  text-gray-400 uppercase  ml-1">Nama Kategori</Label>
           <Input
             type="text"
             value={form.name || ''}

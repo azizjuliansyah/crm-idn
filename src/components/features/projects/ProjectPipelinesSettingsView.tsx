@@ -1,10 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-
-import { Input, Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, Modal, Card, ComboBox } from '@/components/ui';
-
-
+import { Input, Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, Modal, Card, ComboBox, Toast, ToastType, Badge } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { ProjectPipeline, Company, ProjectCustomField } from '@/lib/types';
 import {
@@ -13,6 +10,7 @@ import {
   ArrowUp, ArrowDown, Type, Hash, Calendar as CalendarIcon
 } from 'lucide-react';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
 
 interface Props {
   company: Company;
@@ -27,6 +25,11 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
   const [pipelines, setPipelines] = useState<ProjectPipeline[]>([]);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
+  });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalForm, setModalForm] = useState<{ id: number | null, name: string, stages: StageForm[], custom_fields: ProjectCustomField[] }>({
@@ -191,6 +194,9 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
       setIsModalOpen(false);
       await fetchPipelines();
       window.dispatchEvent(new CustomEvent('pipelinesUpdated'));
+      setToast({ isOpen: true, message: 'Pipeline berhasil disimpan!', type: 'success' });
+    } catch (err: any) {
+      setToast({ isOpen: true, message: 'Gagal menyimpan pipeline: ' + err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -204,77 +210,90 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
       setConfirmModal({ isOpen: false, id: null });
       await fetchPipelines();
       window.dispatchEvent(new CustomEvent('pipelinesUpdated'));
+      setToast({ isOpen: true, message: 'Pipeline berhasil dihapus!', type: 'success' });
+    } catch (err: any) {
+      setToast({ isOpen: true, message: 'Gagal menghapus pipeline: ' + err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-blue-600 mb-4" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Memuat Konfigurasi...</Subtext></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-blue-600 mb-4" /><Subtext className="text-[10px] uppercase font-bold text-gray-400">Memuat Konfigurasi...</Subtext></div>;
 
   return (
-    <div className="max-w-5xl space-y-8">
-      <Card className="">
-        <div className="p-10 border-b border-gray-50 flex items-center justify-between">
-          <div>
-            <H2 className="text-2xl  tracking-tight">Project Pipeline Management</H2>
-            <Subtext className="mt-1">Kelola tahapan pengerjaan proyek di workspace Anda.</Subtext>
-          </div>
-          <Button
-            onClick={handleOpenAdd}
-            leftIcon={<Plus size={16} />}
-            variant='primary'
-          >
-            Tambah Pipeline
-          </Button>
+    <div className="flex flex-col space-y-6 max-w-5xl">
+      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+        <div>
+          <H2 className="text-xl ">Project Pipeline Management</H2>
+          <Subtext className="text-[10px] uppercase font-semibold text-gray-400">Kelola tahapan pengerjaan proyek di workspace Anda.</Subtext>
         </div>
+        <Button
+          onClick={handleOpenAdd}
+          leftIcon={<Plus size={14} strokeWidth={3} />}
+          className="!px-6 py-2.5 text-[10px] uppercase shadow-lg shadow-blue-100"
+          variant='primary'
+          size='sm'
+        >
+          Tambah Pipeline
+        </Button>
+      </div>
 
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm flex flex-col relative">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableCell isHeader className="px-10">Nama Pipeline</TableCell>
-              <TableCell isHeader className="px-10">Tahapan</TableCell>
-              <TableCell isHeader className="px-10 text-center">Aksi</TableCell>
+              <TableCell isHeader className="py-4 px-6 font-bold text-gray-900 uppercase text-[10px]">Nama Pipeline</TableCell>
+              <TableCell isHeader className="py-4 px-6 font-bold text-gray-900 uppercase text-[10px]">Tahapan</TableCell>
+              <TableCell isHeader className="text-center py-4 px-6 font-bold text-gray-900 uppercase text-[10px]">Aksi</TableCell>
             </TableRow>
           </TableHeader>
           <TableBody>
             {pipelines.map(p => (
-              <TableRow key={p.id} className="group">
-                <TableCell className="px-10 py-8">
+              <TableRow key={p.id}>
+                <TableCell className="py-8 px-6">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+                    <div className="w-10 h-10 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-center text-blue-600 shadow-sm">
                       <Workflow size={20} />
                     </div>
                     <div>
-                      <Subtext className="text-sm  text-gray-900 tracking-tight">{p.name}</Subtext>
+                      <Label className="text-[13px] font-semibold text-gray-900">{p.name}</Label>
                       {p.custom_fields && p.custom_fields.length > 0 && (
-                        <Subtext className="text-[10px] text-emerald-600  uppercase mt-1">{p.custom_fields.length} Custom Fields</Subtext>
+                        <Subtext className="text-[10px] text-emerald-600 uppercase font-bold mt-1">{p.custom_fields.length} Custom Fields</Subtext>
                       )}
                     </div>
                   </div>
                 </TableCell>
-                <TableCell className="px-10 py-8">
+                <TableCell className="py-8 px-6">
                   <div className="flex flex-wrap gap-2">
                     {p.stages?.map(s => (
-                      <Label key={s.id} className="px-3 py-1 bg-white border border-gray-100 rounded-full text-[10px]  text-gray-500 shadow-sm uppercase tracking-tight">
+                      <Badge key={s.id} variant="neutral" className="px-3 py-1 bg-white border border-gray-100 text-[10px] text-gray-500 font-bold uppercase shadow-sm">
                         {s.name}
-                      </Label>
+                      </Badge>
                     ))}
                   </div>
                 </TableCell>
-                <TableCell className="px-10 py-8 text-center">
-                  <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(p)} className="!p-2 text-blue-500 hover:bg-blue-50"><Edit2 size={16} /></Button>
-                    <Button variant="ghost" size="sm" onClick={() => setConfirmModal({ isOpen: true, id: p.id })} className="!p-2 text-rose-500 hover:bg-rose-50"><Trash2 size={16} /></Button>
+                <TableCell className="text-center py-8 px-6">
+                  <div className="flex items-center justify-center gap-2">
+                    <ActionButton
+                      icon={Edit2}
+                      variant="blue"
+                      onClick={() => handleOpenEdit(p)}
+                    />
+                    <ActionButton
+                      icon={Trash2}
+                      variant="rose"
+                      onClick={() => setConfirmModal({ isOpen: true, id: p.id })}
+                    />
                   </div>
                 </TableCell>
               </TableRow>
             ))}
+            {pipelines.length === 0 && (
+              <TableEmpty colSpan={3} icon={<Workflow size={48} />} message="Belum ada project pipeline yang dikonfigurasi" />
+            )}
           </TableBody>
-          {pipelines.length === 0 && (
-            <TableEmpty colSpan={3} icon={<Workflow size={48} />} message="Belum ada project pipeline yang dikonfigurasi" />
-          )}
         </Table>
-      </Card>
+      </div>
 
       <Modal
         isOpen={isModalOpen}
@@ -282,14 +301,14 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
         title={modalForm.id ? "Edit Project Pipeline" : "Daftarkan Pipeline Baru"}
         size="lg"
         footer={
-          <div className="flex gap-3 w-full">
-            <Button variant="ghost" onClick={() => setIsModalOpen(false)} className="px-8 flex-1">Batal</Button>
+          <div className="flex w-full gap-3">
+            <Button variant="ghost" onClick={() => setIsModalOpen(false)} className="flex-1 text-[10px] uppercase font-bold">Batal</Button>
             <Button
               onClick={handleSave}
               disabled={isProcessing}
               isLoading={isProcessing}
               leftIcon={<Save size={14} />}
-              className="flex-1"
+              variant='primary'
             >
               Simpan Perubahan
             </Button>
@@ -302,7 +321,7 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
               <div className="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
                 <Workflow size={12} />
               </div>
-              <Label>Nama Pipeline Proyek</Label>
+              <Label className="text-[10px] text-gray-400 uppercase font-bold">Nama Pipeline Proyek</Label>
             </div>
             <Input
               type="text"
@@ -321,26 +340,26 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
                   <div className="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
                     <GripVertical size={12} />
                   </div>
-                  <Label>Tahapan Kerja</Label>
+                  <Label className="text-[10px] text-gray-400 uppercase font-bold">Tahapan Kerja</Label>
                 </div>
               </div>
 
               <div className="space-y-3">
                 {modalForm.stages.map((s, idx) => (
                   <div key={idx} className="flex items-center gap-4 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-blue-100 transition-all group">
-                    <div className="w-7 h-7 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-[9px]  text-gray-400">
+                    <div className="w-7 h-7 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-[9px] font-bold text-gray-400">
                       {idx + 1}
                     </div>
                     <Input
                       type="text"
                       value={s.name}
                       onChange={(e) => handleUpdateStageName(idx, e.target.value)}
-                      className="flex-1 bg-transparent border-none outline-none  text-xs text-gray-700"
+                      className="flex-1 bg-transparent border-none outline-none text-[13px] font-semibold text-gray-700"
                     />
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button onClick={() => handleMoveStage(idx, 'up')} disabled={idx === 0} className="p-1.5 text-gray-400 hover:text-blue-600 disabled:opacity-20"><ArrowUp size={14} /></Button>
-                      <Button onClick={() => handleMoveStage(idx, 'down')} disabled={idx === modalForm.stages.length - 1} className="p-1.5 text-gray-400 hover:text-blue-600 disabled:opacity-20"><ArrowDown size={14} /></Button>
-                      <Button onClick={() => removeStageFromForm(idx)} className="p-1.5 text-gray-400 hover:text-rose-600"><Trash2 size={14} /></Button>
+                      <ActionButton icon={ArrowUp} onClick={() => handleMoveStage(idx, 'up')} disabled={idx === 0} variant="gray" />
+                      <ActionButton icon={ArrowDown} onClick={() => handleMoveStage(idx, 'down')} disabled={idx === modalForm.stages.length - 1} variant="gray" />
+                      <ActionButton icon={Trash2} onClick={() => removeStageFromForm(idx)} variant="rose" />
                     </div>
                   </div>
                 ))}
@@ -353,9 +372,9 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
                   onChange={e => setNewStageInput(e.target.value)}
                   onKeyDown={(e: any) => e.key === 'Enter' && addStageToForm()}
                   placeholder="Nama stage..."
-                  className="flex-1 !py-3"
+                  className="flex-1 px-4 py-3 bg-gray-50 border border-transparent rounded-xl outline-none text-xs focus:bg-white focus:border-blue-200 transition-all"
                 />
-                <Button onClick={addStageToForm} className="px-4 py-3 bg-gray-900 text-white rounded-xl  text-[10px] uppercase">Tambah</Button>
+                <Button onClick={addStageToForm} className="px-5 py-3 bg-gray-900 text-white rounded-xl text-[10px] uppercase font-bold">Tambah</Button>
               </div>
             </div>
 
@@ -366,28 +385,26 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
                   <div className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
                     <Plus size={12} />
                   </div>
-                  <Label>Custom Fields (Optional)</Label>
+                  <Label className="text-[10px] text-gray-400 uppercase font-bold">Custom Fields (Optional)</Label>
                 </div>
               </div>
 
               <div className="space-y-3">
                 {modalForm.custom_fields.map((f, idx) => (
                   <div key={idx} className="flex items-center gap-4 p-4 bg-emerald-50/30 border border-emerald-100 rounded-2xl group">
-                    <div className="w-7 h-7 bg-white border border-emerald-100 rounded-lg flex items-center justify-center text-emerald-600">
+                    <div className="w-7 h-7 bg-white border border-emerald-100 rounded-lg flex items-center justify-center text-emerald-600 shadow-sm">
                       {f.type === 'text' ? <Type size={14} /> : f.type === 'number' ? <Hash size={14} /> : <CalendarIcon size={14} />}
                     </div>
                     <div className="flex-1">
-                      <Subtext className="text-xs  text-gray-700">{f.label}</Subtext>
-                      <Subtext className="text-[8px]  uppercase text-emerald-600 tracking-tight">{f.type}</Subtext>
+                      <Label className="text-[12px] font-semibold text-gray-700">{f.label}</Label>
+                      <Subtext className="text-[8px] uppercase font-bold text-emerald-600">{f.type}</Subtext>
                     </div>
-                    <Button onClick={() => removeCustomField(idx)} className="p-1.5 text-gray-400 hover:text-rose-600 transition-colors">
-                      <X size={14} />
-                    </Button>
+                    <ActionButton icon={X} onClick={() => removeCustomField(idx)} variant="rose" className="opacity-0 group-hover:opacity-100" />
                   </div>
                 ))}
                 {modalForm.custom_fields.length === 0 && (
                   <div className="p-10 text-center border-2 border-dashed border-gray-100 rounded-2xl">
-                    <Subtext className="text-[9px]  uppercase tracking-tight text-gray-300">Belum ada field kustom</Subtext>
+                    <Subtext className="text-[9px] uppercase font-bold text-gray-300">Belum ada field kustom</Subtext>
                   </div>
                 )}
               </div>
@@ -412,7 +429,7 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
                     hideSearch={true}
                     className="flex-1 w-32"
                   />
-                  <Button onClick={addCustomField} className="px-5 py-3 bg-emerald-600 text-white rounded-xl  text-[10px] uppercase shadow-lg shadow-emerald-100">+ Add</Button>
+                  <Button onClick={addCustomField} className="px-5 py-3 bg-emerald-600 text-white rounded-xl text-[10px] uppercase shadow-lg shadow-emerald-100 font-bold">+ Add</Button>
                 </div>
               </div>
             </div>
@@ -428,6 +445,14 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
         itemName="Pipeline ini"
         isProcessing={isProcessing}
         description="Seluruh data proyek yang berada dalam pipeline ini akan terpengaruh atau terhapus. Lanjutkan?"
+        variant="horizontal"
+      />
+
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

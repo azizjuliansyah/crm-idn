@@ -127,7 +127,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
   if (loading) return (
     <div className="flex flex-col items-center justify-center h-96 gap-4">
       <Loader2 className="animate-spin text-blue-600" size={40} />
-      <Subtext className="text-gray-400  uppercase tracking-tight text-[10px]">Menyusun Dashboard Perusahaan...</Subtext>
+      <Subtext className="text-gray-400  uppercase  text-[10px]">Menyusun Dashboard Perusahaan...</Subtext>
     </div>
   );
 
@@ -183,7 +183,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
             <div className="w-12 h-12 rounded-xl bg-white/20 text-white flex items-center justify-center backdrop-blur-sm shadow-inner">
               <Ticket size={22} />
             </div>
-            <div className="px-2.5 py-1 bg-white/20 rounded-full text-[9px]  text-white uppercase tracking-tight backdrop-blur-md">
+            <div className="px-2.5 py-1 bg-white/20 rounded-full text-[9px]  text-white uppercase  backdrop-blur-md">
               Live
             </div>
           </div>
@@ -197,7 +197,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
         <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
           <div className="flex items-center justify-between mb-10">
             <div>
-              <H3 className="normal-case text-lg  text-gray-900 tracking-tight">Tren Pendapatan Bulanan</H3>
+              <H3 className="normal-case text-lg  text-gray-900 ">Tren Pendapatan Bulanan</H3>
               <Subtext>Berdasarkan penawaran yang disetujui (6 bulan terakhir).</Subtext>
             </div>
             <Calendar size={20} className="text-gray-300" />
@@ -222,7 +222,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
         <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
           <div className="flex items-center justify-between mb-10">
             <div>
-              <H3 className="normal-case text-lg  text-gray-900 tracking-tight">Distribusi Nilai Pipeline</H3>
+              <H3 className="normal-case text-lg  text-gray-900 ">Distribusi Nilai Pipeline</H3>
               <Subtext>Estimasi nilai akumulasi per tahapan transaksi.</Subtext>
             </div>
             <Layers size={20} className="text-gray-300" />
@@ -254,7 +254,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm lg:col-span-1">
           <div className="mb-8">
-            <H3 className="normal-case text-lg  text-gray-900 tracking-tight">Sumber Prospek</H3>
+            <H3 className="normal-case text-lg  text-gray-900 ">Sumber Prospek</H3>
             <Subtext>Analisis channel pemasaran terkuat.</Subtext>
           </div>
           <div className="h-64 w-full relative">
@@ -276,7 +276,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
               <Globe size={24} className="text-gray-100 mb-1" />
-              <Label className="text-[10px]  text-gray-400 uppercase tracking-tight">Global</Label>
+              <Label className="text-[10px]  text-gray-400 uppercase ">Global</Label>
             </div>
           </div>
           <div className="mt-6 space-y-3">
@@ -284,7 +284,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
               <div key={item.name} className="flex items-center justify-between text-[11px] ">
                 <div className="flex items-center gap-2.5">
                   <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
-                  <Label className="text-gray-500 uppercase tracking-tight">{item.name}</Label>
+                  <Label className="text-gray-500 uppercase ">{item.name}</Label>
                 </div>
                 <Label className="text-gray-900">{Math.round((item.value / (stats.totalLeads || 1)) * 100)}%</Label>
               </div>
@@ -295,7 +295,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
         <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm lg:col-span-2">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <H3 className="normal-case text-lg  text-gray-900 tracking-tight">Kesehatan Tim Support</H3>
+              <H3 className="normal-case text-lg  text-gray-900 ">Kesehatan Tim Support</H3>
               <Subtext>Beban kerja berdasarkan urgensi ticket aktif.</Subtext>
             </div>
             <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center">
@@ -328,7 +328,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
               variant="ghost"
               size="sm"
               leftIcon={<TrendingUp size={12} className="group-hover:translate-y-[-1px] transition-transform" />}
-              className="text-[10px] font-medium text-blue-600 uppercase tracking-tight"
+              className="text-[10px] font-medium text-blue-600 uppercase "
             >
               Sinkronisasi Ulang
             </Button>
@@ -343,9 +343,9 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
             <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
               <Clock size={20} />
             </div>
-            <H3 className="normal-case text-lg  text-gray-900 tracking-tight">Prospek Terbaru</H3>
+            <H3 className="normal-case text-lg  text-gray-900 ">Prospek Terbaru</H3>
           </div>
-          <Subtext className="text-[10px] font-medium text-gray-400 uppercase tracking-tight">Pembaruan Otomatis</Subtext>
+          <Subtext className="text-[10px] font-medium text-gray-400 uppercase ">Pembaruan Otomatis</Subtext>
         </div>
         <Table>
           <TableHeader>

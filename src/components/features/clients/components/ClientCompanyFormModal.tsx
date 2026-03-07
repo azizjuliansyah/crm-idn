@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Input, Textarea, Button, Label, Modal, ComboBox } from '@/components/ui';
-import { Loader2, Check } from 'lucide-react';
+import { Loader2, Check, X } from 'lucide-react';
 import { ClientCompany, ClientCompanyCategory } from '@/lib/types';
 
 interface ClientCompanyFormModalProps {
@@ -28,15 +28,18 @@ export const ClientCompanyFormModal: React.FC<ClientCompanyFormModalProps> = ({
   onQuickAddCategory
 }) => {
   const [catProcessing, setCatProcessing] = useState(false);
+  const [isAddingCat, setIsAddingCat] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
 
   const handleAddCategory = async () => {
-    const name = prompt("Masukkan nama kategori baru:");
-    if (!name) return;
+    if (!newCatName.trim()) return;
     setCatProcessing(true);
     try {
-      const addedCat = await onQuickAddCategory(name.trim());
+      const addedCat = await onQuickAddCategory(newCatName.trim());
       if (addedCat) {
         setForm(prev => ({ ...prev, category_id: addedCat.id }));
+        setIsAddingCat(false);
+        setNewCatName('');
       }
     } finally {
       setCatProcessing(false);
@@ -66,16 +69,51 @@ export const ClientCompanyFormModal: React.FC<ClientCompanyFormModalProps> = ({
           onChange={e => setForm({ ...form, name: e.target.value })}
         />
 
-        <ComboBox
-          label="Pilih Kategori"
-          placeholder="Pilih Kategori"
-          value={form.category_id || ''}
-          onChange={(val: string | number) => setForm({ ...form, category_id: Number(val) })}
-          options={categories.map(cat => ({ value: cat.id.toString(), label: cat.name }))}
-          onAddNew={handleAddCategory}
-          addNewLabel="Tambah Kategori Baru"
-          disabled={catProcessing}
-        />
+        {isAddingCat ? (
+          <div className="animate-in slide-in-from-left-2 duration-200">
+            <Label className="text-[10px] text-gray-400 uppercase ml-1">Kategori Baru*</Label>
+            <div className="flex gap-2">
+              <Input
+                autoFocus
+                type="text"
+                value={newCatName}
+                onChange={e => setNewCatName(e.target.value)}
+                className="flex-1"
+                placeholder="Nama kategori..."
+              />
+              <Button
+                type="button"
+                variant="success"
+                size="sm"
+                onClick={handleAddCategory}
+                disabled={catProcessing || !newCatName.trim()}
+                className="!px-3"
+              >
+                {catProcessing ? <Loader2 size={12} className="animate-spin" /> : <Check size={14} />}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setIsAddingCat(false)}
+                className="!px-3 text-gray-400"
+              >
+                <X size={14} />
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <ComboBox
+            label="Pilih Kategori"
+            placeholder="Pilih Kategori"
+            value={form.category_id || ''}
+            onChange={(val: string | number) => setForm({ ...form, category_id: Number(val) })}
+            options={categories.map(cat => ({ value: cat.id.toString(), label: cat.name }))}
+            onAddNew={() => setIsAddingCat(true)}
+            addNewLabel="Tambah Kategori Baru"
+            disabled={catProcessing}
+          />
+        )}
 
         <Input
           label="Email Perusahaan"

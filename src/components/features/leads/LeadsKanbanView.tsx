@@ -73,7 +73,7 @@ export const LeadsKanbanView: React.FC<Props> = ({
       <div className="flex items-center justify-between mb-2">
         <Subtext className="text-[10px] font-medium text-blue-600">{formatIDR(lead.expected_value)}</Subtext>
         {lead.source && lead.source.trim() !== '' && (
-          <Badge variant="primary" className="!px-1.5 !py-0 h-4 flex items-center justify-center !text-[8.5px] uppercase tracking-wider">
+          <Badge variant="primary" className="!px-1.5 !py-0 h-4 flex items-center justify-center !text-[8.5px] uppercase ">
             {lead.source}
           </Badge>
         )}

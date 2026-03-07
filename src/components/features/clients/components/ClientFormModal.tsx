@@ -116,13 +116,13 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-[10px]  text-gray-400 uppercase tracking-tight ml-1">Nama Lengkap Client</Label>
+            <Label className="text-[10px]  text-gray-400 uppercase  ml-1">Nama Lengkap Client</Label>
             <Input type="text" value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-lg  outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-sm" placeholder="John Doe..." />
           </div>
 
           <div className="md:col-span-2 space-y-2">
             <div className="flex items-center justify-between px-1">
-              <Label className="text-[10px]  text-gray-400 uppercase tracking-tight">Pilih Perusahaan Client</Label>
+              <Label className="text-[10px]  text-gray-400 uppercase ">Pilih Perusahaan Client</Label>
             </div>
 
             {isAddingCo ? (
@@ -218,11 +218,11 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
           </div>
 
           <div className="space-y-2">
-            <Label className="text-[10px]  text-gray-400 uppercase tracking-tight ml-1">Email Client</Label>
+            <Label className="text-[10px]  text-gray-400 uppercase  ml-1">Email Client</Label>
             <Input type="email" value={form.email || ''} onChange={e => setForm({ ...form, email: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-lg  outline-none shadow-sm focus:bg-white" placeholder="client@email.com" />
           </div>
           <div className="space-y-2">
-            <Label className="text-[10px]  text-gray-400 uppercase tracking-tight ml-1">WhatsApp Client</Label>
+            <Label className="text-[10px]  text-gray-400 uppercase  ml-1">WhatsApp Client</Label>
             <Input type="text" value={form.whatsapp || ''} onChange={e => setForm({ ...form, whatsapp: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-lg  outline-none shadow-sm focus:bg-white" placeholder="08..." />
           </div>
         </div>
@@ -230,18 +230,18 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
         {selectedCoDetails && !isAddingCo && (
           <div className="p-5 bg-blue-50/50 border border-blue-100 rounded-xl flex flex-col gap-4">
             <div className="flex items-center gap-2 text-indigo-600">
-              <Label className="text-[10px]  uppercase tracking-tight">Informasi Perusahaan</Label>
+              <Label className="text-[10px]  uppercase ">Informasi Perusahaan</Label>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Subtext className="text-[9px]  text-gray-400 uppercase tracking-tight">Kategori</Subtext>
+                <Subtext className="text-[9px]  text-gray-400 uppercase ">Kategori</Subtext>
                 <div className="flex items-center gap-2">
                   <Tags size={12} className="text-indigo-400" />
                   <Subtext className="text-xs  text-gray-700 uppercase">{(selectedCoDetails as any).client_company_categories?.name || 'Umum'}</Subtext>
                 </div>
               </div>
               <div className="space-y-1">
-                <Subtext className="text-[9px]  text-gray-400 uppercase tracking-tight">Alamat</Subtext>
+                <Subtext className="text-[9px]  text-gray-400 uppercase ">Alamat</Subtext>
                 <div className="flex items-center gap-2">
                   <MapPin size={12} className="text-indigo-400 shrink-0" />
                   <Subtext className="text-xs  text-gray-600 truncate">{selectedCoDetails.address || '-'}</Subtext>

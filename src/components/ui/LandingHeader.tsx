@@ -14,9 +14,9 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({ session, onNavigat
       <div className="container mx-auto px-6 lg:px-12 flex items-center justify-between">
         <div className="flex items-center cursor-pointer" onClick={() => onNavigate && onNavigate('/')}>
           <div className="w-10 h-10 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200 mr-3">
-            <span className="text-white  text-xl tracking-tight">C</span>
+            <span className="text-white  text-xl ">C</span>
           </div>
-          <span className="text-xl  tracking-tight text-gray-900">CRM<span className="text-blue-600">IDN</span></span>
+          <span className="text-xl   text-gray-900">CRM<span className="text-blue-600">IDN</span></span>
         </div>
 
         <nav className="hidden md:flex items-center gap-8">
@@ -31,7 +31,7 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({ session, onNavigat
           {session ? (
             <Link
               href="/dashboard"
-              className="px-6 py-3 bg-gray-900 text-white rounded-xl  text-xs uppercase tracking-tight hover:bg-black transition-all shadow-lg flex items-center gap-2"
+              className="px-6 py-3 bg-gray-900 text-white rounded-xl  text-xs uppercase  hover:bg-black transition-all shadow-lg flex items-center gap-2"
             >
               <LayoutDashboard size={16} /> Dashboard
             </Link>
@@ -39,13 +39,13 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({ session, onNavigat
             <>
               {/* <Link
                 href="/login"
-                className="hidden md:flex px-6 py-3 text-gray-600  text-xs uppercase tracking-tight hover:text-blue-600 transition-colors"
+                className="hidden md:flex px-6 py-3 text-gray-600  text-xs uppercase  hover:text-blue-600 transition-colors"
               >
                 Masuk
               </Link> */}
               <Link
                 href="/login"
-                className="px-6 py-3 bg-blue-600 text-white rounded-xl  text-xs uppercase tracking-tight hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 flex items-center gap-2"
+                className="px-6 py-3 bg-blue-600 text-white rounded-xl  text-xs uppercase  hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 flex items-center gap-2"
               >
                 Masuk <ArrowRight size={16} />
               </Link>

@@ -8,6 +8,9 @@ import { DealAddModal } from './DealAddModal';
 import { DealDetailModal } from './DealDetailModal';
 import { DealsTableView } from './DealsTableView';
 import { DealsKanbanView } from './DealsKanbanView';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
+import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
+import { Toast, ToastType } from '@/components/ui';
 import { useRouter } from 'next/navigation';
 
 interface Props {
@@ -25,6 +28,12 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>('table');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean, id: number | null }>({ isOpen: false, id: null });
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
+  });
 
   // Auxiliary Data
   const [clients, setClients] = useState<Client[]>([]);
@@ -128,20 +137,44 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
   const handleCreateSuccess = () => {
     setIsAddModalOpen(false);
     fetchData();
+    setToast({
+      isOpen: true,
+      message: 'Deal baru berhasil dibuat!',
+      type: 'success'
+    });
   };
 
   const handleUpdate = () => {
     fetchData();
+    setToast({
+      isOpen: true,
+      message: 'Deal berhasil diperbarui!',
+      type: 'success'
+    });
   };
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm('Apakah Anda yakin ingin menghapus deal ini?')) return;
+  const handleDelete = (id: number) => {
+    setConfirmDelete({ isOpen: true, id });
+  };
+
+  const executeDelete = async () => {
+    if (!confirmDelete.id) return;
     try {
-      await supabase.from('deals').delete().eq('id', id);
+      await supabase.from('deals').delete().eq('id', confirmDelete.id);
       fetchData();
-      if (selectedDeal?.id === id) setSelectedDeal(null);
-    } catch (error) {
-      console.error('Error deleting deal:', error);
+      if (selectedDeal?.id === confirmDelete.id) setSelectedDeal(null);
+      setToast({
+        isOpen: true,
+        message: 'Deal berhasil dihapus!',
+        type: 'success'
+      });
+      setConfirmDelete({ isOpen: false, id: null });
+    } catch (error: any) {
+      setToast({
+        isOpen: true,
+        message: 'Gagal menghapus deal: ' + error.message,
+        type: 'error'
+      });
     }
   };
 
@@ -252,8 +285,22 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
       ));
 
       // Network Update
-      await supabase.from('deals').update({ stage_id: newStageId, kanban_order: newOrder }).eq('id', dealId);
-    } catch (err) { console.error(err); }
+      const { error } = await supabase.from('deals').update({ stage_id: newStageId, kanban_order: newOrder }).eq('id', dealId);
+      if (error) throw error;
+
+      setToast({
+        isOpen: true,
+        message: 'Tahapan deal berhasil diubah!',
+        type: 'success'
+      });
+    } catch (err: any) {
+      setToast({
+        isOpen: true,
+        message: 'Gagal mengubah tahapan: ' + err.message,
+        type: 'error'
+      });
+      fetchData(); // Rollback
+    }
   };
 
   if (!activeCompany) return <div className="p-8 text-center text-gray-400">Pilih workspace terlebih dahulu.</div>;
@@ -263,8 +310,8 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
       <div className="flex flex-col gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
         <div className="flex items-center justify-between">
           <div>
-            <H1 className="text-xl  tracking-tight">Deals & Penjualan</H1>
-            <Subtext className="text-[10px]  uppercase tracking-tight leading-none">Monitoring transaksi dan pipeline penjualan.</Subtext>
+            <H1 className="text-xl  ">Deals & Penjualan</H1>
+            <Subtext className="text-[10px]  uppercase  leading-none">Monitoring transaksi dan pipeline penjualan.</Subtext>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex bg-gray-50 border border-gray-100 p-1 rounded-xl">
@@ -326,7 +373,7 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
               ]}
               className="w-40"
               hideSearch
-              placeholderSize="text-[10px] font-bold text-gray-900 uppercase tracking-tight"
+              placeholderSize="text-[10px] font-bold text-gray-900 uppercase "
             />
             <ComboBox
               value={statusFilter}
@@ -336,7 +383,7 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
                 ...(pipeline?.stages?.map(s => ({ value: s.id, label: s.name.toUpperCase() })) || [])
               ]}
               className="w-40"
-              placeholderSize="text-[10px] font-bold text-gray-900 uppercase tracking-tight"
+              placeholderSize="text-[10px] font-bold text-gray-900 uppercase "
             />
             <ComboBox
               value={assigneeFilter}
@@ -349,7 +396,7 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
                 }))
               ]}
               className="w-40"
-              placeholderSize="text-[10px] font-bold text-gray-900 uppercase tracking-tight"
+              placeholderSize="text-[10px] font-bold text-gray-900 uppercase "
             />
           </div>
         </div>
@@ -404,6 +451,7 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
           setClientCompanies={setClientCompanies}
           setCategories={setCategories}
           user={user}
+          setToast={setToast}
         />
       )}
 
@@ -425,8 +473,26 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
           categories={categories}
           setClientCompanies={setClientCompanies}
           setCategories={setCategories}
+          setToast={setToast}
         />
       )}
+
+      <ConfirmDeleteModal
+        isOpen={confirmDelete.isOpen}
+        onClose={() => setConfirmDelete({ isOpen: false, id: null })}
+        onConfirm={executeDelete}
+        title="Hapus Deal"
+        itemName="Deal ini"
+        description="Apakah Anda yakin ingin menghapus data deal ini dari sistem?"
+        variant="horizontal"
+      />
+
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 };

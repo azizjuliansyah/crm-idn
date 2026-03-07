@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Input, Textarea, Button, H3, Subtext, Label, SectionHeader, Modal, Avatar, Breadcrumb, Timeline, TimelineItem, TimelineIcon, TimelineContent, ComboBox } from '@/components/ui';
+import { Input, Textarea, Button, H3, Subtext, Label, SectionHeader, Modal, Avatar, Breadcrumb, Timeline, TimelineItem, TimelineIcon, TimelineContent, ComboBox, ToastType } from '@/components/ui';
 
 import { supabase } from '@/lib/supabase';
 import { Deal, Company, CompanyMember, Pipeline, Client, ClientCompany, ClientCompanyCategory, LogActivity, Profile } from '@/lib/types';
@@ -8,6 +8,7 @@ import {
   Clock, FileText, FilePlus, UserCircle, Target, Star, Trash2, ChevronLeft, ChevronRight, X, Loader2, Save, Minus, Plus, Check as CheckIcon
 } from 'lucide-react';
 import { ClientFormModal } from '@/components/features/clients/components/ClientFormModal';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
 
 interface Props {
   isOpen: boolean;
@@ -26,12 +27,13 @@ interface Props {
   categories: ClientCompanyCategory[];
   setClientCompanies: React.Dispatch<React.SetStateAction<ClientCompany[]>>;
   setCategories: React.Dispatch<React.SetStateAction<ClientCompanyCategory[]>>;
+  setToast: React.Dispatch<React.SetStateAction<{ isOpen: boolean; message: string; type: ToastType }>>;
 }
 
 export const DealDetailModal: React.FC<Props> = ({
   isOpen, onClose, deal, company, user, members, pipeline,
   clients, clientCompanies, categories, onUpdate, onDelete, onCreateQuotation, onEditQuotation,
-  setClientCompanies, setCategories
+  setClientCompanies, setCategories, setToast
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activities, setActivities] = useState<LogActivity[]>([]);
@@ -99,10 +101,11 @@ export const DealDetailModal: React.FC<Props> = ({
       });
 
       setForm(prev => ({ ...prev, stage_id: newStageId }));
+      setToast({ isOpen: true, message: `Tahapan diubah ke ${newStageName}`, type: 'success' });
       onUpdate();
       await fetchActivities();
     } catch (err: any) {
-      alert(err.message);
+      setToast({ isOpen: true, message: err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -120,10 +123,10 @@ export const DealDetailModal: React.FC<Props> = ({
       });
       if (error) throw error;
       setNewComment('');
+      setToast({ isOpen: true, message: 'Komentar berhasil ditambahkan!', type: 'success' });
       await fetchActivities();
     } catch (err: any) {
-      console.error("Add Comment Error:", err);
-      alert(err.message);
+      setToast({ isOpen: true, message: err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -175,11 +178,12 @@ export const DealDetailModal: React.FC<Props> = ({
       });
 
       setForm(prev => ({ ...prev, ...updateData }));
+      setToast({ isOpen: true, message: 'Progres follow up berhasil dicatat!', type: 'success' });
       setIsFollowUpExpanded(false);
       onUpdate();
       await fetchActivities();
     } catch (err: any) {
-      alert(err.message);
+      setToast({ isOpen: true, message: err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -217,9 +221,8 @@ export const DealDetailModal: React.FC<Props> = ({
       if (error) throw error;
 
       onUpdate();
-      onClose();
     } catch (err: any) {
-      alert(err.message);
+      setToast({ isOpen: true, message: err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -270,7 +273,7 @@ export const DealDetailModal: React.FC<Props> = ({
 
   const handleQuickAddClient = async (savedForm: Partial<Client>) => {
     if (!savedForm.name?.trim()) {
-      alert("Nama Client wajib diisi.");
+      setToast({ isOpen: true, message: "Nama Client wajib diisi.", type: 'error' });
       return;
     }
     setIsProcessingQuick(true);
@@ -304,8 +307,9 @@ export const DealDetailModal: React.FC<Props> = ({
       onUpdate(); // Trigger refresh in parent
       setIsAddingClient(false);
       setNewClient({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
+      setToast({ isOpen: true, message: 'Client berhasil ditambahkan!', type: 'success' });
     } catch (err: any) {
-      alert("Gagal menambah client: " + err.message);
+      setToast({ isOpen: true, message: "Gagal menambah client: " + err.message, type: 'error' });
     } finally {
       setIsProcessingQuick(false);
     }
@@ -347,9 +351,12 @@ export const DealDetailModal: React.FC<Props> = ({
           </div>
 
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => onDelete(deal.id)} className="!p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50">
-              <Trash2 size={18} />
-            </Button>
+            <ActionButton
+              icon={Trash2}
+              variant="rose"
+              onClick={() => onDelete(deal.id)}
+              title="Hapus Deal"
+            />
             {quotation ? (
               <Button
                 variant="ghost"
@@ -392,20 +399,20 @@ export const DealDetailModal: React.FC<Props> = ({
         <div className="px-8 py-4 flex items-center justify-between border-b border-gray-50 bg-gray-50/30 shrink-0">
           <div className="flex items-center gap-6">
             <div className="px-2 pb-1 border border-gray-200 rounded-sm">
-              <Label className="!capitalize !text-black !tracking-tight">DEAL ID: {deal.id}</Label>
+              <Label className="!capitalize !text-black !">DEAL ID: {deal.id}</Label>
             </div>
             <div className="flex items-center gap-1.5 text-[11px] font-medium text-black">
               <Clock size={14} /> Input: {form.input_date ? new Date(form.input_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
             </div>
             {quotation && (
               <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full">
-                <Label className="text-emerald-600 !capitalize !tracking-tight font-medium">{quotation.number}</Label>
+                <Label className="text-emerald-600 !capitalize ! font-medium">{quotation.number}</Label>
               </div>
             )}
           </div>
           <div className="flex items-center  gap-2">
-            <Label className="!capitalize !text-black !tracking-tight">Expected Value:</Label>
-            <Label className="text-sm !capitalize !text-black !tracking-tight font-semibold">{formatIDR(form.expected_value)}</Label>
+            <Label className="!capitalize !text-black !">Expected Value:</Label>
+            <Label className="text-sm !capitalize !text-black ! font-semibold">{formatIDR(form.expected_value)}</Label>
           </div>
 
         </div>
@@ -438,7 +445,7 @@ export const DealDetailModal: React.FC<Props> = ({
                   key={stage.id}
                   onClick={() => handleStatusChange(stage.id)}
                   disabled={isProcessing}
-                  className={`relative flex-1 h-full flex items-center justify-center transition-all cursor-pointer font-medium text-[9px] uppercase tracking-wider ${bgColor} ${borderColor} ${isLast ? '' : 'border-r'}`}
+                  className={`relative flex-1 h-full flex items-center justify-center transition-all cursor-pointer font-medium text-[9px] uppercase  ${bgColor} ${borderColor} ${isLast ? '' : 'border-r'}`}
                   style={{
                     clipPath: isLast
                       ? 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 4% 50%)'
@@ -466,8 +473,8 @@ export const DealDetailModal: React.FC<Props> = ({
                 onClick={() => setIsFollowUpExpanded(!isFollowUpExpanded)}
               >
                 <div>
-                  <H3 className="text-xs text-gray-900 mb-1 !capitalize !tracking-tight font-semibold">Intensitas Follow Up</H3>
-                  <Subtext className="text-[10px] text-gray-500 font-medium !capitalize !tracking-tight">
+                  <H3 className="text-xs text-gray-900 mb-1 !capitalize ! font-semibold">Intensitas Follow Up</H3>
+                  <Subtext className="text-[10px] text-gray-500 font-medium !capitalize !">
                     {form.follow_up || 0} Kali Follow Up • {form.follow_up_date ? `Next: ${new Date(form.follow_up_date).toLocaleDateString('id-ID')}` : 'Belum Atur Jadwal'}
                   </Subtext>
                 </div>
@@ -550,7 +557,7 @@ export const DealDetailModal: React.FC<Props> = ({
 
             <SectionHeader
               title="Log Aktivitas Deal"
-              className="mb-6 shrink-0"
+              className="mb-6 shrink-0 uppercase"
             />
 
             <div className="flex-1 flex flex-col overflow-hidden">
@@ -586,7 +593,7 @@ export const DealDetailModal: React.FC<Props> = ({
                 ) : activities.length === 0 ? (
                   <div className="py-20 text-center text-gray-300">
                     <MessageSquare size={32} className="mx-auto mb-2 opacity-10" />
-                    <Subtext className="text-[10px]  uppercase tracking-tight">Belum ada aktivitas tercatat</Subtext>
+                    <Subtext className="text-[10px]  uppercase ">Belum ada aktivitas tercatat</Subtext>
                   </div>
                 ) : (
                   <Timeline>
@@ -617,8 +624,8 @@ export const DealDetailModal: React.FC<Props> = ({
           {/* COLUMN RIGHT: DETAIL INFORMASI */}
           <div className="w-1/2 flex flex-col min-w-0">
             <SectionHeader
-              title="Informasi Transaksi"
-              className="mb-1 shrink-0"
+              title="Detail Informasi Deal"
+              className="mb-1 shrink-0 uppercase"
             />
 
             <div className="flex items-center gap-4 mb-6 px-1">

@@ -15,10 +15,10 @@ export default function EditInvoicePage() {
   if (!id) return <div className="p-8 text-center text-red-500">Invalid Invoice ID</div>;
 
   return (
-    <InvoiceFormView 
+    <InvoiceFormView
       company={activeCompany}
       editingId={id}
-      onSaveSuccess={() => router.push('/dashboard/sales/invoices')}
+      onSaveSuccess={() => router.push('/dashboard/sales/invoices?success=updated')}
     />
   );
 }

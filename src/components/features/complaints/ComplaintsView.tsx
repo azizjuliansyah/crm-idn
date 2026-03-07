@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Button, H2, Subtext, SearchInput } from '@/components/ui';
+import { Button, H2, Subtext, SearchInput, Toast, ToastType } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -11,12 +11,11 @@ import {
   Plus, Search, Trello, Table as TableIcon,
   AlertTriangle, CheckCircle2, Trash2, X, Loader2
 } from 'lucide-react';
+import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { ComplaintAddModal } from '@/components/features/complaints/ComplaintAddModal';
 import { ComplaintDetailModal } from '@/components/features/complaints/ComplaintDetailModal';
 import { ComplaintsTableView } from '@/components/features/complaints/ComplaintsTableView';
 import { ComplaintsKanbanView } from '@/components/features/complaints/ComplaintsKanbanView';
-import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
-import { NotificationModal } from '@/components/shared/modals/NotificationModal';
 
 interface Props {
   activeCompany: Company;
@@ -42,8 +41,10 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; name: string }>({ isOpen: false, id: null, name: '' });
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
-    isOpen: false, title: '', message: '', type: 'success'
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
   });
 
   const fetchData = useCallback(async (showLoading = true) => {
@@ -71,9 +72,7 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
     fetchData();
   }, [fetchData]);
 
-  const showNotification = (title: string, message: string, type: 'success' | 'error' = 'success') => {
-    setNotification({ isOpen: true, title, message, type });
-  };
+
 
   const handleDeleteClick = (id: number, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -87,11 +86,11 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
     try {
       const { error } = await supabase.from('support_tickets').delete().eq('id', confirmDelete.id);
       if (error) throw error;
-      showNotification('Berhasil', 'Data keluhan telah dihapus.');
+      setToast({ isOpen: true, message: 'Data keluhan telah dihapus.', type: 'success' });
       await fetchData(false);
       setConfirmDelete({ isOpen: false, id: null, name: '' });
     } catch (err: any) {
-      showNotification('Gagal', err.message, 'error');
+      setToast({ isOpen: true, message: err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -130,9 +129,12 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
       ));
 
       // Network Update
-      await supabase.from('support_tickets').update({ status: newStatus.toLowerCase(), kanban_order: newOrder }).eq('id', ticketId);
+      const { error } = await supabase.from('support_tickets').update({ status: newStatus.toLowerCase(), kanban_order: newOrder }).eq('id', ticketId);
+      if (error) throw error;
+      setToast({ isOpen: true, message: 'Status keluhan diperbarui.', type: 'success' });
     } catch (err: any) {
-      showNotification('Gagal', err.message, 'error');
+      setToast({ isOpen: true, message: err.message, type: 'error' });
+      await fetchData(false); // Rollback optimistic state
     }
   };
 
@@ -164,7 +166,7 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
     return groups;
   }, [filteredTickets, stages]);
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-rose-600 mb-4" size={32} /><Subtext className="!text-[10px]  uppercase tracking-tight text-gray-400">Sinkronisasi Complaints...</Subtext></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-rose-600 mb-4" size={32} /><Subtext className="!text-[10px]  uppercase  text-gray-400">Sinkronisasi Complaints...</Subtext></div>;
 
   return (
     <div className="flex flex-col gap-6 text-gray-900">
@@ -172,7 +174,7 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
         <div className="flex items-center justify-between">
           <div>
             <H2 className="text-xl">Customer Complaints</H2>
-            <Subtext className="text-[10px] uppercase tracking-tight">Kelola keluhan dan komplain dari pelanggan.</Subtext>
+            <Subtext className="text-[10px] uppercase ">Kelola keluhan dan komplain dari pelanggan.</Subtext>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex bg-gray-50 border border-gray-100 p-1 rounded-xl">
@@ -196,7 +198,7 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
             <Button
               onClick={() => setIsAddModalOpen(true)}
               leftIcon={<Plus size={14} strokeWidth={3} />}
-              className="!px-6 py-2.5 text-[10px] uppercase tracking-tight shadow-lg shadow-rose-100"
+              className="!px-6 py-2.5 text-[10px] uppercase  shadow-lg shadow-rose-100"
               variant="danger"
               size="sm"
             >
@@ -243,7 +245,8 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
           stages={stages}
           clients={clients}
           topics={topics}
-          onSuccess={() => { fetchData(false); showNotification('Berhasil', 'Keluhan baru telah didaftarkan.'); }}
+          onSuccess={() => fetchData(false)}
+          setToast={setToast}
         />
       )}
 
@@ -260,25 +263,26 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
           topics={topics}
           onUpdate={() => fetchData(false)}
           onDelete={handleDeleteClick}
+          setToast={setToast}
         />
       )}
 
-      {/* CONFIRM DELETE MODAL */}
       <ConfirmDeleteModal
         isOpen={confirmDelete.isOpen}
         onClose={() => setConfirmDelete({ isOpen: false, id: null, name: '' })}
         onConfirm={executeDelete}
+        title="Hapus Keluhan"
         itemName={confirmDelete.name}
         description="Tindakan ini permanen. Seluruh riwayat aktivitas pada keluhan ini akan hilang."
         isProcessing={isProcessing}
+        variant="horizontal"
       />
 
-      <NotificationModal
-        isOpen={notification.isOpen}
-        onClose={() => setNotification({ ...notification, isOpen: false })}
-        title={notification.title}
-        message={notification.message}
-        type={notification.type}
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

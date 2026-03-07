@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Input, Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, Modal, Badge } from '@/components/ui';
+import { Input, Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, Modal, Badge, Toast, ToastType } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { Company, LeadSource } from '@/lib/types';
 import {
   Plus, Search, Edit2, Trash2, Loader2, Globe,
-  Save, AlertTriangle, List, CheckCircle2, X
+  Save, AlertTriangle, List, CheckCircle2, X, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
-import { NotificationModal } from '@/components/shared/modals/NotificationModal';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
+// Removed legacy NotificationModal import
 
 interface Props {
   company: Company;
@@ -26,12 +27,14 @@ export const LeadSourcesSettingsView: React.FC<Props> = ({ company }) => {
   });
 
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: string | null; name: string }>({ isOpen: false, id: null, name: '' });
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' | 'warning' }>({
-    isOpen: false, title: '', message: '', type: 'success'
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
   });
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const fetchData = useCallback(async (isInitial = false) => {
+    if (isInitial) setLoading(true);
     try {
       const { data: sourcesRes } = await supabase
         .from('lead_sources')
@@ -50,12 +53,12 @@ export const LeadSourcesSettingsView: React.FC<Props> = ({ company }) => {
         setUsedSources(distinct);
       }
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
-  }, [company.id, supabase]);
+  }, [company.id]);
 
   useEffect(() => {
-    fetchData();
+    fetchData(true);
   }, [fetchData]);
 
   const filteredSources = sources.filter(s =>
@@ -74,9 +77,9 @@ export const LeadSourcesSettingsView: React.FC<Props> = ({ company }) => {
       }
       setIsModalOpen(false);
       fetchData();
-      setNotification({ isOpen: true, title: 'Berhasil', message: 'Sumber leads telah diperbarui.', type: 'success' });
+      setToast({ isOpen: true, message: 'Sumber leads telah diperbarui.', type: 'success' });
     } catch (err: any) {
-      setNotification({ isOpen: true, title: 'Gagal', message: err.message, type: 'error' });
+      setToast({ isOpen: true, message: err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -85,7 +88,7 @@ export const LeadSourcesSettingsView: React.FC<Props> = ({ company }) => {
   const handleDeleteClick = (source: LeadSource) => {
     const isInUse = usedSources.includes(source.name);
     if (isInUse) {
-      setNotification({ isOpen: true, title: 'Akses Ditolak', message: 'Sumber ini sedang aktif digunakan oleh data leads dan tidak dapat dihapus.', type: 'warning' });
+      setToast({ isOpen: true, message: 'Sumber ini sedang aktif digunakan dan tidak dapat dihapus.', type: 'error' });
       return;
     }
     setConfirmDelete({ isOpen: true, id: source.id, name: source.name });
@@ -98,6 +101,9 @@ export const LeadSourcesSettingsView: React.FC<Props> = ({ company }) => {
       await supabase.from('lead_sources').delete().eq('id', confirmDelete.id);
       setConfirmDelete({ isOpen: false, id: null, name: '' });
       fetchData();
+      setToast({ isOpen: true, message: 'Sumber leads berhasil dihapus.', type: 'success' });
+    } catch (err: any) {
+      setToast({ isOpen: true, message: 'Gagal menghapus: ' + err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -106,26 +112,29 @@ export const LeadSourcesSettingsView: React.FC<Props> = ({ company }) => {
   if (loading) return (
     <div className="flex flex-col items-center justify-center py-24">
       <Loader2 className="animate-spin text-blue-600 mb-4" />
-      <Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Memuat Sumber Leads...</Subtext>
+      <Subtext className="text-[10px]  uppercase  text-gray-400">Memuat Sumber Leads...</Subtext>
     </div>
   );
 
   return (
-    <div className="max-w-3xl space-y-8">
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="p-10 border-b border-gray-50 flex items-center justify-between">
-          <div>
-            <H2 className="text-2xl  tracking-tight">Manajemen Sumber Leads</H2>
-            <Subtext className="mt-1">Daftar channel atau asal datangnya calon pelanggan.</Subtext>
-          </div>
-          <Button
-            onClick={() => { setForm({ id: '', name: '' }); setIsModalOpen(true); }}
-            leftIcon={<Plus size={16} />}
-            variant='primary'
-          >
-            Tambah Sumber
-          </Button>
+    <div className="max-w-4xl flex flex-col space-y-6">
+      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+        <div>
+          <H2 className="text-xl ">Sumber Lead</H2>
+          <Subtext className="text-[10px] uppercase font-semibold text-gray-400">Atur channel atau asal datangnya calon pelanggan ke dalam sistem.</Subtext>
         </div>
+        <Button
+          onClick={() => { setForm({ id: '', name: '' }); setIsModalOpen(true); }}
+          leftIcon={<Plus size={14} strokeWidth={3} />}
+          className="!px-6 py-2.5 text-[10px] uppercase shadow-lg shadow-blue-100"
+          variant='primary'
+          size='sm'
+        >
+          Tambah Sumber
+        </Button>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
         <div className="p-6 border-b border-gray-50">
           <Input
@@ -155,7 +164,7 @@ export const LeadSourcesSettingsView: React.FC<Props> = ({ company }) => {
                       <div className="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600">
                         <Globe size={16} />
                       </div>
-                      <Label className="text-sm  text-gray-900 tracking-tight">{item.name}</Label>
+                      <Label className="text-sm  text-gray-900 ">{item.name}</Label>
                     </div>
                   </TableCell>
                   <TableCell className="text-center">
@@ -164,19 +173,18 @@ export const LeadSourcesSettingsView: React.FC<Props> = ({ company }) => {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-center">
-                    <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="sm" onClick={() => { setForm({ id: item.id, name: item.name }); setIsModalOpen(true); }} className="!p-2 text-blue-500">
-                        <Edit2 size={16} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                    <div className="flex items-center justify-center gap-1">
+                      <ActionButton
+                        icon={Edit2}
+                        variant="blue"
+                        onClick={() => { setForm({ id: item.id, name: item.name }); setIsModalOpen(true); }}
+                      />
+                      <ActionButton
+                        icon={Trash2}
+                        variant="rose"
                         onClick={() => handleDeleteClick(item)}
                         disabled={isInUse}
-                        className={`!p-2 ${isInUse ? 'text-gray-200' : 'text-rose-500 hover:text-rose-600'}`}
-                      >
-                        <Trash2 size={16} />
-                      </Button>
+                      />
                     </div>
                   </TableCell>
                 </TableRow>
@@ -221,14 +229,14 @@ export const LeadSourcesSettingsView: React.FC<Props> = ({ company }) => {
         title="Hapus Sumber"
         itemName={confirmDelete.name}
         isProcessing={isProcessing}
+        variant="horizontal"
       />
 
-      <NotificationModal
-        isOpen={notification.isOpen}
-        onClose={() => setNotification({ ...notification, isOpen: false })}
-        title={notification.title}
-        message={notification.message}
-        type={notification.type}
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Input, Button, Table, TableHeader, TableBody, TableRow, TableCell, H1, H3, Subtext, Label, Avatar, Badge, Card } from '@/components/ui';
+import { Input, Button, Table, TableHeader, TableBody, TableRow, TableCell, H1, H3, Subtext, Label, Avatar, Badge, Card, Toast, ToastType } from '@/components/ui';
 
 import { supabase } from '@/lib/supabase';
 import { Profile, Company, CompanyRole, PlatformSettings } from '@/lib/types';
@@ -14,7 +14,7 @@ import { PlatformWorkspaceFormModal } from './components/PlatformWorkspaceFormMo
 import { PlatformUserFormModal } from './components/PlatformUserFormModal';
 import { PlatformAccessModal } from './components/PlatformAccessModal';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
-import { NotificationModal } from '@/components/shared/modals/NotificationModal';
+// Removed legacy NotificationModal import
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -67,8 +67,15 @@ export const PlatformAdminView: React.FC<Props> = ({ activeView, onSettingsUpdat
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
-  const [alertConfig, setAlertConfig] = useState({ title: '', message: '', type: 'success' as 'success' | 'error' | 'warning' });
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
+  });
+
+  const showToast = (message: string, type: ToastType = 'success') => {
+    setToast({ isOpen: true, message, type });
+  };
 
   const [coForm, setCoForm] = useState({ id: null as number | null, name: '', address: '' });
   const [userForm, setFormUser] = useState({ id: '', full_name: '', email: '', whatsapp: '', password: '', platform_role: 'USER' as any });
@@ -93,14 +100,14 @@ export const PlatformAdminView: React.FC<Props> = ({ activeView, onSettingsUpdat
   const [pendingDelete, setPendingDelete] = useState<{ id: number | string, type: 'company' | 'user' } | null>(null);
 
   // Helper functions
-  const showAlert = (title: string, message: string, type: 'success' | 'error' | 'warning' = 'success') => {
-    setAlertConfig({ title, message, type });
-    setIsAlertModalOpen(true);
-  };
+  // const showAlert = (title: string, message: string, type: 'success' | 'error' | 'warning' = 'success') => {
+  //   setAlertConfig({ title, message, type });
+  //   setIsAlertModalOpen(true);
+  // };
 
   // Data fetching
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (isInitial = false) => {
+    if (isInitial) setLoading(true);
     try {
       const [cosRes, usrsRes] = await Promise.all([
         supabase.from('companies').select('*').order('created_at', { ascending: false }),
@@ -110,7 +117,7 @@ export const PlatformAdminView: React.FC<Props> = ({ activeView, onSettingsUpdat
       if (usrsRes.data) setUsers(usrsRes.data);
       await fetchAllRoles();
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   };
 
@@ -145,7 +152,7 @@ export const PlatformAdminView: React.FC<Props> = ({ activeView, onSettingsUpdat
   };
 
   useEffect(() => {
-    fetchData();
+    fetchData(true);
     fetchSettings();
   }, []);
 
@@ -169,10 +176,10 @@ export const PlatformAdminView: React.FC<Props> = ({ activeView, onSettingsUpdat
         .eq('is_singleton', true);
 
       if (error) throw error;
-      showAlert('Berhasil', 'Pengaturan platform telah diperbarui secara global.');
+      showToast('Pengaturan platform telah diperbarui secara global.');
       if (onSettingsUpdate) onSettingsUpdate();
     } catch (error: any) {
-      showAlert('Gagal', error.message, 'error');
+      showToast(error.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -196,7 +203,7 @@ export const PlatformAdminView: React.FC<Props> = ({ activeView, onSettingsUpdat
       const { data: { publicUrl } } = supabase.storage.from('platform').getPublicUrl(fileName);
       setPlatformSettings({ ...platformSettings, logo_url: publicUrl });
     } catch (err: any) {
-      showAlert('Upload Gagal', err.message, 'error');
+      showToast(err.message, 'error');
     } finally {
       setUploading(null);
     }
@@ -222,12 +229,12 @@ export const PlatformAdminView: React.FC<Props> = ({ activeView, onSettingsUpdat
 
       const result = await res.json();
       if (result.status === 'success') {
-        showAlert('Berhasil', 'Email uji coba telah dikirim. Periksa inbox/spam email penerima.');
+        showToast('Email uji coba telah dikirim. Periksa inbox/spam email penerima.');
       } else {
         throw new Error(result.message || 'Gagal mengirim email.');
       }
     } catch (err: any) {
-      showAlert('Error API', err.message, 'error');
+      showToast(err.message, 'error');
     } finally {
       setIsTestingEmail(false);
     }
@@ -268,9 +275,9 @@ export const PlatformAdminView: React.FC<Props> = ({ activeView, onSettingsUpdat
       setIsCoModalOpen(false);
       fetchData();
       if (onRefresh) onRefresh();
-      showAlert('Berhasil', 'Workspace berhasil dibuat dan data default telah disiapkan.');
+      showToast('Workspace berhasil dibuat dan data default telah disiapkan.');
     } catch (error: any) {
-      showAlert('Gagal', error.message, 'error');
+      showToast(error.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -298,7 +305,7 @@ export const PlatformAdminView: React.FC<Props> = ({ activeView, onSettingsUpdat
       }
       setIsUserModalOpen(false);
       fetchData();
-    } catch (err: any) { showAlert('Gagal', err.message, 'error'); } finally { setIsProcessing(false); }
+    } catch (err: any) { showToast(err.message, 'error'); } finally { setIsProcessing(false); }
   };
 
   const openAccessModal = async (target: any, type: 'user_to_companies' | 'company_to_users') => {
@@ -349,7 +356,7 @@ export const PlatformAdminView: React.FC<Props> = ({ activeView, onSettingsUpdat
       }
       setIsAccessModalOpen(false);
       fetchData();
-    } catch (err: any) { showAlert('Gagal', err.message, 'error'); } finally { setIsProcessing(false); }
+    } catch (err: any) { showToast(err.message, 'error'); } finally { setIsProcessing(false); }
   };
 
   const confirmDelete = async () => {
@@ -359,7 +366,7 @@ export const PlatformAdminView: React.FC<Props> = ({ activeView, onSettingsUpdat
       await supabase.from(pendingDelete.type === 'company' ? 'companies' : 'profiles').delete().eq('id', pendingDelete.id);
       fetchData();
       if (onRefresh) onRefresh();
-    } catch (error: any) { showAlert('Gagal', error.message, 'error'); } finally { setIsConfirmModalOpen(false); setPendingDelete(null); setIsProcessing(false); }
+    } catch (error: any) { showToast(error.message, 'error'); } finally { setIsConfirmModalOpen(false); setPendingDelete(null); setIsProcessing(false); }
   };
 
 
@@ -560,7 +567,7 @@ export const PlatformAdminView: React.FC<Props> = ({ activeView, onSettingsUpdat
                         {uploading === 'logo_url' && <div className="absolute inset-0 bg-white/80 flex items-center justify-center"><Loader2 className="animate-spin text-blue-600" size={16} /></div>}
                       </div>
                       <div className="flex flex-col gap-2">
-                        <label className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-medium uppercase tracking-tight cursor-pointer hover:bg-blue-100 transition-all">
+                        <label className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-medium uppercase  cursor-pointer hover:bg-blue-100 transition-all">
                           Ganti Logo
                           <input type="file" className="hidden" accept="image/*" onChange={handleUploadLogo} disabled={!!uploading} />
                         </label>
@@ -724,12 +731,11 @@ export const PlatformAdminView: React.FC<Props> = ({ activeView, onSettingsUpdat
         isProcessing={isProcessing}
       />
 
-      <NotificationModal
-        isOpen={isAlertModalOpen}
-        onClose={() => setIsAlertModalOpen(false)}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        type={alertConfig.type}
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
       />
 
       <PlatformAccessModal

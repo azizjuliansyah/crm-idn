@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Label, SearchInput, Checkbox, H2 } from '@/components/ui';
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Label, SearchInput, Checkbox, H2, Toast, ToastType } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -12,10 +12,12 @@ import {
   MapPin, Mail, Phone, ChevronRight, X, Save, Tags,
   ArrowUpDown, ChevronUp, ChevronDown, AlertTriangle, CheckCircle2
 } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { ConfirmBulkDeleteModal } from '@/components/shared/modals/ConfirmBulkDeleteModal';
-import { NotificationModal } from '@/components/shared/modals/NotificationModal';
+// Removed legacy NotificationModal import
 import { ClientCompanyFormModal } from './components/ClientCompanyFormModal';
 
 interface Props {
@@ -26,6 +28,7 @@ type SortKey = 'name' | 'category' | 'email' | 'id';
 type SortConfig = { key: SortKey; direction: 'asc' | 'desc' } | null;
 
 export const ClientCompaniesView: React.FC<Props> = ({ company }) => {
+  const searchParams = useSearchParams();
   const [rawItems, setRawItems] = useState<ClientCompany[]>([]);
   const [categories, setCategories] = useState<ClientCompanyCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,20 +41,22 @@ export const ClientCompaniesView: React.FC<Props> = ({ company }) => {
   // Custom Modal States
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; name: string }>({ isOpen: false, id: null, name: '' });
   const [isConfirmBulkOpen, setIsConfirmBulkOpen] = useState(false);
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
-    isOpen: false, title: '', message: '', type: 'success'
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
   });
 
   const [form, setForm] = useState<Partial<ClientCompany>>({
     name: '', category_id: null, address: '', email: '', whatsapp: ''
   });
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (isInitial = false) => {
     if (!company?.id) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    if (isInitial) setLoading(true);
     try {
       const [cosRes, catsRes] = await Promise.all([
         supabase.from('client_companies').select('*').eq('company_id', company.id).order('name'),
@@ -67,13 +72,24 @@ export const ClientCompaniesView: React.FC<Props> = ({ company }) => {
     } catch (err) {
       console.error("Fetch Data Error:", err);
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   }, [company?.id]);
 
   useEffect(() => {
-    fetchData();
+    fetchData(true);
   }, [fetchData]);
+
+  useEffect(() => {
+    const success = searchParams.get('success');
+    if (success) {
+      setToast({ isOpen: true, message: 'Data Berhasil Disimpan', type: 'success' });
+
+      // Clean up the URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
+    }
+  }, [searchParams]);
 
   const items = useMemo(() => {
     let result = rawItems.map(item => ({
@@ -125,8 +141,8 @@ export const ClientCompaniesView: React.FC<Props> = ({ company }) => {
     else setSelectedIds(items.map(i => i.id));
   };
 
-  const showNotification = (title: string, message: string, type: 'success' | 'error' = 'success') => {
-    setNotification({ isOpen: true, title, message, type });
+  const showNotification = (message: string, type: ToastType = 'success') => {
+    setToast({ isOpen: true, message, type });
   };
 
   const handleBulkDelete = async () => {
@@ -137,9 +153,9 @@ export const ClientCompaniesView: React.FC<Props> = ({ company }) => {
       if (error) throw error;
       await fetchData();
       setIsConfirmBulkOpen(false);
-      showNotification('Berhasil', `Berhasil menghapus ${selectedIds.length} data perusahaan.`);
+      showNotification(`Berhasil menghapus ${selectedIds.length} data perusahaan.`);
     } catch (err: any) {
-      showNotification('Gagal Menghapus', err.message || "Beberapa data tidak dapat dihapus karena masih terhubung dengan data lain.", 'error');
+      showNotification(err.message || "Beberapa data tidak dapat dihapus karena masih terhubung dengan data lain.", 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -163,14 +179,14 @@ export const ClientCompaniesView: React.FC<Props> = ({ company }) => {
       if (freshCats) setCategories(freshCats);
       return data;
     } catch (err: any) {
-      showNotification('Gagal', err.message, 'error');
+      showNotification(err.message, 'error');
       return null;
     }
   };
 
   const handleSave = async (formData: Partial<ClientCompany>) => {
     if (!formData.name || !formData.category_id || !formData.address) {
-      showNotification('Data Tidak Lengkap', "Harap isi field wajib (Nama, Kategori, Alamat).", 'error');
+      showNotification("Harap isi field wajib (Nama, Kategori, Alamat).", 'error');
       return;
     }
     setIsProcessing(true);
@@ -187,9 +203,9 @@ export const ClientCompaniesView: React.FC<Props> = ({ company }) => {
       else await supabase.from('client_companies').insert(payload);
       setIsModalOpen(false);
       await fetchData();
-      showNotification('Tersimpan', `Data perusahaan ${formData.name} berhasil diperbarui.`);
+      showNotification(`Data perusahaan ${formData.name} berhasil diperbarui.`);
     } catch (err: any) {
-      showNotification('Gagal Menyimpan', err.message, 'error');
+      showNotification(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -203,9 +219,9 @@ export const ClientCompaniesView: React.FC<Props> = ({ company }) => {
       if (error) throw error;
       await fetchData();
       setConfirmDelete({ isOpen: false, id: null, name: '' });
-      showNotification('Berhasil Dihapus', `Data perusahaan ${confirmDelete.name} telah dihapus.`);
+      showNotification(`Data perusahaan ${confirmDelete.name} telah dihapus.`);
     } catch (err: any) {
-      showNotification('Gagal Menghapus', "Data tidak dapat dihapus karena masih memiliki Client yang terhubung. Hapus client terlebih dahulu.", 'error');
+      showNotification("Data tidak dapat dihapus karena masih memiliki Client yang terhubung. Hapus client terlebih dahulu.", 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -216,7 +232,7 @@ export const ClientCompaniesView: React.FC<Props> = ({ company }) => {
     return sortConfig.direction === 'asc' ? <ChevronUp size={12} className="ml-1 text-indigo-600" /> : <ChevronDown size={12} className="ml-1 text-indigo-600" />;
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-indigo-600 mb-4" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Mensinkronisasi Data Perusahaan...</Subtext></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-indigo-600 mb-4" /><Subtext className="text-[10px]  uppercase  text-gray-400">Mensinkronisasi Data Perusahaan...</Subtext></div>;
 
   return (
     <div className="flex flex-col gap-6 text-gray-900">
@@ -224,13 +240,13 @@ export const ClientCompaniesView: React.FC<Props> = ({ company }) => {
         <div className="flex items-center justify-between">
           <div>
             <H2 className="text-xl">Perusahaan Client</H2>
-            <Subtext className="text-[10px] uppercase tracking-tight">Kelola daftar nama perusahaan dan instansi.</Subtext>
+            <Subtext className="text-[10px] uppercase ">Kelola daftar nama perusahaan dan instansi.</Subtext>
           </div>
           <div className="flex items-center gap-3">
             <Button
               onClick={() => { setForm({ name: '', category_id: null, address: '', email: '', whatsapp: '' }); setIsModalOpen(true); }}
               leftIcon={<Plus size={14} strokeWidth={3} />}
-              className="!px-6 py-2.5 text-[10px] uppercase tracking-tight shadow-lg shadow-blue-100"
+              className="!px-6 py-2.5 text-[10px] uppercase  shadow-lg shadow-blue-100"
               variant="primary"
               size="sm"
             >
@@ -251,7 +267,7 @@ export const ClientCompaniesView: React.FC<Props> = ({ company }) => {
             {selectedIds.length > 0 && (
               <Button
                 onClick={() => setIsConfirmBulkOpen(true)}
-                className="px-4 py-2.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl text-[10px] uppercase tracking-tight flex items-center gap-2 hover:bg-rose-600 hover:text-white transition-all shadow-sm"
+                className="px-4 py-2.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl text-[10px] uppercase  flex items-center gap-2 hover:bg-rose-600 hover:text-white transition-all shadow-sm"
               >
                 <Trash2 size={14} /> Hapus {selectedIds.length} Item
               </Button>
@@ -285,43 +301,43 @@ export const ClientCompaniesView: React.FC<Props> = ({ company }) => {
             <TableBody className="divide-y divide-gray-50">
               {items.map(item => (
                 <TableRow key={item.id} className={`hover:bg-gray-50/30 group transition-colors ${selectedIds.includes(item.id) ? 'bg-indigo-50/30' : ''}`}>
-                  <TableCell className="px-6 py-6 text-center">
+                  <TableCell className="px-6 py-4 text-center">
                     <Checkbox
                       checked={selectedIds.includes(item.id)}
                       onChange={() => toggleSelect(item.id)}
                       variant="indigo"
                     />
                   </TableCell>
-                  <TableCell className="px-6 py-6">
+                  <TableCell className="px-6 py-4">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center"><Factory size={20} /></div>
                       <div>
-                        <Subtext className="text-sm text-gray-900 tracking-tight">{item.name}</Subtext>
-                        <Subtext className="text-[10px] text-gray-400 uppercase mt-1 flex items-center gap-1 tracking-tight"><MapPin size={10} /> {item.address || '-'}</Subtext>
+                        <Subtext className="text-sm text-gray-900 ">{item.name}</Subtext>
+                        <Subtext className="text-[10px] text-gray-400 uppercase mt-1 flex items-center gap-1 "><MapPin size={10} /> {item.address || '-'}</Subtext>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="px-6 py-6">
-                    <Label className="px-3 py-1 bg-white border border-gray-100 rounded-full text-[9px]  uppercase tracking-tight text-gray-500 shadow-sm">
+                  <TableCell className="px-6 py-4">
+                    <Label className="px-3 py-1 bg-white border border-gray-100 rounded-full text-[9px]  uppercase  text-gray-500 shadow-sm">
                       {item.client_company_categories?.name || 'N/A'}
                     </Label>
                   </TableCell>
-                  <TableCell className="px-6 py-6">
+                  <TableCell className="px-6 py-4">
                     <div className="space-y-1">
-                      <Subtext className="text-[10px] text-gray-600 flex items-center gap-2 tracking-tight"><Mail size={12} className="text-gray-300" /> {item.email || '-'}</Subtext>
-                      <Subtext className="text-[10px] text-gray-600 flex items-center gap-2 tracking-tight"><Phone size={12} className="text-gray-300" /> {item.whatsapp || '-'}</Subtext>
+                      <Subtext className="text-[10px] text-gray-600 flex items-center gap-2 "><Mail size={12} className="text-gray-300" /> {item.email || '-'}</Subtext>
+                      <Subtext className="text-[10px] text-gray-600 flex items-center gap-2 "><Phone size={12} className="text-gray-300" /> {item.whatsapp || '-'}</Subtext>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-center gap-2">
-                      <Button onClick={() => { setForm(item); setIsModalOpen(true); }} variant="ghost" size='sm' className="!p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" title="Edit"><Edit2 size={14} /></Button>
-                      <Button onClick={() => setConfirmDelete({ isOpen: true, id: item.id, name: item.name })} variant="ghost" size='sm' className="!p-2 text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg" title="Hapus"><Trash2 size={14} /></Button>
+                      <ActionButton icon={Edit2} variant="blue" onClick={() => { setForm(item); setIsModalOpen(true); }} title="Edit" />
+                      <ActionButton icon={Trash2} variant="rose" onClick={() => setConfirmDelete({ isOpen: true, id: item.id, name: item.name })} title="Hapus" />
                     </div>
                   </TableCell>
                 </TableRow>
               ))}
               {items.length === 0 && (
-                <TableRow><TableCell colSpan={5} className="py-24 text-center text-gray-300  uppercase text-[10px] tracking-tight italic opacity-30">Tidak ada data perusahaan</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="py-24 text-center text-gray-300  uppercase text-[10px]  italic opacity-30">Tidak ada data perusahaan</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -347,6 +363,7 @@ export const ClientCompaniesView: React.FC<Props> = ({ company }) => {
         itemName={confirmDelete.name}
         description="Tindakan ini permanen. Pastikan tidak ada data client yang masih terhubung dengan perusahaan ini sebelum menghapus."
         isProcessing={isProcessing}
+        variant="horizontal"
       />
 
       <ConfirmBulkDeleteModal
@@ -356,14 +373,14 @@ export const ClientCompaniesView: React.FC<Props> = ({ company }) => {
         count={selectedIds.length}
         description={`Apakah Anda yakin ingin menghapus ${selectedIds.length} perusahaan yang dipilih secara permanen?`}
         isProcessing={isProcessing}
+        variant="horizontal"
       />
 
-      <NotificationModal
-        isOpen={notification.isOpen}
-        onClose={() => setNotification({ ...notification, isOpen: false })}
-        title={notification.title}
-        message={notification.message}
-        type={notification.type}
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

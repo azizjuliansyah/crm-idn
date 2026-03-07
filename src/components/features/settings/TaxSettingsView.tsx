@@ -2,14 +2,15 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 
-import { Input, Button, Table, TableHeader, TableBody, TableRow, TableCell, H3, Subtext, Label, Modal } from '@/components/ui';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
+import { Input, Button, Table, TableHeader, TableBody, TableRow, TableCell, H2, Subtext, Label, Modal, Toast, ToastType, Toggle } from '@/components/ui';
+import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 
 
 import { supabase } from '@/lib/supabase';
 import { Company, TaxSetting } from '@/lib/types';
 import {
-  Plus, Edit2, Trash2, Loader2, Coins, Save, CheckCircle2,
-  X, ToggleLeft, ToggleRight
+  Plus, Edit2, Trash2, Loader2, Coins, CheckCircle2
 } from 'lucide-react';
 
 interface Props {
@@ -23,8 +24,19 @@ export const TaxSettingsView: React.FC<Props> = ({ company }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [form, setForm] = useState<Partial<TaxSetting>>({ name: '', rate: 0, is_active: true, is_default: false });
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; name: string }>({ isOpen: false, id: null, name: '' });
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
+  });
+
+  const showToast = (message: string, type: ToastType = 'success') => {
+    setToast({ isOpen: true, message, type });
+  };
+
+  const fetchData = useCallback(async (isInitial = false) => {
+    if (isInitial) setLoading(true);
     try {
       const { data } = await supabase
         .from('tax_settings')
@@ -33,12 +45,12 @@ export const TaxSettingsView: React.FC<Props> = ({ company }) => {
         .order('id');
       if (data) setTaxes(data);
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   }, [company.id]);
 
   useEffect(() => {
-    fetchData();
+    fetchData(true);
   }, [fetchData]);
 
   const handleSave = async (e: React.FormEvent) => {
@@ -66,42 +78,65 @@ export const TaxSettingsView: React.FC<Props> = ({ company }) => {
       }
       setIsModalOpen(false);
       fetchData();
+      showToast('Pengaturan pajak berhasil disimpan.');
     } catch (err: any) {
-      alert(err.message);
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
   };
 
   const handleToggleActive = async (tax: TaxSetting) => {
-    await supabase.from('tax_settings').update({ is_active: !tax.is_active }).eq('id', tax.id);
-    fetchData();
+    try {
+      await supabase.from('tax_settings').update({ is_active: !tax.is_active }).eq('id', tax.id);
+      fetchData();
+      showToast(`Status pajak ${tax.name} berhasil diubah.`);
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Hapus pengaturan pajak ini?")) return;
-    await supabase.from('tax_settings').delete().eq('id', id);
-    fetchData();
+  const handleDelete = (tax: TaxSetting) => {
+    setConfirmDelete({ isOpen: true, id: tax.id, name: tax.name });
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-indigo-600 mb-4" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Memuat Daftar Pajak...</Subtext></div>;
+  const executeDelete = async () => {
+    if (!confirmDelete.id) return;
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase.from('tax_settings').delete().eq('id', confirmDelete.id);
+      if (error) throw error;
+      setConfirmDelete({ isOpen: false, id: null, name: '' });
+      fetchData();
+      showToast('Pengaturan pajak berhasil dihapus.');
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-indigo-600 mb-4" /><Subtext className="text-[10px]  uppercase  text-gray-400">Memuat Daftar Pajak...</Subtext></div>;
 
   return (
-    <div className="max-w-4xl space-y-8">
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="p-10 border-b border-gray-50 flex items-center justify-between">
-          <div>
-            <H3 className="text-2xl  text-gray-900 tracking-tight">Pengaturan Pajak</H3>
-            <Subtext className="text-sm text-gray-400 font-medium mt-1">Daftar tarif pajak yang berlaku untuk penawaran dan invoice.</Subtext>
-          </div>
-          <Button
-            onClick={() => { setForm({ name: '', rate: 0, is_active: true, is_default: false }); setIsModalOpen(true); }}
-            leftIcon={<Plus size={16} />}
-            variant="primary"
-          >
-            Tambah Pajak
-          </Button>
+    <div className="max-w-4xl flex flex-col space-y-6">
+      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+        <div>
+          <H2 className="text-xl ">Pengaturan Pajak</H2>
+          <Subtext className="text-[10px] uppercase font-semibold text-gray-400">Kelola daftar tarif pajak yang berlaku untuk penawaran dan invoice.</Subtext>
         </div>
+        <Button
+          onClick={() => { setForm({ name: '', rate: 0, is_active: true, is_default: false }); setIsModalOpen(true); }}
+          leftIcon={<Plus size={14} strokeWidth={3} />}
+          className="!px-6 py-2.5 text-[10px] uppercase shadow-lg shadow-indigo-100"
+          variant="primary"
+          size="sm"
+        >
+          Tambah Pajak
+        </Button>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
         <Table>
           <TableHeader>
@@ -121,7 +156,7 @@ export const TaxSettingsView: React.FC<Props> = ({ company }) => {
                     <div className="w-9 h-9 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600">
                       <Coins size={16} />
                     </div>
-                    <Label className="text-sm  text-gray-900 tracking-tight">{item.name}</Label>
+                    <Label className="text-sm  text-gray-900 ">{item.name}</Label>
                   </div>
                 </TableCell>
                 <TableCell className={`px-10 py-6 text-center  text-sm ${item.rate < 0 ? 'text-rose-600' : 'text-gray-700'}`}>
@@ -135,28 +170,30 @@ export const TaxSettingsView: React.FC<Props> = ({ company }) => {
                   )}
                 </TableCell>
                 <TableCell className="px-10 py-6 text-center">
-                  <Button
-                    variant="ghost"
-                    onClick={() => handleToggleActive(item)}
-                    className={`!p-0 ${item.is_active ? 'text-indigo-600' : 'text-gray-300'}`}
-                  >
-                    {item.is_active ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
-                  </Button>
+                  <Toggle
+                    checked={item.is_active}
+                    onChange={() => handleToggleActive(item)}
+                    variant="indigo"
+                  />
                 </TableCell>
                 <TableCell className="px-10 py-6 text-center">
-                  <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button variant="ghost" size="sm" onClick={() => { setForm(item); setIsModalOpen(true); }} className="!p-2 text-blue-500 hover:bg-blue-50">
-                      <Edit2 size={16} />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id)} className="!p-2 text-rose-500 hover:bg-rose-50">
-                      <Trash2 size={16} />
-                    </Button>
+                  <div className="flex items-center justify-center gap-1">
+                    <ActionButton
+                      icon={Edit2}
+                      variant="blue"
+                      onClick={() => { setForm(item); setIsModalOpen(true); }}
+                    />
+                    <ActionButton
+                      icon={Trash2}
+                      variant="rose"
+                      onClick={() => handleDelete(item)}
+                    />
                   </div>
                 </TableCell>
               </TableRow>
             ))}
             {taxes.length === 0 && (
-              <TableRow><TableCell colSpan={5} className="py-20 text-center text-gray-300  uppercase text-[10px] tracking-tight italic opacity-30">Daftar pajak kosong</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="py-20 text-center text-gray-300  uppercase text-[10px]  italic opacity-30">Daftar pajak kosong</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
@@ -231,6 +268,22 @@ export const TaxSettingsView: React.FC<Props> = ({ company }) => {
           </div>
         </div>
       </Modal>
+      <ConfirmDeleteModal
+        isOpen={confirmDelete.isOpen}
+        onClose={() => setConfirmDelete({ isOpen: false, id: null, name: '' })}
+        onConfirm={executeDelete}
+        title="Hapus Pengaturan Pajak"
+        itemName={confirmDelete.name}
+        isProcessing={isProcessing}
+        variant="horizontal"
+      />
+
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 };

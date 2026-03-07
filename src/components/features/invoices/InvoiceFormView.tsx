@@ -8,7 +8,7 @@ import {
   User, ChevronDown, Package, Loader2, CheckCircle2, X, AlertCircle, Tags, Weight,
   Building, Mail, Phone, Search, FileText, Check as CheckIcon, FileDown, DollarSign
 } from 'lucide-react';
-import { Modal, Button, Input, Textarea, SectionHeader, Label, Subtext, Table, TableHeader, TableBody, TableRow, TableCell, ComboBox, H2, Card } from '@/components/ui';
+import { Modal, Button, Input, Textarea, SectionHeader, Label, Subtext, Table, TableHeader, TableBody, TableRow, TableCell, ComboBox, H2, Card, Toast, ToastType } from '@/components/ui';
 import { ClientFormModal } from '@/components/features/clients/components/ClientFormModal';
 import { ProductFormModal } from '@/components/features/products/components/ProductFormModal';
 import { jsPDF } from 'jspdf';
@@ -81,7 +81,11 @@ const generateFormattedNumber = (pattern: string, nextNum: number, digitCount: n
 export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialClientId, initialProformaId, initialQuotationId, initialRequestId, onSaveSuccess }) => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
+  });
   const [clients, setClients] = useState<Client[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -355,11 +359,9 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
           await supabase.from('invoice_requests').update({ invoice_id: invId, status: 'Approved' }).eq('id', initialRequestId);
         }
         onSaveSuccess?.(invId);
-        setShowSuccessToast(true);
-        setTimeout(() => setShowSuccessToast(false), 3000);
       }
       setLoading(false);
-    } catch (err: any) { alert(err.message); setLoading(false); }
+    } catch (err: any) { setToast({ isOpen: true, message: err.message, type: 'error' }); setLoading(false); }
   };
 
   const handleDownloadPDF = async () => {
@@ -442,7 +444,7 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
       setClientId(String(data.id));
       setIsClientModalOpen(false);
       setClientForm({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
-    } catch (err: any) { alert(err.message); } finally { setIsProcessingQuick(false); }
+    } catch (err: any) { setToast({ isOpen: true, message: err.message, type: 'error' }); } finally { setIsProcessingQuick(false); }
   };
 
   const handleSaveProduct = async (formData: Partial<Product>) => {
@@ -462,7 +464,7 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
       if (freshRes.data) setProducts(freshRes.data);
       setIsProductModalOpen(false);
       setProductForm({ name: '', category_id: null, unit_id: null, price: 0, description: '' });
-    } catch (err: any) { alert(err.message); } finally { setIsProcessingQuick(false); }
+    } catch (err: any) { setToast({ isOpen: true, message: err.message, type: 'error' }); } finally { setIsProcessingQuick(false); }
   };
 
   const handleQuickAddCo = async (coData: any) => {
@@ -498,7 +500,7 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
   };
 
 
-  if (loading && !items.length) return <div className="flex flex-col items-center justify-center py-24 gap-4 bg-white min-h-screen font-sans"><Loader2 className="animate-spin text-indigo-600" size={32} /><p className="text-[10px] font-bold uppercase tracking-tight text-gray-400">Menyiapkan Invoice...</p></div>;
+  if (loading && !items.length) return <div className="flex flex-col items-center justify-center py-24 gap-4 bg-white min-h-screen font-sans"><Loader2 className="animate-spin text-indigo-600" size={32} /><p className="text-[10px] font-bold uppercase  text-gray-400">Menyiapkan Invoice...</p></div>;
 
   return (
     <div className="bg-[#F9FAFB] min-h-screen pb-24 font-sans relative">
@@ -509,8 +511,8 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
               <ArrowLeft size={20} />
             </Button>
             <div>
-              <h1 className="text-xl font-bold text-gray-900 tracking-tight">{editingId ? 'Ubah Invoice' : 'Invoice Penjualan Baru'}</h1>
-              <Subtext className="text-indigo-600 font-bold uppercase tracking-tight mt-0.5">{invoiceNumber}</Subtext>
+              <h1 className="text-xl font-bold text-gray-900 ">{editingId ? 'Ubah Invoice' : 'Invoice Penjualan Baru'}</h1>
+              <Subtext className="text-indigo-600 font-bold uppercase  mt-0.5">{invoiceNumber}</Subtext>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -669,7 +671,7 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
                     />
                   </TableCell>
                   <TableCell className="px-4 text-center">
-                    <div className="w-full px-2 py-2 bg-gray-50 border border-gray-100 rounded-[4px] text-[10px] text-center text-gray-400 font-bold uppercase tracking-tight">
+                    <div className="w-full px-2 py-2 bg-gray-50 border border-gray-100 rounded-[4px] text-[10px] text-center text-gray-400 font-bold uppercase ">
                       {item.unit}
                     </div>
                   </TableCell>
@@ -694,7 +696,7 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
             </TableBody>
           </Table>
           <div className="flex items-center gap-3 mt-4">
-            <Button onClick={handleAddItem} variant="ghost" size="sm" leftIcon={<Plus size={14} />} className="!text-[#4F46E5] hover:bg-indigo-50 font-bold tracking-tight uppercase text-[10px]">
+            <Button onClick={handleAddItem} variant="ghost" size="sm" leftIcon={<Plus size={14} />} className="!text-[#4F46E5] hover:bg-indigo-50 font-bold  uppercase text-[10px]">
               Tambah Baris
             </Button>
           </div>
@@ -722,12 +724,12 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
               className="mb-4"
             />
             <div className="flex items-center justify-between border-b border-gray-50 pb-4">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">Subtotal</span>
+              <span className="text-xs font-bold text-gray-400 uppercase ">Subtotal</span>
               <span className="text-sm font-bold text-gray-900">{formatIDRVal(subtotal)}</span>
             </div>
             <div className="flex items-center justify-between border-b border-gray-50 pb-4">
               <div className="flex items-center gap-4">
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">Diskon</span>
+                <span className="text-xs font-bold text-gray-400 uppercase ">Diskon</span>
                 <div className="flex bg-white rounded border border-gray-200 overflow-hidden h-11">
                   <ComboBox
                     value={discountType}
@@ -755,7 +757,7 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
 
             <div className="space-y-4 border-b border-gray-50 pb-4">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">Pajak</span>
+                <span className="text-xs font-bold text-gray-400 uppercase ">Pajak</span>
                 <div className="relative">
                   <ComboBox
                     value=""
@@ -789,7 +791,7 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
             </div>
 
             <div className="flex items-center justify-between py-4 mt-2 border-t-2 border-gray-100">
-              <span className="text-md font-bold text-gray-900 uppercase tracking-tight">Total Tagihan</span>
+              <span className="text-md font-bold text-gray-900 uppercase ">Total Tagihan</span>
               <span className="text-2xl font-bold text-blue-600">{formatIDRVal(total)}</span>
             </div>
 
@@ -807,14 +809,12 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
         </div>
       </div>
 
-      {showSuccessToast && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] fade-in duration-500">
-          <div className="bg-emerald-600 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border border-emerald-500">
-            <CheckCircle2 size={20} />
-            <Label className="text-sm uppercase tracking-tight">Data Invoice Berhasil Disimpan</Label>
-          </div>
-        </div>
-      )}
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
+      />
 
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }

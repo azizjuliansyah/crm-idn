@@ -87,7 +87,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
             <div className="flex flex-col gap-6 pb-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="md:col-span-2 space-y-2">
-                        <Label className="text-[10px] text-gray-400 uppercase tracking-tight ml-1">Nama Produk*</Label>
+                        <Label className="text-[10px] text-gray-400 uppercase  ml-1">Nama Produk*</Label>
                         <div className="relative">
                             <Package size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                             <Input
@@ -102,7 +102,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
                     <div className="space-y-2">
                         <div className="flex items-center justify-between px-1">
-                            <Label className="text-[10px] text-gray-400 uppercase tracking-tight">Kategori Produk</Label>
+                            <Label className="text-[10px] text-gray-400 uppercase ">Kategori Produk</Label>
                         </div>
                         {isAddingCat ? (
                             <div className="flex gap-2 animate-in slide-in-from-left-2 duration-200">
@@ -133,7 +133,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
                     <div className="space-y-2">
                         <div className="flex items-center justify-between px-1">
-                            <Label className="text-[10px] text-gray-400 uppercase tracking-tight">Satuan Produk</Label>
+                            <Label className="text-[10px] text-gray-400 uppercase ">Satuan Produk</Label>
                         </div>
                         {isAddingUnit ? (
                             <div className="flex gap-2 animate-in slide-in-from-left-2 duration-200">
@@ -163,7 +163,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     </div>
 
                     <div className="md:col-span-2 space-y-2">
-                        <Label className="text-[10px] text-gray-400 uppercase tracking-tight ml-1">Harga Jual Dasar (IDR)*</Label>
+                        <Label className="text-[10px] text-gray-400 uppercase  ml-1">Harga Jual Dasar (IDR)*</Label>
                         <div className="relative">
                             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 font-bold text-xs">Rp</div>
                             <Input
@@ -177,7 +177,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     </div>
 
                     <div className="md:col-span-2 space-y-2">
-                        <Label className="text-[10px] text-gray-400 uppercase tracking-tight ml-1">Deskripsi Produk (Opsional)</Label>
+                        <Label className="text-[10px] text-gray-400 uppercase  ml-1">Deskripsi Produk (Opsional)</Label>
                         <Textarea
                             value={form.description || ''}
                             onChange={e => setForm({ ...form, description: e.target.value })}

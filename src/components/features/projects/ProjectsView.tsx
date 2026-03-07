@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Input, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, H4, Subtext, Label, Modal, Avatar, Badge, Card, SearchInput, ComboBox } from '@/components/ui';
+import { Input, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, H4, Subtext, Label, Modal, Avatar, Badge, Card, SearchInput, ComboBox, Toast, ToastType } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -10,12 +10,14 @@ import { Project, ProjectPipeline, Company, CompanyMember, Profile, Client, Clie
 import {
   Plus, Search, Trello, Table as TableIcon, Loader2, Briefcase,
   AlertTriangle, CheckCircle2, X, Trash2, Calendar, Clock,
-  Edit2, Save, FileText, ListTodo, Check
+  Edit2, Save, FileText, ListTodo, Check, User as UserIcon
 } from 'lucide-react';
+import { KanbanBoard, KanbanItem, KanbanStage } from '@/components/shared/KanbanBoard/KanbanBoard';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
-import { NotificationModal } from '@/components/shared/modals/NotificationModal';
 import { ClientFormModal } from '@/components/features/clients/components/ClientFormModal';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 interface Props {
   company: Company;
@@ -36,6 +38,12 @@ const STAGE_COLORS = [
   'bg-rose-600',
 ];
 
+const getStageColor = (index: number) => {
+  return STAGE_COLORS[index % STAGE_COLORS.length];
+};
+
+interface KanbanProject extends Project, KanbanItem { }
+
 export const ProjectsView: React.FC<Props> = ({ company, user, members, pipelineId }) => {
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -53,12 +61,11 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; name: string }>({ isOpen: false, id: null, name: '' });
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
-    isOpen: false, title: '', message: '', type: 'success'
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
   });
-
-  const [draggingId, setDraggingId] = useState<number | null>(null);
-  const [dropTarget, setDropTarget] = useState<string | null>(null);
 
   // Quick Add Client State
   const [isAddingClient, setIsAddingClient] = useState(false);
@@ -183,9 +190,9 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
       setIsAddModalOpen(false);
       setIsDetailModalOpen(false);
       fetchData(false);
-      setNotification({ isOpen: true, title: 'Berhasil', message: 'Data proyek berhasil disimpan.', type: 'success' });
+      setToast({ isOpen: true, message: `Proyek "${form.name}" berhasil disimpan!`, type: 'success' });
     } catch (err: any) {
-      setNotification({ isOpen: true, title: 'Gagal', message: err.message, type: 'error' });
+      setToast({ isOpen: true, message: 'Gagal menyimpan proyek: ' + err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -198,25 +205,69 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
       await supabase.from('projects').delete().eq('id', confirmDelete.id);
       setConfirmDelete({ isOpen: false, id: null, name: '' });
       fetchData(false);
+      setToast({ isOpen: true, message: 'Proyek berhasil dihapus!', type: 'success' });
+    } catch (err: any) {
+      setToast({ isOpen: true, message: 'Gagal menghapus proyek: ' + err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const handleStatusChange = async (newStageId: string, pId?: number) => {
-    const targetId = pId || draggingId;
-    if (!targetId || isProcessing) return;
+  const handleStatusChange = async (taskId: number, newStageId: string) => {
+    if (!taskId || isProcessing) return;
 
     setIsProcessing(true);
     try {
-      await supabase.from('projects').update({ stage_id: newStageId }).eq('id', targetId);
+      const { error } = await supabase.from('projects').update({ stage_id: newStageId }).eq('id', taskId);
+      if (error) throw error;
+      fetchData(false);
+      setToast({ isOpen: true, message: 'Tahapan proyek berhasil diperbarui!', type: 'success' });
+    } catch (err: any) {
+      setToast({ isOpen: true, message: 'Gagal memperbarui tahapan: ' + err.message, type: 'error' });
       fetchData(false);
     } finally {
       setIsProcessing(false);
-      setDraggingId(null);
-      setDropTarget(null);
     }
   };
+
+  const renderProjectCard = (p: KanbanProject, isDragged: boolean) => (
+    <div
+      key={p.id}
+      onClick={() => handleOpenEdit(p)}
+      className={`group p-4 bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-lg hover:border-emerald-200 transition-all cursor-pointer relative ${isDragged ? 'opacity-30' : ''}`}
+    >
+      <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all">
+        <Button
+          onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/projects/tasks/${p.id}`); }}
+          className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg shadow-sm hover:bg-emerald-600 hover:text-white border border-emerald-100 transition-all"
+        >
+          <ListTodo size={12} />
+        </Button>
+      </div>
+      <div className="flex items-center justify-between mb-2">
+        <Badge variant="ghost" className="px-1.5 py-0 border border-gray-100 text-[7px] text-gray-400 uppercase bg-gray-50">PRJ-{String(p.id).padStart(4, '0')}</Badge>
+      </div>
+      <H2 className="text-xs font-semibold text-gray-800 mb-0.5 leading-tight group-hover:text-emerald-600 transition-colors uppercase truncate">{p.name}</H2>
+      <Subtext className="text-[9px] text-emerald-600 uppercase mb-3 line-clamp-1">{p.client?.name || 'Personal Client'}</Subtext>
+
+      <div className="flex items-center justify-between pt-3 border-t border-gray-50">
+        <div className="flex -space-x-1.5">
+          <div title={`Lead: ${p.lead_profile?.full_name}`}>
+            <Avatar name={p.lead_profile?.full_name} src={p.lead_profile?.avatar_url} size="sm" className="w-5 h-5 ring-2 ring-emerald-50 shadow-sm" />
+          </div>
+          {p.team_members?.slice(0, 2).map((tm, idx) => (
+            <div key={idx} title={tm.profile?.full_name}>
+              <Avatar name={tm.profile?.full_name} src={tm.profile?.avatar_url} size="sm" className="w-5 h-5 ring-2 ring-white shadow-sm" />
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center gap-1 text-[8px] text-gray-400 uppercase">
+          <Calendar size={10} />
+          {p.end_date ? new Date(p.end_date).toLocaleDateString('id-ID', { month: 'short', day: 'numeric' }) : '-'}
+        </div>
+      </div>
+    </div>
+  );
 
   const handleQuickAddCategory = async (name: string) => {
     const { data, error } = await supabase
@@ -251,8 +302,9 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
       setForm((prev: any) => ({ ...prev, client_id: data.id }));
       setIsAddingClient(false);
       setNewClientForm({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
+      setToast({ isOpen: true, message: 'Client baru berhasil ditambahkan!', type: 'success' });
     } catch (err: any) {
-      setNotification({ isOpen: true, title: 'Gagal', message: err.message, type: 'error' });
+      setToast({ isOpen: true, message: 'Gagal menambah client: ' + err.message, type: 'error' });
     } finally {
       setIsProcessingQuick(false);
     }
@@ -303,7 +355,7 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
   if (loading) return (
     <div className="flex flex-col items-center justify-center py-24 min-h-[400px]">
       <Loader2 className="animate-spin text-emerald-600 mb-4" size={32} />
-      <Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Sinkronisasi Proyek...</Subtext>
+      <Subtext className="text-[10px]  uppercase  text-gray-400">Sinkronisasi Proyek...</Subtext>
     </div>
   );
 
@@ -313,7 +365,7 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
         <div className="flex items-center justify-between">
           <div>
             <H2 className="text-xl">Daftar Proyek</H2>
-            <Subtext className="text-[10px] uppercase tracking-tight">Kelola dan pantau seluruh proyek klien.</Subtext>
+            <Subtext className="text-[10px] uppercase ">Kelola dan pantau seluruh proyek klien.</Subtext>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex bg-gray-50 border border-gray-100 p-1 rounded-xl">
@@ -337,7 +389,7 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
             <Button
               onClick={handleOpenAdd}
               leftIcon={<Plus size={14} strokeWidth={3} />}
-              className="!px-6 py-2.5 text-[10px] uppercase tracking-tight shadow-lg shadow-emerald-100"
+              className="!px-6 py-2.5 text-[10px] uppercase  shadow-lg shadow-emerald-100"
               variant="success"
               size="sm"
             >
@@ -364,6 +416,7 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
               <Table>
                 <TableHeader className="sticky top-0 z-10 bg-white">
                   <TableRow className="hover:bg-transparent">
+                    <TableCell isHeader className="w-[80px]">ID</TableCell>
                     <TableCell isHeader>Informasi Proyek</TableCell>
                     <TableCell isHeader>Lead & Team</TableCell>
                     <TableCell isHeader>Timeline</TableCell>
@@ -373,24 +426,25 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
                 </TableHeader>
                 <TableBody>
                   {processedProjects.map(p => (
-                    <TableRow key={p.id} className="group">
+                    <TableRow key={p.id} className="group hover:bg-gray-50/50 transition-colors text-gray-900">
+                      <TableCell className="font-medium text-xs text-gray-500">
+                        #{String(p.id).padStart(4, '0')}
+                      </TableCell>
                       <TableCell className="py-5">
-                        <Button
-                          onClick={() => router.push(`/dashboard/projects/tasks/${p.id}`)}
-                          className="text-xs  text-gray-900 tracking-tight hover:text-emerald-600 transition-colors text-left block uppercase"
-                        >
-                          {p.name}
-                        </Button>
-                        <Subtext className="text-[9px] text-emerald-600  uppercase tracking-tight mt-1">{p.client?.name || 'Personal Client'}</Subtext>
-                        {p.custom_field_values && Object.entries(p.custom_field_values).slice(0, 1).map(([k, v]) => (
-                          <div key={k} className="flex items-center gap-1.5 mt-2">
-                            <div className="w-1 h-1 rounded-full bg-emerald-300"></div>
-                            <Subtext className="text-[8px]  text-gray-400 uppercase tracking-tight truncate max-w-[150px]">{k}: {String(v)}</Subtext>
-                          </div>
-                        ))}
+                        <div className="flex flex-col">
+                          <Link
+                            href={`/dashboard/projects/tasks/${p.id}`}
+                            className="text-sm font-semibold text-gray-900 hover:text-emerald-600 transition-colors block uppercase"
+                          >
+                            {p.name}
+                          </Link>
+                          <Subtext className="text-[10px] text-emerald-600 font-medium uppercase mt-1">
+                            {p.client?.name || 'Personal Client'}
+                          </Subtext>
+                        </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                           <div title={`Lead: ${p.lead_profile?.full_name}`}>
                             <Avatar name={p.lead_profile?.full_name} src={p.lead_profile?.avatar_url} size="sm" className="ring-2 ring-emerald-50 shadow-sm" />
                           </div>
@@ -401,124 +455,80 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
                               </div>
                             ))}
                             {(p.team_members?.length || 0) > 3 && (
-                              <div className="w-6 h-6 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center text-[8px]  text-gray-400 ring-2 ring-white">
+                              <div className="w-6 h-6 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center text-[8px] text-gray-400 ring-2 ring-white">
                                 +{(p.team_members?.length || 0) - 3}
                               </div>
                             )}
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="py-5 px-6">
-                        <Label className="text-xs text-gray-600 tracking-tight">{p.client?.name || 'Personal Client'}</Label>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <Label className="text-xs font-medium text-gray-700 uppercase">
+                            {p.lead_profile?.full_name || '-'}
+                          </Label>
+                          <div className="flex items-center gap-1.5 text-[9px] text-gray-400 uppercase">
+                            <Clock size={10} />
+                            {p.start_date ? new Date(p.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}
+                            {p.end_date ? ` - ${new Date(p.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}` : ''}
+                          </div>
+                        </div>
                       </TableCell>
-                      <TableCell className="py-5 px-6">
-                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-gray-50 text-[10px] text-gray-500 border border-gray-100 w-fit">
-                          <Calendar size={12} className="text-gray-400" />
-                          {p.end_date ? new Date(p.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                      <TableCell>
+                        <div className="flex flex-col gap-1.5">
+                          <Badge variant="ghost" className="px-2 py-0.5 border border-emerald-100 text-[9px] text-emerald-600 uppercase bg-emerald-50/50 w-fit">
+                            {pipeline?.stages?.find(s => s.id === p.stage_id)?.name || 'Unknown'}
+                          </Badge>
+                          {p.end_date && (
+                            <div className="flex items-center gap-1 text-[9px] text-gray-400 uppercase px-1">
+                              <Calendar size={10} />
+                              Deadline: {new Date(p.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </div>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                          <ActionButton
+                            icon={ListTodo}
+                            variant="emerald"
                             onClick={() => router.push(`/dashboard/projects/tasks/${p.id}`)}
-                            className="!p-2 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors"
                             title="Buka Tasks Proyek"
-                          >
-                            <ListTodo size={14} strokeWidth={2.5} />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                          />
+                          <ActionButton
+                            icon={Edit2}
+                            variant="blue"
                             onClick={() => handleOpenEdit(p)}
-                            className="!p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors transition-colors"
                             title="Edit Proyek"
-                          >
-                            <Edit2 size={14} />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                          />
+                          <ActionButton
+                            icon={Trash2}
+                            variant="rose"
                             onClick={() => setConfirmDelete({ isOpen: true, id: p.id, name: p.name })}
-                            className="!p-2 text-rose-700 !bg-transparent hover:!bg-rose-50 shadow-none hover:border-rose-200 transition-all border border-transparent rounded-lg"
                             title="Hapus Proyek"
-                          >
-                            <Trash2 size={14} />
-                          </Button>
+                          />
                         </div>
                       </TableCell>
                     </TableRow>
                   ))}
                   {processedProjects.length === 0 && (
-                    <TableEmpty colSpan={5} icon={<Briefcase size={48} />} message="Belum ada proyek terdaftar" />
+                    <TableEmpty colSpan={6} icon={<Briefcase size={48} />} message="Belum ada proyek terdaftar" />
                   )}
                 </TableBody>
               </Table>
             </div>
           </Card>
         ) : (
-          <div className="flex gap-4 items-start h-full overflow-x-auto pb-4 scrollbar-hide">
-            {pipeline?.stages?.map((stage, sIdx) => (
-              <div key={stage.id} className="flex flex-col gap-3 min-w-[300px] w-[300px] h-full">
-                <div className={`p-4 ${STAGE_COLORS[sIdx % STAGE_COLORS.length]} rounded-2xl shadow-lg shadow-black/5 flex items-center justify-between border-b-4 border-black/10`}>
-                  <Badge variant="ghost" className="!p-0 text-[10px]  uppercase tracking-[0.2em] text-white">{stage.name}</Badge>
-                  <div className="flex items-center justify-center bg-white/20 px-2.5 py-1 rounded-lg border border-white/20">
-                    <Label className="text-[10px]  text-white">{projectsByStage[stage.id]?.length || 0}</Label>
-                  </div>
-                </div>
-                <div
-                  onDragOver={(e) => { e.preventDefault(); setDropTarget(stage.id); }}
-                  onDrop={(e) => { e.preventDefault(); const id = parseInt(e.dataTransfer.getData('text/plain')); if (id) handleStatusChange(stage.id, id); }}
-                  className={`flex-1 space-y-3 p-3 rounded-2xl border-2 border-dashed transition-all overflow-y-auto scrollbar-hide ${dropTarget === stage.id ? 'bg-emerald-50/50 border-emerald-300' : 'bg-gray-50/50 border-transparent'}`}
-                >
-                  {projectsByStage[stage.id]?.map(p => (
-                    <div
-                      key={p.id}
-                      draggable
-                      onDragStart={(e) => { setDraggingId(p.id); e.dataTransfer.setData('text/plain', p.id.toString()); }}
-                      onClick={() => handleOpenEdit(p)}
-                      className="group p-5 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-xl hover:shadow-emerald-900/5 hover:border-emerald-200 transition-all cursor-pointer transform hover:-translate-y-1 active:scale-[0.98] relative"
-                    >
-                      <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all">
-                        <Button
-                          onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/projects/tasks/${p.id}`); }}
-                          className="p-2 bg-emerald-50 text-emerald-600 rounded-xl shadow-sm hover:bg-emerald-600 hover:text-white border border-emerald-100 transition-all"
-                        >
-                          <ListTodo size={14} />
-                        </Button>
-                      </div>
-                      <div className="flex items-center justify-between mb-4">
-                        <Badge variant="ghost" className="px-2 py-0.5 border border-gray-100 text-[8px]  text-gray-400 uppercase tracking-tight bg-gray-50">PRJ-{String(p.id).padStart(4, '0')}</Badge>
-                      </div>
-                      <H2 className=" text-[13px] text-gray-800 mb-1 leading-tight tracking-tight group-hover:text-emerald-600 transition-colors uppercase">{p.name}</H2>
-                      <Subtext className="text-[9px] text-emerald-600  uppercase tracking-tight mb-4">{p.client?.name || 'Personal Client'}</Subtext>
-
-                      <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                        <div className="flex -space-x-1.5">
-                          <div title={`Lead: ${p.lead_profile?.full_name}`}>
-                            <Avatar name={p.lead_profile?.full_name} src={p.lead_profile?.avatar_url} size="sm" className="w-6 h-6 ring-2 ring-emerald-50 shadow-sm" />
-                          </div>
-                          {p.team_members?.slice(0, 2).map((tm, idx) => (
-                            <div key={idx} title={tm.profile?.full_name}>
-                              <Avatar name={tm.profile?.full_name} src={tm.profile?.avatar_url} size="sm" className="w-6 h-6 ring-2 ring-white shadow-sm" />
-                            </div>
-                          ))}
-                        </div>
-                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-gray-50 text-[9px]  text-gray-400 uppercase tracking-tight">
-                          <Calendar size={10} />
-                          {p.end_date ? new Date(p.end_date).toLocaleDateString('id-ID', { month: 'short', day: 'numeric' }) : '-'}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {projectsByStage[stage.id]?.length === 0 && (
-                    <div className="h-24 flex items-center justify-center border-2 border-dashed border-gray-100 rounded-2xl text-[9px]  uppercase text-gray-200 tracking-[0.2em]">Kosong</div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+          <KanbanBoard<KanbanProject>
+            stages={pipeline?.stages?.map((stage, idx) => ({
+              id: stage.id,
+              name: stage.name,
+              colorClass: getStageColor(idx)
+            })) || []}
+            itemsByStatus={projectsByStage as Record<string, KanbanProject[]>}
+            renderCard={renderProjectCard as any}
+            onReorder={handleStatusChange}
+          />
         )}
       </div>
 
@@ -530,14 +540,14 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
         size="lg"
         footer={
           <div className="flex w-full gap-3">
-            <Button variant="ghost" onClick={() => { setIsAddModalOpen(false); setIsDetailModalOpen(false); }} className="flex-1  text-xs uppercase tracking-tight">Batal</Button>
+            <Button variant="ghost" onClick={() => { setIsAddModalOpen(false); setIsDetailModalOpen(false); }} className="flex-1  text-xs uppercase ">Batal</Button>
             <Button
               onClick={handleSave}
               disabled={isProcessing}
               isLoading={isProcessing}
               leftIcon={<Save size={14} />}
               variant="success"
-              className="flex-1  text-xs uppercase tracking-tight shadow-lg shadow-emerald-100"
+              className="flex-1  text-xs uppercase  shadow-lg shadow-emerald-100"
             >
               Simpan Data
             </Button>
@@ -592,10 +602,8 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
               }))}
               className="rounded-md"
             />
-            <Input type="date" label="Tanggal Mulai" value={form.start_date} onChange={(e: any) => setForm({ ...form, start_date: e.target.value })} className="rounded-md" />
-            <Input type="date" label="Estimasi Selesai" value={form.end_date} onChange={(e: any) => setForm({ ...form, end_date: e.target.value })} className="rounded-md" />
             <div className="space-y-1.5 relative">
-              <Label className="ml-1 text-[9px] uppercase tracking-tight text-gray-400">Project Team</Label>
+              <Label className="ml-1 text-[9px] uppercase  text-gray-400">Project Team</Label>
               <details className="group relative">
                 <summary className="flex items-center justify-between w-full px-4 py-3.5 border border-gray-200 rounded-md text-sm font-medium cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500 list-none">
                   <span className={form.team_ids.length ? 'text-gray-900' : 'text-gray-400'}>
@@ -621,7 +629,7 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
                         }}
                         className="w-4 h-4 rounded border-gray-300"
                       />
-                      <span className="text-xs text-gray-700 font-medium uppercase tracking-tight">{m.profile?.full_name}</span>
+                      <span className="text-xs text-gray-700 font-medium uppercase ">{m.profile?.full_name}</span>
                     </Label>
                   ))}
                   {members.length === 0 && (
@@ -630,6 +638,8 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
                 </div>
               </details>
             </div>
+            <Input type="date" label="Tanggal Mulai" value={form.start_date} onChange={(e: any) => setForm({ ...form, start_date: e.target.value })} className="rounded-md" />
+            <Input type="date" label="Estimasi Selesai" value={form.end_date} onChange={(e: any) => setForm({ ...form, end_date: e.target.value })} className="rounded-md" />
           </div>
 
           {/* Dynamic Custom Fields */}
@@ -637,10 +647,10 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
             <div className="space-y-5 pt-6 border-t border-gray-50">
               <div className="flex items-center gap-2">
                 <FileText size={16} className="text-emerald-500" />
-                <H4 className="text-[11px]  uppercase tracking-tight text-gray-900">Field Tambahan Pipeline</H4>
+                <H4 className="text-[11px]  uppercase  text-gray-900">Field Tambahan Pipeline</H4>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {pipeline.custom_fields.map((field, fIdx) => (
+                {pipeline?.custom_fields?.map((field, fIdx) => (
                   <div key={fIdx} className="space-y-2">
                     <Label className="ml-1">{field.label}</Label>
                     <Input
@@ -656,7 +666,7 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
           )}
 
           <div className="space-y-4 pt-6 border-t border-gray-50">
-            <Textarea label="Catatan & Lingkup Kerja" value={form.notes} onChange={(e: any) => setForm({ ...form, notes: e.target.value })} className="h-32 resize-none shadow-inner" placeholder="Tuliskan detail pekerjaan atau instruksi teknis..." />
+            <Textarea label="Catatan & Lingkup Kerja" value={form.notes} onChange={(e: any) => setForm({ ...form, notes: e.target.value })} className="h-32 resize-none" placeholder="Tuliskan detail pekerjaan atau instruksi teknis..." />
           </div>
         </div>
       </Modal>
@@ -668,14 +678,14 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
         title="Hapus Proyek"
         itemName={confirmDelete.name}
         isProcessing={isProcessing}
+        variant="horizontal"
       />
 
-      <NotificationModal
-        isOpen={notification.isOpen}
-        onClose={() => setNotification({ ...notification, isOpen: false })}
-        title={notification.title}
-        message={notification.message}
-        type={notification.type}
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
       />
 
 
@@ -692,6 +702,6 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
         onQuickAddCompany={handleQuickAddCompany}
         onQuickAddCategory={handleQuickAddCategory}
       />
-    </div>
+    </div >
   );
 };

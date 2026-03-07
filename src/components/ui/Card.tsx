@@ -23,7 +23,7 @@ export const Card: React.FC<CardProps> = ({
         <div className="p-8 border-b border-gray-50 flex items-center justify-between">
           <div>
             {typeof title === 'string' ? (
-              <h3 className="text-lg font-medium uppercase tracking-tight">{title}</h3>
+              <h3 className="text-lg font-medium uppercase ">{title}</h3>
             ) : (
               title
             )}

@@ -71,12 +71,10 @@ export const Layout: React.FC<LayoutProps> = ({
     if (['data_client', 'perusahaan_client', 'pengaturan_kategori_client'].includes(activeView)) {
       setIsClientOpen(true);
     }
-    if (['sop_all', 'sop_category_settings', 'sop_archive', 'sop_editor', 'sop_detail'].includes(activeView) || activeView.startsWith('sop_cat_')) {
+    if (['sop_all', 'sop_archive', 'sop_editor', 'sop_detail'].includes(activeView) || activeView.startsWith('sop_cat_')) {
       setIsSopOpen(true);
-      if (activeView === 'sop_category_settings' || activeView.startsWith('sop_cat_')) {
-        setIsSopCategoriesExpanded(true);
-      }
       if (activeView.startsWith('sop_cat_')) {
+        setIsSopCategoriesExpanded(true);
         const catId = parseInt(activeView.split('_')[2]);
         if (!isNaN(catId)) {
           setExpandedSopCats(prev => ({ ...prev, [catId]: true }));
@@ -94,7 +92,7 @@ export const Layout: React.FC<LayoutProps> = ({
       'pengaturan_project_pipeline', 'pengaturan_task_pipeline', 'support_pipeline',
       'pengaturan_kategori_client', 'penomoran_otomatis', 'pengaturan_pajak',
       'pengaturan_template_pdf', 'kategori_produk', 'satuan_produk', 'pengaturan_ai',
-      'pengaturan_ticket_topic'
+      'pengaturan_ticket_topic', 'request_category_settings', 'sop_category_settings'
     ].includes(activeView)) {
       setIsSettingsOpen(true);
     }
@@ -139,14 +137,14 @@ export const Layout: React.FC<LayoutProps> = ({
     isSupportActive: ['customer_support', 'complaints', 'knowledge_base', 'support_pipeline'].includes(activeView),
     isSalesActive: ['daftar_penawaran', 'buat_penawaran', 'edit_penawaran', 'daftar_proforma', 'buat_proforma', 'edit_proforma', 'daftar_invoice', 'buat_invoice', 'edit_invoice', 'daftar_kwitansi', 'buat_kwitansi', 'edit_kwitansi', 'request_invoice', 'buat_request_invoice', 'edit_request_invoice', 'request_kwitansi', 'buat_request_kwitansi', 'edit_request_kwitansi'].includes(activeView),
     isClientActive: ['data_client', 'perusahaan_client', 'pengaturan_kategori_client'].includes(activeView),
-    isSopActive: ['sop_all', 'sop_category_settings', 'sop_archive', 'sop_editor', 'sop_detail'].includes(activeView) || activeView.startsWith('sop_cat_'),
+    isSopActive: ['sop_all', 'sop_archive', 'sop_editor', 'sop_detail'].includes(activeView) || activeView.startsWith('sop_cat_'),
     isSettingsActive: [
       'pengaturan_perusahaan', 'workspace_email_config', 'anggota_tim', 'manajemen_role',
       'pengaturan_leads', 'pengaturan_sumber_leads', 'pengaturan_deals_pipeline',
       'pengaturan_project_pipeline', 'pengaturan_task_pipeline', 'support_pipeline',
       'pengaturan_kategori_client', 'penomoran_otomatis', 'pengaturan_pajak',
       'pengaturan_template_pdf', 'kategori_produk', 'satuan_produk', 'pengaturan_ai',
-      'pengaturan_ticket_topic'
+      'pengaturan_ticket_topic', 'request_category_settings', 'sop_category_settings'
     ].includes(activeView)
   }), [activeView]);
 
@@ -263,12 +261,12 @@ export const Layout: React.FC<LayoutProps> = ({
       <Button
         onClick={() => { onNavigate(id); setIsSidebarOpen(false); }}
         align="left" size='sm'
-        className={`w-full flex items-center gap-4 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer !normal-case !tracking-tight ${activeView === id ? 'text-blue-600 font-bold' : 'text-gray-700 hover:bg-gray-50 font-medium'}`}
+        className={`w-full flex items-center gap-4 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer !normal-case ! ${activeView === id ? 'text-blue-600 font-bold' : 'text-gray-700 hover:bg-gray-50 font-medium'}`}
       >
         <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-sm ${activeView === id ? 'bg-blue-600 text-white' : `${bgColorClass} ${iconColorClass}`}`}>
           {React.cloneElement(icon as React.ReactElement<any>, { size: 14 })}
         </div>
-        <Label className={`text-[13px] !capitalize !tracking-tight ${activeView === id ? 'text-blue-600' : 'text-inherit'}`}>{label}</Label>
+        <Label className={`text-[13px] !capitalize ! ${activeView === id ? 'text-blue-600' : 'text-inherit'}`}>{label}</Label>
       </Button>
     </div>
   );
@@ -278,7 +276,7 @@ export const Layout: React.FC<LayoutProps> = ({
       <Button
         onClick={() => { onNavigate(id); setIsSidebarOpen(false); }}
         align="left" size='sm'
-        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer !normal-case !tracking-tight ${active ? 'text-blue-600 font-bold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50 font-medium'}`}
+        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer !normal-case ! ${active ? 'text-blue-600 font-bold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50 font-medium'}`}
       >
         <div className="flex items-center gap-3">
           <div className="w-1 h-1 flex items-center justify-center">
@@ -289,7 +287,7 @@ export const Layout: React.FC<LayoutProps> = ({
           <div className={`transition-colors ${active ? 'text-blue-600' : 'text-gray-400'}`}>
             {React.cloneElement(icon as React.ReactElement<any>, { size: 14 })}
           </div>
-          <Label className={`text-[12px] !capitalize !tracking-tight ${active ? 'text-blue-600' : 'text-inherit'}`}>{label}</Label>
+          <Label className={`text-[12px] !capitalize ! ${active ? 'text-blue-600' : 'text-inherit'}`}>{label}</Label>
         </div>
       </Button>
     </div>
@@ -300,7 +298,7 @@ export const Layout: React.FC<LayoutProps> = ({
       key={id}
       onClick={() => { onNavigate(id); setIsSidebarOpen(false); }}
       align="left" size='sm'
-      className={`w-full px-3 py-2 rounded-lg text-[11px] font-medium !capitalize !tracking-tight transition-all cursor-pointer ${active ? 'text-blue-600 font-bold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}
+      className={`w-full px-3 py-2 rounded-lg text-[11px] font-medium !capitalize ! transition-all cursor-pointer ${active ? 'text-blue-600 font-bold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}
     >
       <div className="flex items-center gap-3">
         <div className="w-1 h-1 flex items-center justify-center">
@@ -334,7 +332,7 @@ export const Layout: React.FC<LayoutProps> = ({
             <Button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               align="left" size='sm'
-              className={`w-full group flex items-center gap-3 p-3 rounded-2xl transition-all duration-300 border cursor-pointer !normal-case !tracking-tight ${isDropdownOpen ? 'bg-white border-blue-100 shadow-xl shadow-blue-50 ring-4 ring-blue-50/50' : 'bg-white border-gray-100 hover:border-blue-200'}`}
+              className={`w-full group flex items-center gap-3 p-3 rounded-2xl transition-all duration-300 border cursor-pointer !normal-case ! ${isDropdownOpen ? 'bg-white border-blue-100 shadow-xl shadow-blue-50 ring-4 ring-blue-50/50' : 'bg-white border-gray-100 hover:border-blue-200'}`}
             >
               <div className="relative">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-medium text-xs shadow-lg transition-transform group-hover:scale-105 duration-300 overflow-hidden ${(!activeCompany && isAdmin) ? 'bg-blue-600' : 'bg-gray-900'}`}>
@@ -349,8 +347,8 @@ export const Layout: React.FC<LayoutProps> = ({
                 </div>
               </div>
               <div className="flex-1 text-left overflow-hidden">
-                <Subtext className="text-[10px] text-gray-400 font-medium !capitalize !tracking-tight mb-1">Workspace</Subtext>
-                <H1 className="text-[13px] font-medium text-gray-900 truncate !capitalize !tracking-tight">
+                <Subtext className="text-[10px] text-gray-400 font-medium !capitalize ! mb-1">Workspace</Subtext>
+                <H1 className="text-[13px] font-medium text-gray-900 truncate !capitalize !">
                   {(!activeCompany && isAdmin) ? 'Platform Central' : (activeCompany?.name || 'Pilih Tim')}
                 </H1>
               </div>
@@ -362,29 +360,29 @@ export const Layout: React.FC<LayoutProps> = ({
                 <div className="max-h-[60vh] flex flex-col">
                   {isAdmin && (
                     <div className="px-2 pb-2 mb-2 border-b border-gray-50">
-                      <Button onClick={() => { onCompanyChange(null); setIsDropdownOpen(false); }} align="left" size='sm' className={`w-full px-3 py-2 flex items-center gap-3 rounded-xl transition-all cursor-pointer !normal-case !tracking-tight ${!activeCompany ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50 text-gray-500'}`}>
+                      <Button onClick={() => { onCompanyChange(null); setIsDropdownOpen(false); }} align="left" size='sm' className={`w-full px-3 py-2 flex items-center gap-3 rounded-xl transition-all cursor-pointer !normal-case ! ${!activeCompany ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50 text-gray-500'}`}>
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${!activeCompany ? 'bg-blue-600 text-white shadow-lg' : 'bg-gray-100 text-gray-400'}`}><Monitor size={14} /></div>
-                        <Label className="text-[11px] !capitalize !tracking-tight">Platform Central</Label>
+                        <Label className="text-[11px] !capitalize !">Platform Central</Label>
                       </Button>
                     </div>
                   )}
                   <div className="px-3 pb-2"><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" size={12} /><Input type="text" placeholder="Cari tim..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-9 pr-3 py-2 bg-gray-50/50 border border-transparent focus:border-blue-100 focus:bg-white rounded-xl text-[10px] font-medium outline-none transition-all" /></div></div>
                   <div className="px-2 space-y-1 overflow-y-auto custom-scrollbar">
                     {filteredCompanies.map(co => (
-                      <Button key={co.id} onClick={() => { onCompanyChange(co); setIsDropdownOpen(false); }} align="left" size='sm' className={`w-full px-3 py-2 flex items-center gap-3 rounded-xl transition-all !capitalize !normal-case !tracking-tight cursor-pointer ${activeCompany?.id === co.id ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-50 text-gray-500'}`}>
+                      <Button key={co.id} onClick={() => { onCompanyChange(co); setIsDropdownOpen(false); }} align="left" size='sm' className={`w-full px-3 py-2 flex items-center gap-3 rounded-xl transition-all !capitalize !normal-case ! cursor-pointer ${activeCompany?.id === co.id ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-50 text-gray-500'}`}>
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${activeCompany?.id === co.id ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-400'}`}>{co.logo_url ? <img src={co.logo_url} className="w-full h-full object-cover rounded-lg" alt="Logo" /> : co.name.charAt(0)}</div>
-                        <Label className="text-[11px] truncate !capitalize !tracking-tight ">{co.name}</Label>
+                        <Label className="text-[11px] truncate !capitalize ! ">{co.name}</Label>
                       </Button>
                     ))}
                   </div>
                   <div className="mt-2 pt-2 border-t border-gray-50 px-2 space-y-1">
-                    <Button onClick={() => { onNavigate('profil_saya'); setIsDropdownOpen(false); }} align="left" size='sm' className="w-full px-3 py-2 flex items-center gap-3 rounded-xl text-gray-600 hover:bg-gray-50 transition-all cursor-pointer !normal-case !tracking-tight">
+                    <Button onClick={() => { onNavigate('profil_saya'); setIsDropdownOpen(false); }} align="left" size='sm' className="w-full px-3 py-2 flex items-center gap-3 rounded-xl text-gray-600 hover:bg-gray-50 transition-all cursor-pointer !normal-case !">
                       <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400"><User size={14} /></div>
-                      <Label className="text-[10px] !capitalize !tracking-tight">Profil Saya</Label>
+                      <Label className="text-[10px] !capitalize !">Profil Saya</Label>
                     </Button>
-                    <Button onClick={() => { onLogout(); setIsDropdownOpen(false); }} align="left" size='sm' className="w-full px-3 py-2 flex items-center gap-3 rounded-xl text-rose-500 hover:bg-rose-50 transition-all cursor-pointer !normal-case !tracking-tight">
+                    <Button onClick={() => { onLogout(); setIsDropdownOpen(false); }} align="left" size='sm' className="w-full px-3 py-2 flex items-center gap-3 rounded-xl text-rose-500 hover:bg-rose-50 transition-all cursor-pointer !normal-case !">
                       <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center text-rose-500"><LogOut size={14} /></div>
-                      <Label className="text-[10px] !capitalize !tracking-tight">Logout Sesi</Label>
+                      <Label className="text-[10px] !capitalize !">Logout Sesi</Label>
                     </Button>
                   </div>
                 </div>
@@ -404,10 +402,10 @@ export const Layout: React.FC<LayoutProps> = ({
                   {activeStates.isCrmActive && (
                     <div className="absolute left-[-12px] top-2 bottom-2 w-1 bg-blue-600 rounded-r-full z-10" />
                   )}
-                  <Button onClick={() => setIsCrmOpen(!isCrmOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case !tracking-tight ${activeStates.isCrmActive ? 'text-blue-600' : isCrmOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
+                  <Button onClick={() => setIsCrmOpen(!isCrmOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case ! ${activeStates.isCrmActive ? 'text-blue-600' : isCrmOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
                     <div className="flex-1 flex items-center gap-4">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-md ${activeStates.isCrmActive ? 'bg-indigo-600 text-white' : 'bg-indigo-500 text-white'}`}><Target size={14} /></div>
-                      <Label className={`text-[13px] !capitalize !tracking-tight ${activeStates.isCrmActive ? 'text-blue-600 font-bold' : isCrmOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>CRM</Label>
+                      <Label className={`text-[13px] !capitalize ! ${activeStates.isCrmActive ? 'text-blue-600 font-bold' : isCrmOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>CRM</Label>
                     </div>
                     <ChevronRight size={14} className={`transition-transform duration-300 ${isCrmOpen ? 'rotate-90 text-indigo-500' : activeStates.isCrmActive ? 'text-indigo-400' : 'text-gray-300'}`} />
                   </Button>
@@ -419,7 +417,7 @@ export const Layout: React.FC<LayoutProps> = ({
                           <Button
                             onClick={() => setIsDealsExpanded(!isDealsExpanded)}
                             align="left" size='sm'
-                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case !tracking-tight ${(activeView === 'deals' || activeView.startsWith('deals_')) ? 'text-blue-600 font-bold' : isDealsExpanded ? 'text-gray-900 font-semibold bg-gray-50/50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case ! ${(activeView === 'deals' || activeView.startsWith('deals_')) ? 'text-blue-600 font-bold' : isDealsExpanded ? 'text-gray-900 font-semibold bg-gray-50/50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}
                           >
                             <div className="flex items-center gap-3">
                               <div className="w-1 h-1 flex items-center justify-center">
@@ -428,7 +426,7 @@ export const Layout: React.FC<LayoutProps> = ({
                                 )}
                               </div>
                               <div className={`${(activeView === 'deals' || activeView.startsWith('deals_')) ? 'text-blue-600' : isDealsExpanded ? 'text-indigo-600' : 'text-gray-300'}`}><Layers size={14} /></div>
-                              <Label className="text-[12px] !capitalize !tracking-tight">Deals</Label>
+                              <Label className="text-[12px] !capitalize !">Deals</Label>
                             </div>
                             <ChevronRight size={10} className={`transition-transform duration-300 ml-auto ${isDealsExpanded ? 'rotate-90 text-indigo-500' : 'text-gray-300'}`} />
                           </Button>
@@ -451,10 +449,10 @@ export const Layout: React.FC<LayoutProps> = ({
                   {activeStates.isProjectActive && (
                     <div className="absolute left-[-12px] top-2 bottom-2 w-1 bg-blue-600 rounded-r-full z-10 shadow-[0_0_10px_rgba(37,99,235,0.2)]" />
                   )}
-                  <Button onClick={() => setIsProjectOpen(!isProjectOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case !tracking-tight ${activeStates.isProjectActive ? 'text-blue-600' : isProjectOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
+                  <Button onClick={() => setIsProjectOpen(!isProjectOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case ! ${activeStates.isProjectActive ? 'text-blue-600' : isProjectOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
                     <div className="flex-1 flex items-center gap-4">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-md ${activeStates.isProjectActive ? 'bg-blue-600 text-white' : 'bg-blue-600 text-white'}`}><Briefcase size={14} /></div>
-                      <Label className={`text-[13px] !capitalize !tracking-tight ${activeStates.isProjectActive ? 'text-blue-600 font-bold' : isProjectOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>Projects</Label>
+                      <Label className={`text-[13px] !capitalize ! ${activeStates.isProjectActive ? 'text-blue-600 font-bold' : isProjectOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>Projects</Label>
                     </div>
                     <ChevronRight size={14} className={`transition-transform duration-300 ${isProjectOpen ? 'rotate-90 text-blue-600' : activeStates.isProjectActive ? 'text-blue-400' : 'text-gray-300'}`} />
                   </Button>
@@ -472,10 +470,10 @@ export const Layout: React.FC<LayoutProps> = ({
                   {activeStates.isSupportActive && (
                     <div className="absolute left-[-12px] top-2 bottom-2 w-1 bg-blue-600 rounded-r-full z-10 shadow-[0_0_10px_rgba(37,99,235,0.2)]" />
                   )}
-                  <Button onClick={() => setIsSupportOpen(!isSupportOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case !tracking-tight ${activeStates.isSupportActive ? 'text-blue-600' : isSupportOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
+                  <Button onClick={() => setIsSupportOpen(!isSupportOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case ! ${activeStates.isSupportActive ? 'text-blue-600' : isSupportOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
                     <div className="flex-1 flex items-center gap-4">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-md ${activeStates.isSupportActive ? 'bg-rose-600 text-white' : 'bg-rose-500 text-white'}`}><Headset size={14} /></div>
-                      <Label className={`text-[13px] !capitalize !tracking-tight ${activeStates.isSupportActive ? 'text-blue-600 font-bold' : isSupportOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>Support</Label>
+                      <Label className={`text-[13px] !capitalize ! ${activeStates.isSupportActive ? 'text-blue-600 font-bold' : isSupportOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>Support</Label>
                     </div>
                     <ChevronRight size={14} className={`transition-transform duration-300 ${isSupportOpen ? 'rotate-90 text-rose-500' : activeStates.isSupportActive ? 'text-rose-400' : 'text-gray-300'}`} />
                   </Button>
@@ -495,10 +493,10 @@ export const Layout: React.FC<LayoutProps> = ({
                   {activeStates.isSalesActive && (
                     <div className="absolute left-[-12px] top-2 bottom-2 w-1 bg-blue-600 rounded-r-full z-10 shadow-[0_0_10px_rgba(37,99,235,0.2)]" />
                   )}
-                  <Button onClick={() => setIsSalesOpen(!isSalesOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case !tracking-tight ${activeStates.isSalesActive ? 'text-blue-600' : isSalesOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
+                  <Button onClick={() => setIsSalesOpen(!isSalesOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case ! ${activeStates.isSalesActive ? 'text-blue-600' : isSalesOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
                     <div className="flex-1 flex items-center gap-4">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-md ${activeStates.isSalesActive ? 'bg-sky-600 text-white' : 'bg-sky-500 text-white'}`}><ReceiptCent size={14} /></div>
-                      <Label className={`text-[13px] !capitalize !tracking-tight ${activeStates.isSalesActive ? 'text-blue-600 font-bold' : isSalesOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>Penjualan</Label>
+                      <Label className={`text-[13px] !capitalize ! ${activeStates.isSalesActive ? 'text-blue-600 font-bold' : isSalesOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>Penjualan</Label>
                     </div>
                     <ChevronRight size={14} className={`transition-transform duration-300 ${isSalesOpen ? 'rotate-90 text-sky-500' : activeStates.isSalesActive ? 'text-sky-400' : 'text-gray-300'}`} />
                   </Button>
@@ -513,7 +511,7 @@ export const Layout: React.FC<LayoutProps> = ({
                           <Button
                             onClick={() => setIsRequestsExpanded(!isRequestsExpanded)}
                             align="left" size='sm'
-                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case !tracking-tight ${(activeView.includes('request_invoice') || activeView.includes('request_kwitansi')) ? 'text-blue-600 font-bold' : isRequestsExpanded ? 'text-gray-900 font-semibold bg-gray-50/50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case ! ${(activeView.includes('request_invoice') || activeView.includes('request_kwitansi')) ? 'text-blue-600 font-bold' : isRequestsExpanded ? 'text-gray-900 font-semibold bg-gray-50/50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}
                           >
                             <div className="flex items-center gap-3">
                               <div className="w-1 h-1 flex items-center justify-center">
@@ -522,7 +520,7 @@ export const Layout: React.FC<LayoutProps> = ({
                                 )}
                               </div>
                               <div className={`${(activeView.includes('request_invoice') || activeView.includes('request_kwitansi')) ? 'text-blue-600' : isRequestsExpanded ? 'text-indigo-600' : 'text-gray-300'}`}><FileQuestion size={14} /></div>
-                              <Label className="text-[12px] !capitalize !tracking-tight">Requests</Label>
+                              <Label className="text-[12px] !capitalize !">Requests</Label>
                             </div>
                             <ChevronRight size={10} className={`transition-transform duration-300 ml-auto ${isRequestsExpanded ? 'rotate-90 text-indigo-500' : 'text-gray-300'}`} />
                           </Button>
@@ -531,11 +529,6 @@ export const Layout: React.FC<LayoutProps> = ({
                               {canShow('Request Invoice') && renderSubMenuLevel2('request_invoice', 'Request Invoice', activeView === 'request_invoice' || activeView === 'buat_request_invoice' || activeView === 'edit_request_invoice')}
                               {canShow('Request Kwitansi') && renderSubMenuLevel2('request_kwitansi', 'Request Kwitansi', activeView === 'request_kwitansi' || activeView === 'buat_request_kwitansi' || activeView === 'edit_request_kwitansi')}
                               {canShow('Akses Sales Request') && salesRequestCategories.map(cat => renderSubMenuLevel2(`request_cat_${cat.id}`, cat.name, activeView === `request_cat_${cat.id}` || activeView === `buat_request_cat_${cat.id}` || activeView === `edit_request_cat_${cat.id}`))}
-                              {canShow('Pengaturan Kategori Request') && (
-                                <div className="mt-2 pt-2 border-t border-blue-50">
-                                  {renderSubMenuLevel2('request_category_settings', 'Konfigurasi', activeView === 'request_category_settings')}
-                                </div>
-                              )}
                             </div>
                           )}
                         </div>
@@ -553,10 +546,10 @@ export const Layout: React.FC<LayoutProps> = ({
                   {activeStates.isClientActive && (
                     <div className="absolute left-[-12px] top-2 bottom-2 w-1 bg-blue-600 rounded-r-full z-10 shadow-[0_0_10px_rgba(37,99,235,0.2)]" />
                   )}
-                  <Button onClick={() => setIsClientOpen(!isClientOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case !tracking-tight ${activeStates.isClientActive ? 'text-blue-600' : isClientOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
+                  <Button onClick={() => setIsClientOpen(!isClientOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case ! ${activeStates.isClientActive ? 'text-blue-600' : isClientOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
                     <div className="flex-1 flex items-center gap-4">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-md ${activeStates.isClientActive ? 'bg-violet-600 text-white' : 'bg-violet-500 text-white'}`}><Users2 size={14} /></div>
-                      <Label className={`text-[13px] !capitalize !tracking-tight ${activeStates.isClientActive ? 'text-blue-600 font-bold' : isClientOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>Client</Label>
+                      <Label className={`text-[13px] !capitalize ! ${activeStates.isClientActive ? 'text-blue-600 font-bold' : isClientOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>Client</Label>
                     </div>
                     <ChevronRight size={14} className={`transition-transform duration-300 ${isClientOpen ? 'rotate-90 text-violet-500' : activeStates.isClientActive ? 'text-violet-400' : 'text-gray-300'}`} />
                   </Button>
@@ -575,10 +568,10 @@ export const Layout: React.FC<LayoutProps> = ({
                   {activeStates.isSopActive && (
                     <div className="absolute left-[-12px] top-2 bottom-2 w-1 bg-blue-600 rounded-r-full z-10 shadow-[0_0_10px_rgba(37,99,235,0.2)]" />
                   )}
-                  <Button onClick={() => setIsSopOpen(!isSopOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case !tracking-tight ${activeStates.isSopActive ? 'text-blue-600' : isSopOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
+                  <Button onClick={() => setIsSopOpen(!isSopOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case ! ${activeStates.isSopActive ? 'text-blue-600' : isSopOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
                     <div className="flex-1 flex items-center gap-4">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-md ${activeStates.isSopActive ? 'bg-emerald-700 text-white' : 'bg-emerald-600 text-white'}`}><BookMarked size={14} /></div>
-                      <Label className={`text-[13px] !capitalize !tracking-tight ${activeStates.isSopActive ? 'text-blue-600 font-bold' : isSopOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>SOP</Label>
+                      <Label className={`text-[13px] !capitalize ! ${activeStates.isSopActive ? 'text-blue-600 font-bold' : isSopOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>SOP</Label>
                     </div>
                     <ChevronRight size={14} className={`transition-transform duration-300 ${isSopOpen ? 'rotate-90 text-emerald-600' : activeStates.isSopActive ? 'text-emerald-400' : 'text-gray-300'}`} />
                   </Button>
@@ -590,22 +583,21 @@ export const Layout: React.FC<LayoutProps> = ({
                         <Button
                           onClick={() => setIsSopCategoriesExpanded(!isSopCategoriesExpanded)}
                           align="left" size='sm'
-                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case !tracking-tight ${(activeView === 'sop_category_settings' || activeView.startsWith('sop_cat_')) ? 'text-blue-600 font-bold' : isSopCategoriesExpanded ? 'text-gray-900 font-semibold bg-gray-50/50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case ! ${activeView.startsWith('sop_cat_') ? 'text-blue-600 font-bold' : isSopCategoriesExpanded ? 'text-gray-900 font-semibold bg-gray-50/50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}
                         >
                           <div className="flex items-center gap-3">
                             <div className="w-1 h-1 flex items-center justify-center">
-                              {(activeView === 'sop_category_settings' || activeView.startsWith('sop_cat_')) && (
+                              {activeView.startsWith('sop_cat_') && (
                                 <div className="w-1 h-1 bg-blue-600 rounded-full shadow-[0_0_8px_rgba(37,99,235,0.4)]" />
                               )}
                             </div>
-                            <div className={`${(activeView === 'sop_category_settings' || activeView.startsWith('sop_cat_')) ? 'text-blue-600' : isSopCategoriesExpanded ? 'text-emerald-600' : 'text-gray-300'}`}><Tags size={14} /></div>
-                            <Label className="text-[12px] !capitalize !tracking-tight">Kategori SOP</Label>
+                            <div className={`${activeView.startsWith('sop_cat_') ? 'text-blue-600' : isSopCategoriesExpanded ? 'text-emerald-600' : 'text-gray-300'}`}><Tags size={14} /></div>
+                            <Label className="text-[12px] !capitalize !">Kategori SOP</Label>
                           </div>
                           <ChevronRight size={10} className={`transition-transform duration-300 ml-auto ${isSopCategoriesExpanded ? 'rotate-90 text-emerald-500' : 'text-gray-300'}`} />
                         </Button>
                         {isSopCategoriesExpanded && (
                           <div className="ml-[12px] !border-l !border-emerald-100 pl-[14px] mt-1 space-y-0.5">
-                            {renderSubMenuLevel2('sop_category_settings', 'Konfigurasi', activeView === 'sop_category_settings')}
                             {sopCategories
                               .filter(cat => !cat.parent_id)
                               .map(cat => {
@@ -642,32 +634,45 @@ export const Layout: React.FC<LayoutProps> = ({
                     {activeStates.isSettingsActive && (
                       <div className="absolute left-[-12px] top-2 bottom-2 w-1 bg-blue-600 rounded-r-full z-10 shadow-[0_0_10px_rgba(37,99,235,0.2)]" />
                     )}
-                    <Button onClick={() => setIsSettingsOpen(!isSettingsOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case !tracking-tight ${activeStates.isSettingsActive ? 'text-blue-600' : isSettingsOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
+                    <Button onClick={() => setIsSettingsOpen(!isSettingsOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case ! ${activeStates.isSettingsActive ? 'text-blue-600' : isSettingsOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
                       <div className="flex-1 flex items-center gap-4">
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-md ${activeStates.isSettingsActive ? 'bg-amber-100 text-amber-600' : 'bg-amber-50 text-amber-500'}`}><Settings size={14} /></div>
-                        <Label className={`text-[13px] !capitalize !tracking-tight ${activeStates.isSettingsActive ? 'text-blue-600 font-bold' : isSettingsOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>Workspace Setup</Label>
+                        <Label className={`text-[13px] !capitalize ! ${activeStates.isSettingsActive ? 'text-blue-600 font-bold' : isSettingsOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>Workspace Setup</Label>
                       </div>
                       <ChevronRight size={14} className={`transition-transform duration-300 ${isSettingsOpen ? 'rotate-90 text-amber-500' : activeStates.isSettingsActive ? 'text-amber-400' : 'text-gray-300'}`} />
                     </Button>
                     {isSettingsOpen && (
                       <div className="pl-4 space-y-0.5 mt-0.5 ml-6 pb-4">
+                        {/* UMUM & TIM */}
+                        <div className="px-3 pb-1 pt-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Umum & Tim</div>
                         {canShow('Perusahaan') && renderSubMenuLevel1('pengaturan_perusahaan', 'Identitas Umum', <Building2 />, activeView === 'pengaturan_perusahaan')}
                         {canShow('Konfigurasi Email') && renderSubMenuLevel1('workspace_email_config', 'Konfigurasi Email', <Mail />, activeView === 'workspace_email_config')}
                         {canShow('Anggota Tim') && renderSubMenuLevel1('anggota_tim', 'Anggota Tim', <Users />, activeView === 'anggota_tim')}
                         {canShow('Manajemen Role') && renderSubMenuLevel1('manajemen_role', 'Manajemen Role', <ShieldAlert />, activeView === 'manajemen_role')}
+
+                        {/* CRM & PIPELINES */}
+                        <div className="px-3 pb-1 pt-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Pipelines</div>
                         {canShow('Pengaturan Leads') && renderSubMenuLevel1('pengaturan_leads', 'Leads Pipeline', <Target />, activeView === 'pengaturan_leads')}
-                        {canShow('Pengaturan Sumber Leads') && renderSubMenuLevel1('pengaturan_sumber_leads', 'Lead Sources', <Globe />, activeView === 'pengaturan_sumber_leads')}
                         {canShow('Pengaturan Deals Pipeline') && renderSubMenuLevel1('pengaturan_deals_pipeline', 'Deals Pipeline', <Layers />, activeView === 'pengaturan_deals_pipeline')}
                         {canShow('Project Pipeline') && renderSubMenuLevel1('pengaturan_project_pipeline', 'Project Pipeline', <Workflow />, activeView === 'pengaturan_project_pipeline')}
                         {canShow('Task Pipeline') && renderSubMenuLevel1('pengaturan_task_pipeline', 'Task Pipeline', <CheckSquare />, activeView === 'pengaturan_task_pipeline')}
                         {canShow('Support Pipeline') && renderSubMenuLevel1('support_pipeline', 'Support Pipeline', <LifeBuoy />, activeView === 'support_pipeline')}
+
+                        {/* MASTER DATA */}
+                        <div className="px-3 pb-1 pt-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Master Data</div>
                         {canShow('Pengaturan Kategori Client') && renderSubMenuLevel1('pengaturan_kategori_client', 'Kategori Client', <Tags />, activeView === 'pengaturan_kategori_client')}
+                        {canShow('Pengaturan Sumber Leads') && renderSubMenuLevel1('pengaturan_sumber_leads', 'Lead Sources', <Globe />, activeView === 'pengaturan_sumber_leads')}
+                        {canShow('Kategori Produk') && renderSubMenuLevel1('kategori_produk', 'Kategori Produk', <LayoutGrid />, activeView === 'kategori_produk')}
+                        {canShow('Satuan') && renderSubMenuLevel1('satuan_produk', 'Satuan Produk', <Weight />, activeView === 'satuan_produk')}
+                        {canShow('Pengaturan Kategori Request') && renderSubMenuLevel1('request_category_settings', 'Kategori Request', <FileQuestion />, activeView === 'request_category_settings')}
+                        {canShow('SOP') && renderSubMenuLevel1('sop_category_settings', 'Kategori SOP', <BookMarked />, activeView === 'sop_category_settings')}
+                        {canShow('Ticket Topic') && renderSubMenuLevel1('pengaturan_ticket_topic', 'Ticket Topic', <Ticket />, activeView === 'pengaturan_ticket_topic')}
+
+                        {/* FINANCE & DOCS */}
+                        <div className="px-3 pb-1 pt-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Finance & Tools</div>
                         {canShow('Penomoran Otomatis') && renderSubMenuLevel1('penomoran_otomatis', 'Format Nomor', <Hash />, activeView === 'penomoran_otomatis')}
                         {canShow('Pengaturan Pajak') && renderSubMenuLevel1('pengaturan_pajak', 'Pajak & Fee', <Coins />, activeView === 'pengaturan_pajak')}
                         {canShow('Template Dokumen') && renderSubMenuLevel1('pengaturan_template_pdf', 'PDF Templates', <Palette />, activeView === 'pengaturan_template_pdf')}
-                        {canShow('Kategori Produk') && renderSubMenuLevel1('kategori_produk', 'Kategori Produk', <LayoutGrid />, activeView === 'kategori_produk')}
-                        {canShow('Satuan') && renderSubMenuLevel1('satuan_produk', 'Satuan Produk', <Weight />, activeView === 'satuan_produk')}
-                        {canShow('Ticket Topic') && renderSubMenuLevel1('pengaturan_ticket_topic', 'Ticket Topic', <Ticket />, activeView === 'pengaturan_ticket_topic')}
                         {canShow('Pengaturan AI') && renderSubMenuLevel1('pengaturan_ai', 'Konfigurasi Gemini', <BrainCircuit />, activeView === 'pengaturan_ai')}
                       </div>
                     )}
@@ -696,8 +701,8 @@ export const Layout: React.FC<LayoutProps> = ({
               {user.avatar_url ? <img src={user.avatar_url} className="w-full h-full object-cover" alt="Avatar" /> : <User size={20} />}
             </div>
             <div className="overflow-hidden">
-              <Subtext className="text-[11px] font-semibold text-gray-900 truncate tracking-tight">{user.full_name}</Subtext>
-              <Subtext className="text-[9px] text-gray-400 font-medium !capitalize !tracking-tight truncate">{currentRoleName}</Subtext>
+              <Subtext className="text-[11px] font-semibold text-gray-900 truncate ">{user.full_name}</Subtext>
+              <Subtext className="text-[9px] text-gray-400 font-medium !capitalize ! truncate">{currentRoleName}</Subtext>
             </div>
           </div>
           <Button onClick={onLogout} className="p-2.5 text-gray-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all cursor-pointer" title="Keluar Sesi"><LogOut size={16} /></Button>
@@ -712,7 +717,7 @@ export const Layout: React.FC<LayoutProps> = ({
           >
             <Menu size={18} />
           </Button>
-          <H2 className="text-xl font-medium text-gray-900 tracking-tight capitalize truncate">{getDisplayHeader()}</H2>
+          <H2 className="text-xl font-medium text-gray-900  capitalize truncate">{getDisplayHeader()}</H2>
         </header>
         <div className={`flex-1 overflow-y-auto custom-scrollbar ${['buat_penawaran', 'edit_penawaran', 'buat_proforma', 'edit_proforma', 'buat_invoice', 'edit_invoice', 'buat_kwitansi', 'edit_kwitansi', 'buat_request_invoice', 'edit_request_invoice', 'sop_editor', 'sop_detail'].includes(activeView) ? 'p-0' : 'p-6 lg:p-10'}`}>{children}</div>
       </main>

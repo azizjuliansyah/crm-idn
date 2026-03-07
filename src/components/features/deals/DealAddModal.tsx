@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Input, Textarea, Button, Subtext, Label, SectionHeader, Modal, ComboBox, H4 } from '@/components/ui';
+import { Input, Textarea, Button, Subtext, Label, SectionHeader, Modal, ComboBox, H4, ToastType } from '@/components/ui';
 
 import { supabase } from '@/lib/supabase';
 import { Deal, Company, CompanyMember, Pipeline, Client, ClientCompany, ClientCompanyCategory } from '@/lib/types';
@@ -23,11 +23,12 @@ interface Props {
   setClients: React.Dispatch<React.SetStateAction<Client[]>>;
   setClientCompanies: React.Dispatch<React.SetStateAction<ClientCompany[]>>;
   setCategories: React.Dispatch<React.SetStateAction<ClientCompanyCategory[]>>;
+  setToast: React.Dispatch<React.SetStateAction<{ isOpen: boolean; message: string; type: ToastType }>>;
 }
 
 export const DealAddModal: React.FC<Props> = ({
   isOpen, onClose, company, user, members, pipeline, clients, clientCompanies,
-  categories, onSuccess, setClients, setClientCompanies, setCategories
+  categories, onSuccess, setClients, setClientCompanies, setCategories, setToast
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isProcessingQuick, setIsProcessingQuick] = useState(false);
@@ -71,7 +72,7 @@ export const DealAddModal: React.FC<Props> = ({
 
   const handleQuickAddClient = async (savedForm: Partial<Client>) => {
     if (!savedForm.name?.trim()) {
-      alert("Nama Client wajib diisi.");
+      setToast({ isOpen: true, message: "Nama Client wajib diisi.", type: 'error' });
       return;
     }
     setIsProcessingQuick(true);
@@ -113,7 +114,7 @@ export const DealAddModal: React.FC<Props> = ({
       setIsAddingClient(false);
       setNewClient({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
     } catch (err: any) {
-      alert("Gagal menambah client: " + err.message);
+      setToast({ isOpen: true, message: "Gagal menambah client: " + err.message, type: 'error' });
     } finally {
       setIsProcessingQuick(false);
     }

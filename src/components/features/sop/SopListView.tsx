@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 
-import { Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Label, SearchInput, H2 } from '@/components/ui';
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Label, SearchInput, H2, Toast, ToastType } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -11,7 +11,8 @@ import {
   Plus, Search, FileText, Loader2, BookOpen,
   ChevronRight, ArrowUpDown, Clock, Tag, Archive, Edit, Eye, Trash2
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface Props {
   company: Company;
@@ -21,9 +22,15 @@ interface Props {
 
 export const SopListView: React.FC<Props> = ({ company, categoryId, isArchive }) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [sops, setSops] = useState<Sop[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
+  });
 
   const fetchSops = useCallback(async () => {
     setLoading(true);
@@ -53,6 +60,21 @@ export const SopListView: React.FC<Props> = ({ company, categoryId, isArchive })
     fetchSops();
   }, [fetchSops]);
 
+  useEffect(() => {
+    const success = searchParams.get('success');
+    if (success) {
+      setToast({
+        isOpen: true,
+        message: success === 'created' ? 'SOP Berhasil Dibuat' : 'SOP Berhasil Diperbarui',
+        type: 'success'
+      });
+
+      // Clean up the URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
+    }
+  }, [searchParams]);
+
   const filteredSops = sops.filter(s =>
     s.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     s.document_number.toLowerCase().includes(searchTerm.toLowerCase())
@@ -62,7 +84,7 @@ export const SopListView: React.FC<Props> = ({ company, categoryId, isArchive })
     router.push(`/dashboard/sops/${id}`);
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-blue-600 mb-4" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Sinkronisasi Dokumen...</Subtext></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-blue-600 mb-4" /><Subtext className="text-[10px]  uppercase  text-gray-400">Sinkronisasi Dokumen...</Subtext></div>;
 
   return (
     <div className="space-y-6 flex flex-col">
@@ -70,14 +92,14 @@ export const SopListView: React.FC<Props> = ({ company, categoryId, isArchive })
         <div className="flex items-center justify-between">
           <div>
             <H2 className="text-xl">{isArchive ? 'Arsip SOP' : 'Standard Operating Procedure'}</H2>
-            <Subtext className="text-[10px] uppercase tracking-tight">Kelola daftar dokumen standard operating procedure perusahaan.</Subtext>
+            <Subtext className="text-[10px] uppercase ">Kelola daftar dokumen standard operating procedure perusahaan.</Subtext>
           </div>
           <div className="flex items-center gap-3">
             {!isArchive && (
               <Button
                 onClick={() => router.push('/dashboard/sops/create')}
                 leftIcon={<Plus size={14} strokeWidth={3} />}
-                className="!px-6 py-2.5 text-[10px] uppercase tracking-tight shadow-lg shadow-blue-100"
+                className="!px-6 py-2.5 text-[10px] uppercase  shadow-lg shadow-blue-100"
                 variant="primary"
                 size="sm"
               >
@@ -129,7 +151,7 @@ export const SopListView: React.FC<Props> = ({ company, categoryId, isArchive })
                         <FileText size={18} />
                       </div>
                       <div>
-                        <Subtext className="text-sm  text-gray-900 tracking-tight leading-tight group-hover:text-blue-600 transition-colors uppercase">
+                        <Subtext className="text-sm  text-gray-900  leading-tight group-hover:text-blue-600 transition-colors uppercase">
                           {sop.title}
                         </Subtext>
                         <Subtext className="text-[10px] text-gray-400 font-medium mt-1">
@@ -141,7 +163,7 @@ export const SopListView: React.FC<Props> = ({ company, categoryId, isArchive })
                   <TableCell className="px-8 py-6">
                     <div className="flex items-center gap-2">
                       <Tag size={12} className="text-gray-300" />
-                      <Label className="text-[11px]  text-gray-600 uppercase tracking-tight">
+                      <Label className="text-[11px]  text-gray-600 uppercase ">
                         {sop.sop_categories?.name || 'Manual'}
                       </Label>
                     </div>
@@ -152,22 +174,19 @@ export const SopListView: React.FC<Props> = ({ company, categoryId, isArchive })
                     </Label>
                   </TableCell>
                   <TableCell className="px-8 py-6 text-center">
-                    <Label className={`px-3 py-1 rounded-full text-[9px]  uppercase tracking-tight border ${sop.status === 'Approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'
+                    <Label className={`px-3 py-1 rounded-full text-[9px]  uppercase  border ${sop.status === 'Approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'
                       }`}>
                       {sop.status}
                     </Label>
                   </TableCell>
                   <TableCell className="px-8 py-6 text-center">
                     <div className="flex items-center justify-center gap-2 transition-all">
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      <ActionButton
+                        icon={Eye}
+                        variant="blue"
                         onClick={(e: any) => { e.stopPropagation(); handleView(sop.id); }}
-                        className="!p-2 text-blue-500 hover:!bg-blue-50 rounded-lg shadow-none border-none"
                         title="Lihat Detail"
-                      >
-                        <Eye size={16} />
-                      </Button>
+                      />
                       <ChevronRight size={16} className="text-gray-300" />
                     </div>
                   </TableCell>
@@ -188,6 +207,12 @@ export const SopListView: React.FC<Props> = ({ company, categoryId, isArchive })
 
 
       </div>
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 };

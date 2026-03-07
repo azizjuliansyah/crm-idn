@@ -127,7 +127,7 @@ export const LoginView: React.FC<Props> = ({ platformSettings }) => {
             <div className="w-16 h-16 bg-blue-600 rounded-[24px] flex items-center justify-center text-white  text-3xl shadow-2xl shadow-blue-200 mb-10">CP</div>
           )}
 
-          <H1 className="text-[44px] !font-bold text-gray-900 tracking-tight leading-[1.1] mb-6">
+          <H1 className="text-[44px] !font-bold text-gray-900  leading-[1.1] mb-6">
             Kelola Bisnis Jadi <br /> Lebih <span className="text-blue-600 relative inline-block">
               Pintar
               <span className="absolute bottom-1 left-0 w-full h-[6px] bg-blue-100/60 -z-10 rounded-full"></span>
@@ -158,7 +158,7 @@ export const LoginView: React.FC<Props> = ({ platformSettings }) => {
             <>
               <Button
                 onClick={() => { setMode('login'); setError(null); setSuccess(null); }}
-                className="flex items-center gap-2 !font-bold text-gray-400 hover:text-blue-600  text-[10px] uppercase tracking-tight mb-6 transition-colors"
+                className="flex items-center gap-2 !font-bold text-gray-400 hover:text-blue-600  text-[10px] uppercase  mb-6 transition-colors"
               >
                 <ChevronLeft size={14} /> Kembali Login
               </Button>
@@ -195,7 +195,7 @@ export const LoginView: React.FC<Props> = ({ platformSettings }) => {
                   <Button
                     type="button"
                     onClick={() => { setMode('forgot'); setError(null); setSuccess(null); }}
-                    className="text-[10px] font-bold !text-blue-600 uppercase tracking-tight hover:underline"
+                    className="text-[10px] font-bold !text-blue-600 uppercase  hover:underline"
                   >
                     Lupa Password?
                   </Button>

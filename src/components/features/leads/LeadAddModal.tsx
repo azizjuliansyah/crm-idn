@@ -2,7 +2,7 @@ import { Plus, Save, X, Mail, Building, Contact2, Wallet, FileText, Check as Che
 import { Company, Client, ClientCompany, ClientCompanyCategory, Lead, LeadStage, LeadSource, CompanyMember } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import React, { useState, useEffect } from 'react';
-import { Input, Textarea, Button, Subtext, Label, Modal, H4, ComboBox } from '@/components/ui';
+import { Input, Textarea, Button, Subtext, Label, Modal, H4, ComboBox, Toast, ToastType } from '@/components/ui';
 import { ClientFormModal } from '@/components/features/clients/components/ClientFormModal';
 
 
@@ -19,10 +19,11 @@ interface LeadAddModalProps {
   onSuccess: () => void;
   setClientCompanies: React.Dispatch<React.SetStateAction<ClientCompany[]>>;
   setCategories: React.Dispatch<React.SetStateAction<ClientCompanyCategory[]>>;
+  setToast: React.Dispatch<React.SetStateAction<{ isOpen: boolean; message: string; type: ToastType }>>;
 }
 
 export const LeadAddModal: React.FC<LeadAddModalProps> = ({
-  isOpen, onClose, company, members, stages, sources, clientCompanies, categories, onSuccess, setClientCompanies, setCategories
+  isOpen, onClose, company, members, stages, sources, clientCompanies, categories, onSuccess, setClientCompanies, setCategories, setToast
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -132,7 +133,7 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
       handleClientSelect(String(data.id));
       setIsClientModalOpen(false);
       setClientForm({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
-    } catch (err: any) { alert(err.message); } finally { setIsProcessingQuick(false); }
+    } catch (err: any) { setToast({ isOpen: true, message: err.message, type: 'error' }); } finally { setIsProcessingQuick(false); }
   };
 
   const handleSave = async (e?: React.FormEvent) => {
@@ -153,7 +154,7 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
       onSuccess();
       onClose();
     } catch (error: any) {
-      alert('Gagal Menyimpan: ' + error.message);
+      setToast({ isOpen: true, message: 'Gagal Menyimpan: ' + error.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -256,7 +257,7 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
             </div>
 
             <div className="space-y-2">
-              <Label className="text-[10px]  text-gray-400 uppercase tracking-tight ml-1">WhatsApp</Label>
+              <Label className="text-[10px]  text-gray-400 uppercase  ml-1">WhatsApp</Label>
               <div className="flex border border-gray-100 rounded-md overflow-hidden focus-within:border-blue-500 focus-within:bg-white transition-all">
                 <div className="px-4 py-2.5 bg-gray-100/50 text-[11px]  text-gray-400 border-r border-gray-100 flex items-center">+62</div>
                 <Input

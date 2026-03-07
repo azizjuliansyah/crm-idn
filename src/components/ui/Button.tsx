@@ -22,7 +22,7 @@ export const Button: React.FC<ButtonProps> = ({
   disabled,
   ...props
 }) => {
-  const baseStyles = 'inline-flex items-center uppercase tracking-tight transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none cursor-pointer';
+  const baseStyles = 'inline-flex items-center uppercase font-medium transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none cursor-pointer';
 
   const variants = {
     primary: 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 hover:bg-indigo-700',

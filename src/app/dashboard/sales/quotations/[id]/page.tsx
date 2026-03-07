@@ -15,10 +15,10 @@ export default function EditQuotationPage() {
   if (!id) return <div className="p-8 text-center text-red-500">Invalid Quotation ID</div>;
 
   return (
-    <QuotationFormView 
+    <QuotationFormView
       company={activeCompany}
       editingId={id}
-      onSaveSuccess={() => router.push('/dashboard/sales/quotations')}
+      onSaveSuccess={() => router.push('/dashboard/sales/quotations?success=updated')}
     />
   );
 }

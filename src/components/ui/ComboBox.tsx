@@ -99,7 +99,7 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
   return (
     <div className={`relative ${className}`} ref={containerRef}>
       {label && (
-        <label className="text-[10px] font-medium text-gray-400 uppercase tracking-tight ml-1">
+        <label className="text-[10px] font-medium text-gray-400 uppercase  ml-1">
           {label}
         </label>
       )}
@@ -144,7 +144,7 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
             <div className="flex flex-col min-w-0">
               <span className={`font-medium text-gray-900 truncate block normal-case ${placeholderSize}`}>{selectedOption.label}</span>
               {selectedOption.sublabel && (
-                <span className="text-[10px] text-gray-400 uppercase tracking-tight truncate block">{selectedOption.sublabel}</span>
+                <span className="text-[10px] text-gray-400 uppercase  truncate block">{selectedOption.sublabel}</span>
               )}
             </div>
           ) : (
@@ -202,7 +202,7 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
                   <div className="flex flex-col min-w-0">
                     <span className="text-sm font-semibold">{opt.label}</span>
                     {opt.sublabel && (
-                      <span className="text-[9px] uppercase tracking-tight text-gray-400 truncate">{opt.sublabel}</span>
+                      <span className="text-[9px] uppercase  text-gray-400 truncate">{opt.sublabel}</span>
                     )}
                   </div>
                   {opt.value === value && <Check size={14} className="text-blue-600 shrink-0" />}
@@ -223,7 +223,7 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
                   onAddNew();
                   setIsOpen(false);
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-md text-blue-600 font-bold text-[10px] uppercase tracking-tight hover:bg-blue-50 transition-all text-left"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-md text-blue-600 font-bold text-[10px] uppercase  hover:bg-blue-50 transition-all text-left"
               >
                 <div className="w-6 h-6 rounded-md bg-blue-100 flex items-center justify-center">
                   <Plus size={12} />

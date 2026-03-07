@@ -204,8 +204,8 @@ export const LogActivityView: React.FC<Props> = ({ user, companyId }) => {
             <div className="flex flex-col gap-4 bg-gray-50/50 p-6 rounded-2xl border border-gray-100 shrink-0">
                 <div className="flex items-center justify-between">
                     <div>
-                        <H2 className="text-xl font-semibold text-gray-900 !capitalize !tracking-tight">Aktivitas Tim Sales</H2>
-                        <Subtext className="text-gray-500 !capitalize !tracking-tight mt-1">Pantau seluruh aktivitas leads dan deals dalam satu tempat.</Subtext>
+                        <H2 className="text-xl font-semibold text-gray-900 !capitalize !">Aktivitas Tim Sales</H2>
+                        <Subtext className="text-gray-500 !capitalize ! mt-1">Pantau seluruh aktivitas leads dan deals dalam satu tempat.</Subtext>
                     </div>
                     <div className="flex items-center gap-3 bg-white p-1 rounded-xl shadow-sm border border-gray-100">
                         {isAdmin && (
@@ -221,7 +221,7 @@ export const LogActivityView: React.FC<Props> = ({ user, companyId }) => {
                                         }))
                                     ]}
                                     className="w-64 border-none !px-2 !py-0 shadow-none ring-0"
-                                    placeholderSize="text-[10px] font-bold text-gray-900 uppercase tracking-tight"
+                                    placeholderSize="text-[10px] font-bold text-gray-900 uppercase "
                                 />
                             </div>
                         )}
@@ -287,7 +287,7 @@ export const LogActivityView: React.FC<Props> = ({ user, companyId }) => {
             {/* ACTIVITY TIMELINE LIST */}
             <div className="flex-1 bg-white border border-gray-100 rounded-2xl flex flex-col">
                 <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/30 flex items-center justify-between shrink-0">
-                    <H2 className="text-sm font-semibold text-gray-900 !capitalize !tracking-tight">Riwayat Aktivitas</H2>
+                    <H2 className="text-sm font-semibold text-gray-900 !capitalize !">Riwayat Aktivitas</H2>
                     <Badge>{activities.length} Aktivitas</Badge>
                 </div>
 
@@ -334,7 +334,7 @@ export const LogActivityView: React.FC<Props> = ({ user, companyId }) => {
                                                                     {new Date(act.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} pukul {new Date(act.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                                                                 </Subtext>
                                                                 <span className="w-1 h-1 rounded-full bg-gray-200" />
-                                                                <Label className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${isDeals ? 'bg-indigo-50 text-indigo-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                                                                <Label className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase  ${isDeals ? 'bg-indigo-50 text-indigo-600' : 'bg-emerald-50 text-emerald-600'}`}>
                                                                     {contextLabel}
                                                                 </Label>
                                                             </div>
@@ -364,7 +364,7 @@ export const LogActivityView: React.FC<Props> = ({ user, companyId }) => {
 
                                                 {contextName && (
                                                     <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-50">
-                                                        <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Terkait:</span>
+                                                        <span className="text-[10px] text-gray-400 font-medium uppercase ">Terkait:</span>
                                                         <span className="text-xs font-semibold text-gray-700 !capitalize hover:text-blue-600 cursor-pointer transition-colors"
                                                             onClick={() => {
                                                                 if (isDeals) router.push(`/dashboard/deals`);
@@ -390,7 +390,7 @@ export const LogActivityView: React.FC<Props> = ({ user, companyId }) => {
 };
 
 const Badge = ({ children }: { children: React.ReactNode }) => (
-    <span className="px-2.5 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-blue-100">
+    <span className="px-2.5 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold uppercase  rounded-lg border border-blue-100">
         {children}
     </span>
 );
@@ -399,7 +399,7 @@ const MetricCard = ({ title, value, icon, colorClass }: { title: string, value: 
     <div className="bg-white border border-gray-100 rounded-2xl p-5 hover:shadow-md transition-shadow relative overflow-hidden group">
         <div className="flex justify-between items-start relative z-10">
             <div>
-                <Subtext className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">{title}</Subtext>
+                <Subtext className="text-[11px] font-bold text-gray-400 uppercase  mb-2">{title}</Subtext>
                 <H2 className="text-3xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{value.toLocaleString('id-ID')}</H2>
             </div>
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center border shadow-sm transition-transform group-hover:scale-110 ${colorClass}`}>

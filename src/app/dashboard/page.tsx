@@ -11,7 +11,7 @@ const DashboardOverview = dynamic(
     loading: () => (
       <div className="flex flex-col items-center justify-center h-96 gap-4">
         <Loader2 className="animate-spin text-blue-600" size={40} />
-        <p className="text-gray-400  uppercase tracking-tight text-[10px]">Menyiapkan Komponen Dashboard...</p>
+        <p className="text-gray-400  uppercase  text-[10px]">Menyiapkan Komponen Dashboard...</p>
       </div>
     )
   }

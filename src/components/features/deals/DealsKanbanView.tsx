@@ -1,10 +1,8 @@
 import React from 'react';
 import { Button, Subtext, Label } from '@/components/ui';
-
 import { Deal, Pipeline } from '@/lib/types';
 import { User as UserIcon, ChevronRight, Trash2, Target, FileText, Plus, FilePlus } from 'lucide-react';
-
-
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { KanbanBoard, KanbanItem, KanbanStage } from '@/components/shared/KanbanBoard/KanbanBoard';
 
 // Extend KanbanItem
@@ -62,35 +60,35 @@ export const DealsKanbanView: React.FC<Props> = ({
       >
         <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
           {quotation ? (
-            <Button
+            <ActionButton
+              icon={FileText}
+              variant="blue"
               onClick={(e) => { e.stopPropagation(); onEditQuotation?.(quotation.id); }}
-              className="!p-2 text-blue-700 !bg-transparent hover:!bg-blue-50 shadow-none hover:border-blue-200 transition-all border border-transparent rounded-lg"
-              size='sm'
               title="Edit Penawaran"
-            >
-              <FileText size={12} />
-            </Button>
+              iconSize={12}
+              className="!p-1 h-fit"
+            />
           ) : (
             onCreateQuotation && deal.client_id && (
-              <Button
+              <ActionButton
+                icon={FilePlus}
+                variant="blue"
                 onClick={(e) => { e.stopPropagation(); onCreateQuotation(deal.client_id!, deal.id); }}
-                className="!p-2 text-blue-700 !bg-transparent hover:!bg-blue-50 shadow-none hover:border-blue-200 transition-all border border-transparent rounded-lg"
-                size='sm'
                 title="Buat Penawaran"
-              >
-                <FilePlus size={12} />
-              </Button>
+                iconSize={12}
+                className="!p-1 h-fit"
+              />
             )
           )}
 
-          <Button
-            onClick={(e) => onDelete(deal.id, e)}
-            className="!p-2 text-red-700 !bg-transparent hover:!bg-red-50 shadow-none hover:border-red-200 transition-all border border-transparent rounded-lg"
-            size='sm'
+          <ActionButton
+            icon={Trash2}
+            variant="rose"
+            onClick={(e) => { e.stopPropagation(); onDelete(deal.id, e); }}
             title="Hapus Deal"
-          >
-            <Trash2 size={12} />
-          </Button>
+            iconSize={12}
+            className="!p-1 h-fit"
+          />
         </div>
 
         <div className="flex items-center justify-between mb-2 w-3/4">
@@ -103,17 +101,17 @@ export const DealsKanbanView: React.FC<Props> = ({
           </div>
         </div>
 
-        <h4 className="text-[12px] leading-tight text-gray-900 font-medium mb-1 pr-10 !capitalize !tracking-tight line-clamp-2">{deal.name}</h4>
+        <h4 className="text-[12px] leading-tight text-gray-900 font-medium mb-1 pr-10 !capitalize ! line-clamp-2">{deal.name}</h4>
 
         <div className="flex items-center gap-2 mb-2 flex-wrap">
-          <Subtext className="text-[10px] !text-blue-600 tracking-tight font-medium">{formatIDR(deal.expected_value)}</Subtext>
+          <Subtext className="text-[10px] !text-blue-600  font-medium">{formatIDR(deal.expected_value)}</Subtext>
           {(deal.follow_up || 0) > 0 && (
-            <Label className="px-1 py-0 bg-amber-50 !text-amber-600 border border-amber-100 rounded text-[7px] font-medium !capitalize !tracking-tight inline-flex items-center gap-0.5" title={`${deal.follow_up} kali di-follow up`}>
+            <Label className="px-1 py-0 bg-amber-50 !text-amber-600 border border-amber-100 rounded text-[7px] font-medium !capitalize ! inline-flex items-center gap-0.5" title={`${deal.follow_up} kali di-follow up`}>
               FU {deal.follow_up}
             </Label>
           )}
           {deal.follow_up_date && (
-            <Label className="px-1 py-0 bg-blue-50 !text-blue-600 border border-blue-100 rounded text-[7px] font-medium !capitalize !tracking-tight inline-flex items-center gap-0.5">
+            <Label className="px-1 py-0 bg-blue-50 !text-blue-600 border border-blue-100 rounded text-[7px] font-medium !capitalize ! inline-flex items-center gap-0.5">
               TGL FU: {new Date(deal.follow_up_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
             </Label>
           )}
@@ -128,14 +126,14 @@ export const DealsKanbanView: React.FC<Props> = ({
         )}
 
         <div className="mb-3">
-          <Subtext className="text-[10px] text-gray-900 !capitalize !tracking-tight font-medium truncate flex gap-1 items-center">
+          <Subtext className="text-[10px] text-gray-900 !capitalize ! font-medium truncate flex gap-1 items-center">
             {deal.contact_name}
             <span className="text-[10px] text-gray-400 font-normal italic lowercase">({deal.customer_company || 'Perorangan'})</span>
           </Subtext>
         </div>
 
         <div className="pt-2 border-t border-gray-50 flex items-center justify-between text-gray-400 text-[9px]">
-          <div className="flex items-center gap-1.5 font-medium !capitalize !tracking-tight">
+          <div className="flex items-center gap-1.5 font-medium !capitalize !">
             <UserIcon size={10} className="text-gray-300" />
             <span className="truncate max-w-[120px]">{deal.sales_profile?.full_name?.split(' ')[0] || '-'}</span>
           </div>

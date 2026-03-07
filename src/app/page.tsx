@@ -68,7 +68,7 @@ export default function LandingPage() {
               className="flex items-center gap-2"
             >
               <Image src="/logo_idn.svg" alt="IDN Logo" width={32} height={32} />
-              <span className="font-bold text-xl tracking-tight">CRM Pintar</span>
+              <span className="font-bold text-xl ">CRM Pintar</span>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, x: 20 }}
@@ -98,7 +98,7 @@ export default function LandingPage() {
               <span className="flex h-2 w-2 rounded-full bg-blue-600 dark:bg-blue-400 animate-pulse"></span>
               Pembaruan v2.0 Telah Hadir
             </motion.div>
-            <motion.h1 variants={itemVariants} className="text-5xl md:text-7xl font-bold tracking-tight mb-8 leading-tight">
+            <motion.h1 variants={itemVariants} className="text-5xl md:text-7xl font-bold  mb-8 leading-tight">
               Tingkatkan <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-500">Penjualan</span> Anda dengan CRM Modern
             </motion.h1>
             <motion.p variants={itemVariants} className="text-lg md:text-xl text-zinc-600 dark:text-zinc-400 mb-10 max-w-2xl mx-auto leading-relaxed">
@@ -136,7 +136,7 @@ export default function LandingPage() {
       <section id="features" className="py-24 bg-white dark:bg-zinc-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">Fitur Lengkap untuk Bisnis Anda</h2>
+            <h2 className="text-3xl md:text-4xl font-bold  mb-4">Fitur Lengkap untuk Bisnis Anda</h2>
             <p className="text-zinc-600 dark:text-zinc-400 text-lg">Segala yang Anda butuhkan untuk mengelola siklus penjualan dari awal hingga akhir dengan mulus dan efisien.</p>
           </div>
 
@@ -222,7 +222,7 @@ export default function LandingPage() {
             <div className="col-span-1 md:col-span-1">
               <div className="flex items-center gap-2 mb-6">
                 <Image src="/logo_idn.svg" alt="IDN Logo" width={28} height={28} />
-                <span className="font-bold text-xl tracking-tight">CRM Pintar</span>
+                <span className="font-bold text-xl ">CRM Pintar</span>
               </div>
               <p className="text-zinc-500 dark:text-zinc-400 text-sm leading-relaxed">
                 Solusi CRM modern buatan anak bangsa untuk memajukan bisnis di seluruh penjuru Indonesia.

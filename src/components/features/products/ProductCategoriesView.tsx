@@ -8,10 +8,9 @@ import { supabase } from '@/lib/supabase';
 
 import React, { useState, useEffect, useCallback } from 'react';
 
-import { Input, Button, Table, TableHeader, TableBody, TableRow, TableCell, H3, Subtext, Label, Modal, Card, EmptyState } from '@/components/ui';
-
-
+import { Input, Button, Table, TableHeader, TableBody, TableRow, TableCell, H2, Subtext, Label, Modal, EmptyState, Toast, ToastType } from '@/components/ui';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
 
 interface Props {
   company: Company | null;
@@ -25,16 +24,22 @@ export const ProductCategoriesView: React.FC<Props> = ({ company }) => {
   const [form, setForm] = useState<Partial<ProductCategory>>({ name: '' });
 
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; name: string }>({ isOpen: false, id: null, name: '' });
-  const [notification, setNotification] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({
-    isOpen: false, title: '', message: '', type: 'success'
+  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
   });
 
-  const fetchData = useCallback(async () => {
+  const showToast = (message: string, type: ToastType = 'success') => {
+    setToast({ isOpen: true, message, type });
+  };
+
+  const fetchData = useCallback(async (isInitial = false) => {
     if (!company?.id) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    if (isInitial) setLoading(true);
     try {
       const { data } = await supabase
         .from('product_categories')
@@ -43,12 +48,12 @@ export const ProductCategoriesView: React.FC<Props> = ({ company }) => {
         .order('name');
       if (data) setCategories(data);
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   }, [company?.id]);
 
   useEffect(() => {
-    fetchData();
+    fetchData(true);
   }, [fetchData]);
 
   const handleSave = async (e: React.FormEvent) => {
@@ -64,9 +69,9 @@ export const ProductCategoriesView: React.FC<Props> = ({ company }) => {
       }
       setIsModalOpen(false);
       fetchData();
-      setNotification({ isOpen: true, title: 'Berhasil', message: 'Kategori produk telah disimpan.', type: 'success' });
+      showToast('Kategori produk telah disimpan.');
     } catch (err: any) {
-      setNotification({ isOpen: true, title: 'Gagal', message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -85,31 +90,34 @@ export const ProductCategoriesView: React.FC<Props> = ({ company }) => {
       setConfirmDelete({ isOpen: false, id: null, name: '' });
       fetchData();
     } catch (err: any) {
-      setNotification({ isOpen: true, title: 'Gagal Menghapus', message: 'Data tidak dapat dihapus karena masih digunakan oleh produk lain.', type: 'error' });
+      showToast('Data tidak dapat dihapus karena masih digunakan oleh produk lain.', 'error');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-blue-600 mb-4" /><Subtext className="text-[10px]  uppercase tracking-tight text-gray-400">Memuat Kategori...</Subtext></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-blue-600 mb-4" /><Subtext className="text-[10px]  uppercase  text-gray-400">Memuat Kategori...</Subtext></div>;
   if (!company) return <div className="text-center p-8 text-gray-500">Pilih workspace terlebih dahulu</div>;
 
   return (
-    <div className="max-w-2xl space-y-8 text-gray-900">
-      <Card>
-        <div className="p-10 border-b border-gray-50 flex items-center justify-between">
-          <div>
-            <H3 className="!tracking-tight !normal-case text-2xl">Kategori Produk</H3>
-            <Subtext className="mt-1">Klasifikasikan produk dan jasa Anda.</Subtext>
-          </div>
-          <Button
-            onClick={() => { setForm({ name: '' }); setIsModalOpen(true); }}
-            leftIcon={<Plus size={16} />}
-            variant='primary'
-          >
-            Kategori Baru
-          </Button>
+    <div className="max-w-4xl flex flex-col space-y-6">
+      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+        <div>
+          <H2 className="text-xl ">Kategori Produk</H2>
+          <Subtext className="text-[10px] uppercase font-semibold text-gray-400">Klasifikasikan produk dan jasa Anda ke dalam kategori yang tepat.</Subtext>
         </div>
+        <Button
+          onClick={() => { setForm({ name: '' }); setIsModalOpen(true); }}
+          leftIcon={<Plus size={14} strokeWidth={3} />}
+          className="!px-6 py-2.5 text-[10px] uppercase shadow-lg shadow-blue-100"
+          variant='primary'
+          size='sm'
+        >
+          Kategori Baru
+        </Button>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
         <div className="overflow-x-auto">
           <Table>
@@ -127,17 +135,21 @@ export const ProductCategoriesView: React.FC<Props> = ({ company }) => {
                       <div className="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600">
                         <Tags size={16} />
                       </div>
-                      <Label className="text-sm text-gray-900 tracking-tight">{item.name}</Label>
+                      <Label className="text-sm text-gray-900 ">{item.name}</Label>
                     </div>
                   </TableCell>
                   <TableCell className="text-center">
-                    <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="sm" onClick={() => { setForm(item); setIsModalOpen(true); }} className="!p-2 text-blue-500 hover:bg-blue-50">
-                        <Edit2 size={16} />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(item)} className="!p-2 text-rose-500 hover:bg-rose-50">
-                        <Trash2 size={16} />
-                      </Button>
+                    <div className="flex items-center justify-center gap-1">
+                      <ActionButton
+                        icon={Edit2}
+                        variant="blue"
+                        onClick={() => { setForm(item); setIsModalOpen(true); }}
+                      />
+                      <ActionButton
+                        icon={Trash2}
+                        variant="rose"
+                        onClick={() => handleDeleteClick(item)}
+                      />
                     </div>
                   </TableCell>
                 </TableRow>
@@ -156,7 +168,7 @@ export const ProductCategoriesView: React.FC<Props> = ({ company }) => {
             </TableBody>
           </Table>
         </div>
-      </Card>
+      </div>
 
       <Modal
         isOpen={isModalOpen}
@@ -168,7 +180,7 @@ export const ProductCategoriesView: React.FC<Props> = ({ company }) => {
             onClick={handleSave}
             isLoading={isProcessing}
             disabled={isProcessing}
-            className="px-10 py-4 shadow-xl flex items-center gap-2"
+            variant="primary"
           >
             Simpan Kategori
           </Button>
@@ -193,17 +205,15 @@ export const ProductCategoriesView: React.FC<Props> = ({ company }) => {
         title="Hapus Kategori"
         itemName={confirmDelete.name}
         description={`Tindakan ini permanen. Pastikan tidak ada produk yang terhubung dengan kategori ${confirmDelete.name}.`}
+        variant="horizontal"
       />
 
-      {/* NOTIFICATION MODAL */}
-      <Modal isOpen={notification.isOpen} onClose={() => setNotification({ ...notification, isOpen: false })} title="" size="sm">
-        <div className="flex flex-col items-center py-6 text-center">
-          <div className={`w-16 h-16 rounded-xl flex items-center justify-center mb-6 ${notification.type === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>{notification.type === 'success' ? <CheckCircle2 size={32} /> : <X size={32} />}</div>
-          <H3 className="mb-2 !normal-case">{notification.title}</H3>
-          <Subtext className="mb-8">{notification.message}</Subtext>
-          <Button onClick={() => setNotification({ ...notification, isOpen: false })} className="w-full uppercase tracking-tight">Tutup</Button>
-        </div>
-      </Modal>
+      <Toast
+        isOpen={toast.isOpen}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 };

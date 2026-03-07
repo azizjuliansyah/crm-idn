@@ -71,7 +71,7 @@ export const DateFilterDropdown: React.FC<DateFilterDropdownProps> = ({
         `}
             >
                 <Calendar size={14} className="text-gray-300 shrink-0" />
-                <span className="text-[10px] font-medium text-gray-900 uppercase tracking-tight whitespace-nowrap">
+                <span className="text-[10px] font-medium text-gray-900 uppercase  whitespace-nowrap">
                     {handleDisplayLabel()}
                 </span>
                 <ChevronDown size={14} className={`text-gray-300 transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180 text-blue-500' : ''}`} />
@@ -80,7 +80,7 @@ export const DateFilterDropdown: React.FC<DateFilterDropdownProps> = ({
             {isOpen && (
                 <div className="absolute top-[calc(100%+8px)] right-0 w-[280px] bg-white border border-gray-100 rounded-xl shadow-xl z-[100] py-3 animate-in fade-in zoom-in duration-200 origin-top-right">
                     <div className="px-3 pb-2 border-b border-gray-50 mb-2">
-                        <span className="text-[10px] font-medium text-gray-900 uppercase tracking-tight ml-1">Filter Tanggal</span>
+                        <span className="text-[10px] font-medium text-gray-900 uppercase  ml-1">Filter Tanggal</span>
                     </div>
 
                     <div className="max-h-[300px] overflow-y-auto px-2 space-y-1">
@@ -110,7 +110,7 @@ export const DateFilterDropdown: React.FC<DateFilterDropdownProps> = ({
                     {(value === 'custom') && (
                         <div className="mt-3 mx-4 pt-3 border-t border-gray-100 space-y-3">
                             <div className="space-y-1">
-                                <label className="text-[10px] font-medium text-gray-400 uppercase tracking-tight">Mulai Tanggal</label>
+                                <label className="text-[10px] font-medium text-gray-400 uppercase ">Mulai Tanggal</label>
                                 <Input
                                     type="date"
                                     value={startDate}
@@ -119,7 +119,7 @@ export const DateFilterDropdown: React.FC<DateFilterDropdownProps> = ({
                                 />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-[10px] font-medium text-gray-400 uppercase tracking-tight">Sampai Tanggal</label>
+                                <label className="text-[10px] font-medium text-gray-400 uppercase ">Sampai Tanggal</label>
                                 <Input
                                     type="date"
                                     value={endDate}
