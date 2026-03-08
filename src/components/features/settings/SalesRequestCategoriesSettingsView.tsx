@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { SalesRequestCategory, Company } from '@/lib/types';
 import {
     Loader2, Plus, GripVertical,
-    Tags, ArrowUp, ArrowDown, Edit2, Trash2, Save
+    Tags, ArrowUp, ArrowDown, Edit2, Trash2, Save, Zap
 } from 'lucide-react';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
@@ -20,7 +20,7 @@ export const SalesRequestCategoriesSettingsView: React.FC<Props> = ({ company })
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [form, setForm] = useState<Partial<SalesRequestCategory>>({ name: '' });
+    const [form, setForm] = useState<Partial<SalesRequestCategory>>({ name: '', has_urgency: false });
     const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; name: string }>({ isOpen: false, id: null, name: '' });
     const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
         isOpen: false,
@@ -63,7 +63,7 @@ export const SalesRequestCategoriesSettingsView: React.FC<Props> = ({ company })
     }, [fetchData]);
 
     const handleAddClick = () => {
-        setForm({ name: '' });
+        setForm({ name: '', has_urgency: false });
         setIsModalOpen(true);
     };
 
@@ -80,7 +80,8 @@ export const SalesRequestCategoriesSettingsView: React.FC<Props> = ({ company })
         try {
             const payload = {
                 name: form.name.trim(),
-                company_id: company.id
+                company_id: company.id,
+                has_urgency: form.has_urgency
             };
 
             if (form.id) {
@@ -229,14 +230,20 @@ export const SalesRequestCategoriesSettingsView: React.FC<Props> = ({ company })
                 onClose={() => setIsModalOpen(false)}
                 title={form.id ? "Edit Kategori" : "Tambah Kategori Request"}
                 footer={
-                    <Button
-                        onClick={() => handleSave()}
-                        disabled={isProcessing || !form.name?.trim()}
-                        variant="primary"
-                    >
-                        {isProcessing ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
-                        Simpan Kategori
-                    </Button>
+                    <div className="flex items-center justify-end gap-3 w-full">
+                        <Button variant="ghost" onClick={() => setIsModalOpen(false)} disabled={isProcessing} className="rounded-md">
+                            Batal
+                        </Button>
+                        <Button
+                            onClick={() => handleSave()}
+                            disabled={isProcessing || !form.name?.trim()}
+                            variant="primary"
+                            className="rounded-md"
+                        >
+                            {isProcessing ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                            Simpan Kategori
+                        </Button>
+                    </div>
                 }
             >
                 <div className="space-y-6 py-2">
@@ -250,6 +257,8 @@ export const SalesRequestCategoriesSettingsView: React.FC<Props> = ({ company })
                             placeholder="Misal: Request Sampel Produk..."
                         />
                     </div>
+
+
                 </div>
             </Modal>
 

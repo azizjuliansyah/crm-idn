@@ -2,7 +2,7 @@ import React from 'react';
 import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, Label, Badge } from '@/components/ui';
 import { Deal, Pipeline } from '@/lib/types';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
-import { User, Trash2, Edit2, FileText, Plus, FilePlus, ChevronUp, ChevronDown, Clock } from 'lucide-react';
+import { User, Trash2, Edit2, FileText, Plus, FilePlus, ChevronUp, ChevronDown, Clock, Zap } from 'lucide-react';
 
 interface Props {
   deals: Deal[];
@@ -18,6 +18,8 @@ interface Props {
   selectedIds: number[];
   onToggleSelect: (id: number) => void;
   onToggleSelectAll: () => void;
+  onToggleUrgency: (id: number, current: boolean) => void;
+  hasUrgency?: boolean;
 }
 
 const getStatusVariant = (status: string) => {
@@ -32,7 +34,7 @@ const getStatusVariant = (status: string) => {
 
 export const DealsTableView: React.FC<Props> = ({
   deals, pipeline, onEdit, onDelete, onCreateQuotation, onEditQuotation, formatIDR,
-  sortConfig, onSort, selectedIds, onToggleSelect, onToggleSelectAll
+  sortConfig, onSort, selectedIds, onToggleSelect, onToggleSelectAll, onToggleUrgency, hasUrgency
 }) => {
   const SortIndicator = ({ column }: { column: string }) => {
     if (sortConfig?.key !== column) return <ChevronUp size={12} className="text-gray-200 opacity-0 group-hover:opacity-100 transition-opacity ml-1" />;
@@ -74,7 +76,7 @@ export const DealsTableView: React.FC<Props> = ({
             const quotation: any = Array.isArray(d.quotations) ? d.quotations[0] : d.quotations;
 
             return (
-              <TableRow key={d.id} className="group hover:bg-gray-50/30 transition-colors border-b border-gray-50">
+              <TableRow key={d.id} className={`group hover:bg-gray-50/30 transition-colors border-b border-gray-50 ${d.is_urgent ? '!border-l-3 !border-l-amber-400 !bg-amber-50 even:!bg-amber-100/60 hover:!bg-amber-100/60 transition-colors' : ''}`}>
                 <TableCell className="text-gray-400 w-[100px]">
                   #{String(d.id).padStart(4, '0')}
                 </TableCell>
@@ -87,7 +89,7 @@ export const DealsTableView: React.FC<Props> = ({
                 </TableCell>
 
                 <TableCell>
-                  <div className="font-bold text-gray-900 mb-1">{d.name}</div>
+                  <div className={`font-bold text-gray-900 mb-1 ${d.is_urgent ? 'text-amber-900' : ''}`}>{d.name}</div>
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <Label className="text-[10px] text-indigo-600 !capitalize ! font-medium">{d.contact_name}</Label>
                     <Label className="text-[10px] text-gray-300">•</Label>
@@ -158,6 +160,13 @@ export const DealsTableView: React.FC<Props> = ({
 
                 <TableCell className="text-center py-4 w-[120px]">
                   <div className="flex items-center justify-center gap-1">
+                    <ActionButton
+                      icon={Zap}
+                      variant={d.is_urgent ? 'amber' : 'gray'}
+                      onClick={(e) => { e.stopPropagation(); onToggleUrgency(d.id, !!d.is_urgent); }}
+                      title={d.is_urgent ? 'Hapus Urgensi' : 'Tandai Urgent'}
+                      className={d.is_urgent ? 'animate-pulse' : ''}
+                    />
                     {quotation ? (
                       <ActionButton
                         icon={FileText}

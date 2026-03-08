@@ -54,6 +54,9 @@ export interface Company {
   address: string;
   logo_url?: string;
   created_at?: string;
+  has_lead_urgency?: boolean;
+  has_invoice_urgency?: boolean;
+  has_kwitansi_urgency?: boolean;
 }
 
 export interface PlatformSettings {
@@ -117,6 +120,9 @@ export interface Lead {
   created_at: string;
   sales_profile?: Profile;
   client_company?: ClientCompany;
+  is_urgent?: boolean;
+  urgency_id?: number | null;
+  urgency_level?: UrgencyLevel;
 }
 
 export interface Pipeline {
@@ -124,6 +130,7 @@ export interface Pipeline {
   company_id: number;
   name: string;
   stages?: PipelineStage[];
+  has_urgency?: boolean;
 }
 
 export interface PipelineStage {
@@ -158,6 +165,9 @@ export interface Deal {
   sales_profile?: Profile;
   client?: Client;
   quotations?: Quotation | Quotation[];
+  is_urgent?: boolean;
+  urgency_id?: number | null;
+  urgency_level?: UrgencyLevel;
 }
 
 export interface LogActivity {
@@ -200,6 +210,15 @@ export interface ClientCompanyCategory {
   id: number;
   company_id: number;
   name: string;
+}
+
+export interface UrgencyLevel {
+  id: number;
+  company_id: number;
+  name: string;
+  color?: string;
+  sort_order: number;
+  created_at: string;
 }
 
 export interface Product {
@@ -361,11 +380,14 @@ export interface InvoiceRequest {
   status: 'Pending' | 'Approved' | 'Rejected';
   notes?: string;
   created_at: string;
+  is_urgent?: boolean;
+  urgency_id?: number | null;
   profile?: Profile;
   client?: Client;
   quotation?: { number: string };
   proforma?: { number: string };
   invoice?: { id: number, number: string };
+  urgency_level?: UrgencyLevel;
 }
 
 export interface Kwitansi {
@@ -406,14 +428,19 @@ export interface KwitansiRequest {
   requester_id: string;
   client_id: number;
   invoice_id?: number | null;
+  proforma_id?: number | null;
   kwitansi_id?: number | null;
   status: 'Pending' | 'Approved' | 'Rejected';
   notes?: string;
   created_at: string;
+  is_urgent?: boolean;
+  urgency_id?: number | null;
   profile?: Profile;
   client?: Client;
   invoice?: { id: number, number: string };
+  proforma?: { id: number, number: string };
   kwitansi?: { id: number, number: string };
+  urgency_level?: UrgencyLevel;
 }
 
 export interface SalesRequestCategory {
@@ -422,6 +449,7 @@ export interface SalesRequestCategory {
   name: string;
   sort_order: number;
   created_at: string;
+  has_urgency?: boolean;
 }
 
 export interface SalesRequest {
@@ -435,11 +463,14 @@ export interface SalesRequest {
   status: 'Pending' | 'Approved' | 'Rejected';
   notes?: string;
   created_at: string;
+  is_urgent?: boolean;
+  urgency_id?: number | null;
   profile?: Profile;
   client?: Client;
   category?: SalesRequestCategory;
   quotation?: { id: number, number: string };
   proforma?: { id: number, number: string };
+  urgency_level?: UrgencyLevel;
 }
 
 export interface DocumentTemplateSetting {

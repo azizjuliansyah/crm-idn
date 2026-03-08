@@ -12,11 +12,14 @@ import {
   ChevronRight, ArrowUpDown, ChevronUp, ChevronDown,
   AlertTriangle, CheckCircle2, X, Filter,
   FileText, Clock, User, Building,
-  FileCheck, Check, Trash2, FilePlus, ExternalLink
+  FileCheck, Check, Trash2, FilePlus, ExternalLink, Zap, FileDown
 } from 'lucide-react';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 // Removed legacy NotificationModal import
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { generateTemplate1, generateTemplate5, generateTemplate6 } from '@/lib/pdf-templates';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useDashboard } from '@/app/dashboard/DashboardContext';
 
@@ -51,7 +54,7 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
     try {
       const { data, error } = await supabase
         .from('invoice_requests')
-        .select('*, profile:profiles(*), client:clients(*, client_company:client_companies(*)), quotation:quotations(number), proforma:proformas(number), invoice:invoices(id, number)')
+        .select('*, profile:profiles(*), client:clients(*, client_company:client_companies(*)), quotation:quotations(number), proforma:proformas(number), invoice:invoices(id, number), urgency_level:urgency_levels(id, name, color, sort_order)')
         .eq('company_id', company.id)
         .order('id', { ascending: false });
 
@@ -93,6 +96,11 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
 
     if (sortConfig) {
       result.sort((a, b) => {
+        // Sort by urgency first
+        const orderA = a.urgency_level?.sort_order ?? 999;
+        const orderB = b.urgency_level?.sort_order ?? 999;
+        if (orderA !== orderB) return orderA - orderB;
+
         let valA: any, valB: any;
         switch (sortConfig.key) {
           case 'client': valA = a.client?.name || ''; valB = b.client?.name || ''; break;
@@ -102,6 +110,14 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
         }
         if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
         if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    } else {
+      // Even if no specific sort, show urgent first
+      result.sort((a, b) => {
+        const orderA = a.urgency_level?.sort_order ?? 999;
+        const orderB = b.urgency_level?.sort_order ?? 999;
+        if (orderA !== orderB) return orderA - orderB;
         return 0;
       });
     }
@@ -133,6 +149,164 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
       setIsProcessing(false);
     }
   };
+
+  const handleDownloadInvoice = async (r: InvoiceRequest) => {
+    if (!r.invoice_id) return;
+    setIsProcessing(true);
+
+    try {
+      const { data: inv, error: invErr } = await supabase
+        .from('invoices')
+        .select('*, client:clients(*, client_company:client_companies(*)), invoice_items(*, products(*))')
+        .eq('id', r.invoice_id)
+        .single();
+
+      if (invErr) throw invErr;
+      if (!inv) throw new Error('Invoice tidak ditemukan.');
+
+      const { data: templateSetting } = await supabase
+        .from('document_template_settings')
+        .select('*')
+        .eq('company_id', company.id)
+        .eq('document_type', 'invoice')
+        .maybeSingle();
+
+      const templateId = templateSetting?.template_id || 'template1';
+      const config = templateSetting?.config || {};
+      config.document_type = 'invoice';
+
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const padX = 18;
+
+      if (templateId === 'template1') {
+        await generateTemplate1(doc, inv, config, company, pageWidth, padX);
+      } else if (templateId === 'template5') {
+        const mainColor = '#4F46E5';
+        const grayColor = '#9B9B9B';
+        const rowLightColor = '#F5F5FF';
+
+        doc.setFontSize(8.5);
+        doc.setTextColor(17, 17, 17);
+        doc.text(config.top_contact || '', pageWidth - padX, 10, { align: 'right' });
+
+        const bannerHeight = 22;
+        const startY = 18;
+
+        const logoUrl = config.logo_url || company.logo_url;
+        if (logoUrl) {
+          try {
+            const img = new Image();
+            img.crossOrigin = "Anonymous";
+            await new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = reject;
+              img.src = logoUrl;
+            });
+            const maxWidth = 60;
+            const maxHeight = bannerHeight;
+            const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
+            doc.addImage(img, 'PNG', padX, startY + (maxHeight - img.height * ratio) / 2, img.width * ratio, img.height * ratio, undefined, 'FAST');
+          } catch (e) {
+            doc.setFontSize(14); doc.setFont('helvetica', 'bold'); doc.text(company.name, padX, startY + 12);
+          }
+        } else {
+          doc.setFontSize(14); doc.setFont('helvetica', 'bold'); doc.text(company.name, padX, startY + 12);
+        }
+
+        doc.setFillColor(mainColor);
+        doc.rect(pageWidth - 110, startY, 110, bannerHeight, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(34);
+        doc.setFont('helvetica', 'bold');
+        doc.text('INVOICE', pageWidth - 100, startY + 15);
+
+        doc.setTextColor(17, 17, 17);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text('BILLED TO:', padX, 55);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(inv.client?.client_company?.name || 'PERORANGAN', padX, 62);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${inv.client?.salutation || ''} ${inv.client?.name || ''}`.trim(), padX, 68);
+
+        const metaX = 130;
+        doc.text('INVOICE NO', metaX, 55);
+        doc.text(':', metaX + 30, 55);
+        doc.text(inv.number, metaX + 35, 55);
+        doc.text('DATE', metaX, 61);
+        doc.text(':', metaX + 30, 61);
+        doc.text(new Date(inv.date).toLocaleDateString('id-ID'), metaX + 35, 61);
+        doc.text('DUE DATE', metaX, 67);
+        doc.text(':', metaX + 30, 67);
+        doc.text(new Date(inv.due_date).toLocaleDateString('id-ID'), metaX + 35, 67);
+
+        autoTable(doc, {
+          startY: 95,
+          head: [['Item / Description', 'Price', 'Qty', 'Total']],
+          body: inv.invoice_items?.map((it: any) => [
+            `${it.products?.name || ''}\n${it.description || ''}`,
+            new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(it.price),
+            `${it.qty} ${it.unit_name || ''}`,
+            new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(it.total)
+          ]) || [],
+          theme: 'plain',
+          headStyles: { fillColor: mainColor, textColor: '#FFFFFF', fontSize: 11, fontStyle: 'bold', minCellHeight: 12, valign: 'middle', halign: 'left' },
+          bodyStyles: { fillColor: '#FFFFFF', fontSize: 10, textColor: '#111111', minCellHeight: 14, valign: 'middle', halign: 'left' },
+          alternateRowStyles: { fillColor: rowLightColor },
+          columnStyles: { 0: { cellWidth: 100, cellPadding: { left: padX, top: 4, right: 4, bottom: 4 } }, 3: { cellPadding: { left: 4, top: 4, right: padX, bottom: 4 } } },
+          margin: { left: 0, right: 0 },
+          tableWidth: pageWidth
+        });
+
+        const finalY = (doc as any).lastAutoTable?.finalY || 150;
+        doc.text('Sub Total', 130, finalY + 10.5);
+        doc.text(new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(inv.subtotal), pageWidth - padX, finalY + 10.5, { align: 'right' });
+
+        const grandTotalY = finalY + 18.5;
+        doc.setFillColor(mainColor);
+        doc.rect(120, grandTotalY, 90, 10, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Grand Total', 130, grandTotalY + 6.5);
+        doc.text(new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(inv.total), pageWidth - padX, grandTotalY + 6.5, { align: 'right' });
+      } else if (templateId === 'template6') {
+        await generateTemplate6(doc, inv, config, company, pageWidth, padX);
+      } else {
+        doc.setFillColor('#4F46E5');
+        doc.rect(0, 0, pageWidth, 40, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(24);
+        doc.setFont('helvetica', 'bold');
+        doc.text('SALES INVOICE', 20, 25);
+
+        autoTable(doc, {
+          startY: 50,
+          head: [['Produk', 'Deskripsi', 'Qty', 'Harga', 'Total']],
+          body: inv.invoice_items?.map((it: any) => [
+            String(it.products?.name || ''),
+            String(it.description || ''),
+            `${it.qty} ${it.unit_name || ''}`,
+            new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(it.price),
+            new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(it.total)
+          ]) || [],
+          theme: 'striped',
+          headStyles: { fillColor: '#4F46E5' }
+        });
+      }
+
+      doc.save(`${inv.number}.pdf`);
+    } catch (err: any) {
+      setToast({ isOpen: true, message: err.message, type: 'error' });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+
 
   const executeDelete = async () => {
     if (!confirmDelete.id) return;
@@ -228,8 +402,16 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredRequests.map(r => (
-              <TableRow key={r.id} className="group hover:bg-indigo-50/30 transition-colors border-b border-gray-50/50 last:border-0">
+            {filteredRequests.map((r, idx) => (
+              <TableRow
+                key={r.id}
+                className={`group transition-all border-b border-gray-50/50 last:border-0 ${(r.urgency_level)
+                  ? (idx % 2 === 0
+                    ? 'bg-amber-50/20 hover:bg-amber-100/30'
+                    : 'bg-amber-50/10 hover:bg-amber-100/20')
+                  : 'hover:bg-indigo-50/30'
+                  }`}
+              >
                 <TableCell className="text-[10px] text-gray-500 py-5">#{r.id}</TableCell>
                 <TableCell className="py-5">
                   <div className="flex items-center gap-2 text-gray-400">
@@ -274,13 +456,23 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
                   </div>
                 </TableCell>
                 <TableCell className="text-center py-5">
-                  <Badge variant={
-                    r.status === 'Pending' ? 'neutral' :
-                      r.status === 'Approved' ? 'emerald' :
-                        'rose'
-                  }>
-                    {r.status}
-                  </Badge>
+                  <div className="flex flex-col items-center gap-2">
+                    <Badge variant={
+                      r.status === 'Pending' ? 'neutral' :
+                        r.status === 'Approved' ? 'emerald' :
+                          'rose'
+                    } className="capitalize">
+                      {r.status}
+                    </Badge>
+                    {(r.urgency_level) && (
+                      <div className={`px-2 py-1 rounded-full text-[9px] font-bold tracking-wide uppercase flex items-center gap-1 shadow-sm border ${
+                        r.urgency_level ? `bg-${r.urgency_level.color}-100 text-${r.urgency_level.color}-700 border-${r.urgency_level.color}-200` : 'bg-amber-100 text-amber-700 border-amber-200'
+                      }`}>
+                        <Zap size={10} fill="currentColor" />
+                        {r.urgency_level?.name || 'Urgent'}
+                      </div>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-center gap-2">
@@ -300,7 +492,7 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
                         />
                       </>
                     )}
-                    {r.status === 'Approved' && !r.invoice_id && (
+                    {r.status === 'Approved' && !r.invoice_id && hasApprovalPermission && (
                       <ActionButton
                         icon={FilePlus}
                         variant="indigo"
@@ -316,12 +508,20 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
                       />
                     )}
                     {r.status === 'Approved' && r.invoice_id && (
-                      <ActionButton
-                        icon={ExternalLink}
-                        variant="emerald"
-                        onClick={() => router.push(`/dashboard/sales/invoices/${r.invoice_id}`)}
-                        title={`Sudah di convert ke Invoice ${r.invoice?.number || ''}`}
-                      />
+                      <>
+                        <ActionButton
+                          icon={FileDown}
+                          variant="emerald"
+                          onClick={() => handleDownloadInvoice(r)}
+                          title="Download Invoice"
+                        />
+                        <ActionButton
+                          icon={ExternalLink}
+                          variant="blue"
+                          onClick={() => router.push(`/dashboard/sales/invoices/${r.invoice_id}`)}
+                          title={`Lihat Invoice ${r.invoice?.number || ''}`}
+                        />
+                      </>
                     )}
                     <ActionButton
                       icon={Trash2}

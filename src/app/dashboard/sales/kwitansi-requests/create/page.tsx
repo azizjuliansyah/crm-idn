@@ -18,7 +18,7 @@ export default function CreateKwitansiRequestsPage() {
                 company={company}
                 user={user}
                 onNavigate={(path) => {
-                    if (path === 'request_kwitansi') {
+                    if (path.startsWith('request_kwitansi')) {
                         router.push('/dashboard/sales/kwitansi-requests');
                     }
                 }}

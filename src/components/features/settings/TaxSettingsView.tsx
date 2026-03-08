@@ -205,13 +205,20 @@ export const TaxSettingsView: React.FC<Props> = ({ company }) => {
         title={form.id ? "Edit Pajak" : "Tambah Pajak Baru"}
         size="md"
         footer={
-          <Button
-            onClick={handleSave}
-            isLoading={isProcessing}
-            className="w-full !py-4 shadow-xl"
-          >
-            Simpan Pajak
-          </Button>
+          <div className="flex items-center justify-end gap-3 w-full">
+            <Button variant="ghost" onClick={() => setIsModalOpen(false)} disabled={isProcessing} className="rounded-md">
+              Batal
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSave}
+              isLoading={isProcessing}
+              disabled={isProcessing}
+              className="rounded-md"
+            >
+              Simpan Pajak
+            </Button>
+          </div>
         }
       >
         <div className="space-y-6 py-2">

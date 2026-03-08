@@ -69,15 +69,21 @@ export const KnowledgeBaseArticleModal: React.FC<Props> = ({
       title={form.id ? "Detail Artikel Bantuan" : "Tulis Artikel Baru"}
       size="lg"
       footer={
-        <Button
-          onClick={handleSave}
-          disabled={isProcessing}
-          isLoading={isProcessing}
-          leftIcon={<Save size={14} />}
-          variant="success"
-        >
-          Simpan Artikel
-        </Button>
+        <div className="flex items-center justify-end gap-3 w-full">
+          <Button variant="ghost" onClick={onClose} disabled={isProcessing} className="rounded-md">
+            Batal
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleSave}
+            disabled={isProcessing}
+            isLoading={isProcessing}
+            leftIcon={<Save size={14} />}
+            className="rounded-md"
+          >
+            Simpan Artikel
+          </Button>
+        </div>
       }
     >
       <div className="space-y-8 py-2">

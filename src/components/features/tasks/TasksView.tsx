@@ -9,9 +9,10 @@ import { supabase } from '@/lib/supabase';
 import { Task, TaskStage, Project, Company, CompanyMember, Profile } from '@/lib/types';
 import {
   Plus, Search, Trello, Table as TableIcon, Loader2,
-  CheckSquare, ArrowLeft, Calendar, Clock,
+  CheckSquare, ArrowLeft, Calendar, Clock, AlignLeft,
   AlertTriangle, Trash2, Edit2, Save, X, CheckCircle2, User as UserIcon
 } from 'lucide-react';
+import { GanttBoard } from '@/components/shared/GanttBoard/GanttBoard';
 import { KanbanBoard, KanbanItem, KanbanStage } from '@/components/shared/KanbanBoard/KanbanBoard';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
@@ -25,7 +26,7 @@ interface Props {
   projectId: number;
 }
 
-type ViewMode = 'table' | 'kanban';
+type ViewMode = 'table' | 'kanban' | 'gantt';
 
 const STAGE_COLORS = [
   'bg-blue-600',
@@ -129,6 +130,30 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
 
   const handleSave = async () => {
     if (!form.title || !form.stage_id) return;
+    
+    // Validasi Timeline Project
+    if (project?.start_date && form.start_date) {
+      if (new Date(form.start_date) < new Date(project.start_date)) {
+        showToast('Tanggal mulai task tidak boleh mendahului tanggal mulai project (' + new Date(project.start_date).toLocaleDateString('id-ID') + ')', 'error');
+        return;
+      }
+    }
+    
+    if (project?.end_date && form.end_date) {
+      if (new Date(form.end_date) > new Date(project.end_date)) {
+        showToast('Tenggat waktu task tidak boleh melebihi tanggal selesai project (' + new Date(project.end_date).toLocaleDateString('id-ID') + ')', 'error');
+        return;
+      }
+    }
+
+    // Validasi End Date >= Start Date
+    if (form.start_date && form.end_date) {
+      if (new Date(form.end_date) < new Date(form.start_date)) {
+        showToast('Tenggat waktu task tidak boleh mendahului tanggal mulai', 'error');
+        return;
+      }
+    }
+    
     setIsProcessing(true);
     try {
       const payload = {
@@ -275,11 +300,12 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
           <div className="flex items-center gap-1 bg-gray-50 border border-gray-100 rounded-xl p-1">
             <Button variant="ghost" size="sm" onClick={() => setViewMode('table')} className={`!p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-white text-emerald-600 shadow-sm ring-1 ring-gray-100' : '!text-gray-400'}`}><TableIcon size={14} /></Button>
             <Button variant="ghost" size="sm" onClick={() => setViewMode('kanban')} className={`!p-2 rounded-lg transition-all ${viewMode === 'kanban' ? 'bg-white text-emerald-600 shadow-sm ring-1 ring-gray-100' : '!text-gray-400'}`}><Trello size={14} /></Button>
+            <Button variant="ghost" size="sm" onClick={() => setViewMode('gantt')} className={`!p-2 rounded-lg transition-all ${viewMode === 'gantt' ? 'bg-white text-emerald-600 shadow-sm ring-1 ring-gray-100' : '!text-gray-400'}`}><AlignLeft size={14} /></Button>
           </div>
           <Button
             onClick={handleOpenAdd}
             leftIcon={<Plus size={14} />}
-            variant="success"
+            variant="primary"
             size='sm'
           >
             Task Baru
@@ -348,7 +374,7 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
               </Table>
             </div>
           </div>
-        ) : (
+        ) : viewMode === 'kanban' ? (
           <KanbanBoard<KanbanTask>
             stages={stages.map(s => ({
               id: s.id,
@@ -358,6 +384,18 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
             itemsByStatus={tasksByStage as Record<string, KanbanTask[]>}
             renderCard={renderTaskCard as any}
             onReorder={handleStatusChange}
+          />
+        ) : (
+          <GanttBoard
+            items={filteredTasks as any[]}
+            stages={stages.map(s => ({
+              id: s.id.toString(),
+              name: s.name,
+              colorClass: getStageColor(s.name)
+            }))}
+            projectStartDate={project?.start_date}
+            projectEndDate={project?.end_date}
+            onTaskClick={handleOpenEdit}
           />
         )}
       </div>
@@ -369,15 +407,17 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
         title={form.id ? "Edit Pekerjaan" : "Tambah Pekerjaan Baru"}
         size="lg"
         footer={
-          <div className="flex w-full gap-3">
-            <Button variant="ghost" onClick={() => { setIsAddModalOpen(false); setIsDetailModalOpen(false); }} className="flex-1  text-xs uppercase ">Batal</Button>
+          <div className="flex items-center justify-end gap-3 w-full">
+            <Button variant="ghost" onClick={() => { setIsAddModalOpen(false); setIsDetailModalOpen(false); }} disabled={isProcessing} className="rounded-md">
+              Batal
+            </Button>
             <Button
+              variant="primary"
               onClick={handleSave}
               disabled={isProcessing}
               isLoading={isProcessing}
               leftIcon={<Save size={14} />}
-              variant="success"
-              className="flex-1  text-xs uppercase  shadow-lg shadow-emerald-100"
+              className="rounded-md"
             >
               Simpan Data
             </Button>

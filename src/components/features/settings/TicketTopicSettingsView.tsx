@@ -172,13 +172,19 @@ export const TicketTopicSettingsView: React.FC<Props> = ({ company }) => {
         title={form.id ? "Edit Topik" : "Tambah Topik Baru"}
         size="md"
         footer={
-          <Button
-            onClick={handleSave}
-            isLoading={isProcessing}
-            variant='primary'
-          >
-            Simpan Topik
-          </Button>
+          <div className="flex items-center justify-end gap-3 w-full">
+            <Button variant="ghost" onClick={() => setIsModalOpen(false)} disabled={isProcessing} className="rounded-md">
+              Batal
+            </Button>
+            <Button
+              onClick={handleSave}
+              isLoading={isProcessing}
+              variant='primary'
+              className="rounded-md"
+            >
+              Simpan Topik
+            </Button>
+          </div>
         }
       >
         <div className="space-y-6 py-2">

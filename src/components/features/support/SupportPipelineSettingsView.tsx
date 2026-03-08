@@ -205,16 +205,18 @@ export const SupportPipelineSettingsView: React.FC<Props> = ({ company }) => {
         onClose={() => setIsModalOpen(false)}
         title={form.id ? "Edit Tahapan Support" : "Tambah Tahapan Support"}
         footer={
-          <div className="flex w-full gap-3">
-            <Button variant="ghost" onClick={() => setIsModalOpen(false)} className="flex-1 text-[10px] uppercase font-bold">Batal</Button>
+          <div className="flex items-center justify-end gap-3 w-full">
+            <Button variant="ghost" onClick={() => setIsModalOpen(false)} disabled={isProcessing} className="rounded-md">
+              Batal
+            </Button>
             <Button
-              onClick={handleSave}
-              disabled={isProcessing}
-              isLoading={isProcessing}
-              leftIcon={<Save size={14} />}
               variant="primary"
+              onClick={handleSave}
+              isLoading={isProcessing}
+              disabled={isProcessing}
+              className="rounded-md"
             >
-              Simpan
+              <Save size={14} className="mr-2" /> Simpan
             </Button>
           </div>
         }

@@ -186,7 +186,7 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
               onClick={() => { setForm({ name: '', category_id: categories[0]?.id || null, unit_id: units[0]?.id || null, price: 0, description: '' }); setIsModalOpen(true); }}
               leftIcon={<Plus size={14} strokeWidth={3} />}
               className="!px-6 py-2.5 text-[10px] uppercase  shadow-lg shadow-emerald-100"
-              variant="success"
+              variant="primary"
               size="sm"
             >
               Produk Baru
@@ -288,15 +288,26 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
         title={form.id ? "Edit Data Produk" : "Daftarkan Produk Baru"}
         size="lg"
         footer={
-          <Button
-            onClick={handleSave}
-            isLoading={isProcessing}
-            disabled={isProcessing}
-            variant="success"
-            className="px-10 py-4 shadow-xl flex items-center gap-2"
-          >
-            Simpan Produk
-          </Button>
+          <div className="flex items-center justify-end gap-3 w-full">
+            <Button variant="ghost" onClick={() => {
+              setIsModalOpen(false);
+              setIsAddingCat(false);
+              setIsAddingUnit(false);
+              setNewCatName('');
+              setNewUnitName('');
+            }} disabled={isProcessing} className="rounded-md">
+              Batal
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSave}
+              isLoading={isProcessing}
+              disabled={isProcessing}
+              className="rounded-md"
+            >
+              Simpan Produk
+            </Button>
+          </div>
         }
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 pb-4">

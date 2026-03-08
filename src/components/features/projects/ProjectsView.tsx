@@ -155,6 +155,14 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
 
   const handleSave = async () => {
     if (!form.name || !form.stage_id) return;
+
+    if (form.start_date && form.end_date) {
+      if (new Date(form.end_date) < new Date(form.start_date)) {
+        setToast({ isOpen: true, message: 'Estimasi selesai tidak boleh mendahului tanggal mulai', type: 'error' });
+        return;
+      }
+    }
+
     setIsProcessing(true);
     try {
       const projectPayload = {
@@ -390,7 +398,7 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
               onClick={handleOpenAdd}
               leftIcon={<Plus size={14} strokeWidth={3} />}
               className="!px-6 py-2.5 text-[10px] uppercase  shadow-lg shadow-emerald-100"
-              variant="success"
+              variant="primary"
               size="sm"
             >
               Project Baru
@@ -539,15 +547,17 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
         title={form.id ? "Detail Proyek" : "Registrasi Proyek Baru"}
         size="lg"
         footer={
-          <div className="flex w-full gap-3">
-            <Button variant="ghost" onClick={() => { setIsAddModalOpen(false); setIsDetailModalOpen(false); }} className="flex-1  text-xs uppercase ">Batal</Button>
+          <div className="flex items-center justify-end gap-3 w-full">
+            <Button variant="ghost" onClick={() => { setIsAddModalOpen(false); setIsDetailModalOpen(false); }} disabled={isProcessing} className="rounded-md">
+              Batal
+            </Button>
             <Button
+              variant="primary"
               onClick={handleSave}
               disabled={isProcessing}
               isLoading={isProcessing}
               leftIcon={<Save size={14} />}
-              variant="success"
-              className="flex-1  text-xs uppercase  shadow-lg shadow-emerald-100"
+              className="rounded-md"
             >
               Simpan Data
             </Button>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Subtext, Label, Badge } from '@/components/ui';
 import { Lead, LeadStage } from '@/lib/types';
-import { User as UserIcon, ChevronRight, Trash2 } from 'lucide-react';
+import { User as UserIcon, ChevronRight, Trash2, Zap } from 'lucide-react';
 
 import { KanbanBoard, KanbanItem, KanbanStage } from '@/components/shared/KanbanBoard/KanbanBoard';
 
@@ -15,6 +15,7 @@ interface Props {
   onDelete: (id: number, e: React.MouseEvent) => void;
   formatIDR: (num?: number) => string;
   onReorder: (itemId: number, newStatus: string, newIndex?: number) => void;
+  hasUrgency?: boolean;
 }
 
 const getStageColor = (status: string) => {
@@ -28,7 +29,7 @@ const getStageColor = (status: string) => {
 };
 
 export const LeadsKanbanView: React.FC<Props> = ({
-  stages, leadsByStatus, onEdit, onDelete, formatIDR, onReorder
+  stages, leadsByStatus, onEdit, onDelete, formatIDR, onReorder, hasUrgency
 }) => {
 
   const kanbanStages: KanbanStage[] = stages.map(s => ({
@@ -40,8 +41,14 @@ export const LeadsKanbanView: React.FC<Props> = ({
   const renderCard = (lead: KanbanLead, isDragged: boolean) => (
     <div
       onClick={() => onEdit(lead)}
-      className={`group p-3 bg-white border border-gray-100 rounded-xl shadow-sm hover:border-blue-300 transition-all cursor-pointer transform relative ${isDragged ? 'opacity-30' : 'hover:-translate-y-1'}`}
+      className={`group p-3 bg-white border border-gray-100 rounded-xl shadow-sm hover:border-blue-300 transition-all cursor-pointer transform relative ${isDragged ? 'opacity-30' : 'hover:-translate-y-1'
+        } ${hasUrgency && lead.is_urgent ? 'border-l-3 border-l-amber-400 bg-amber-50/50 shadow-amber-100/50' : ''}`}
     >
+      {hasUrgency && lead.is_urgent && (
+        <div className="absolute top-1 left-2">
+          <Zap size={10} className="text-amber-500 fill-amber-500 animate-pulse" />
+        </div>
+      )}
       <Button
         variant="ghost"
         size="sm"

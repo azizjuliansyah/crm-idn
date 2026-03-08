@@ -251,14 +251,20 @@ export const SopCategorySettingsView: React.FC<Props> = ({ company }) => {
         onClose={() => setIsModalOpen(false)}
         title={form.id ? "Edit Kategori" : "Tambah Kategori SOP"}
         footer={
-          <Button
-            onClick={() => handleSave()}
-            disabled={isProcessing || !form.name?.trim()}
-            variant="primary"
-          >
-            {isProcessing ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
-            Simpan Kategori
-          </Button>
+          <div className="flex items-center justify-end gap-3 w-full">
+            <Button variant="ghost" onClick={() => setIsModalOpen(false)} disabled={isProcessing} className="rounded-md">
+              Batal
+            </Button>
+            <Button
+              onClick={() => handleSave()}
+              disabled={isProcessing || !form.name?.trim()}
+              variant="primary"
+              className="rounded-md"
+            >
+              {isProcessing ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+              Simpan Kategori
+            </Button>
+          </div>
         }
       >
         <div className="space-y-6 py-2">

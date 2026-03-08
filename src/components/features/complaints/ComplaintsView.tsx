@@ -182,7 +182,7 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
                 variant="ghost"
                 size="sm"
                 onClick={() => setViewMode('table')}
-                className={`!p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-white shadow-sm ring-1 ring-gray-100 text-rose-600' : 'text-gray-400'}`}
+                className={`!p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-white shadow-sm ring-1 ring-gray-100 text-blue-600' : 'text-gray-400'}`}
               >
                 <TableIcon size={14} strokeWidth={2.5} />
               </Button>
@@ -190,7 +190,7 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
                 variant="ghost"
                 size="sm"
                 onClick={() => setViewMode('kanban')}
-                className={`!p-2 rounded-lg transition-all ${viewMode === 'kanban' ? 'bg-white shadow-sm ring-1 ring-gray-100 text-rose-600' : 'text-gray-400'}`}
+                className={`!p-2 rounded-lg transition-all ${viewMode === 'kanban' ? 'bg-white shadow-sm ring-1 ring-gray-100 text-blue-600' : 'text-gray-400'}`}
               >
                 <Trello size={14} strokeWidth={2.5} />
               </Button>
@@ -198,8 +198,8 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
             <Button
               onClick={() => setIsAddModalOpen(true)}
               leftIcon={<Plus size={14} strokeWidth={3} />}
-              className="!px-6 py-2.5 text-[10px] uppercase  shadow-lg shadow-rose-100"
-              variant="danger"
+              className="!px-6 py-2.5 text-[10px] uppercase  shadow-lg shadow-blue-100"
+              variant="primary"
               size="sm"
             >
               Complaint Baru

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Input, Textarea, Button, Label, Modal, ComboBox } from '@/components/ui';
-import { Loader2, Check, X } from 'lucide-react';
+import { Loader2, Check, X, Save } from 'lucide-react';
 import { ClientCompany, ClientCompanyCategory } from '@/lib/types';
 
 interface ClientCompanyFormModalProps {
@@ -55,9 +55,19 @@ export const ClientCompanyFormModal: React.FC<ClientCompanyFormModalProps> = ({
       title={form.id ? "Edit Perusahaan" : "Tambah Perusahaan Baru"}
       size="lg"
       footer={
-        <Button onClick={(e) => onSave(form)} disabled={isProcessing} variant='primary'>
-          {isProcessing && <Loader2 className="animate-spin" size={14} />} Simpan Data
-        </Button>
+        <div className="flex items-center justify-end gap-3 w-full">
+          <Button variant="ghost" onClick={onClose} disabled={isProcessing} className="rounded-md">
+            Batal
+          </Button>
+          <Button
+            variant="primary"
+            onClick={(e) => onSave(form)}
+            disabled={isProcessing}
+            className="rounded-md"
+          >
+            {isProcessing ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} className="mr-2" />} Simpan Data
+          </Button>
+        </div>
       }
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6 pb-4">

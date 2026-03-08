@@ -3,9 +3,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { LogActivity, Profile, Quotation } from '@/lib/types';
-import { H2, Subtext, Input, Button, Label, Avatar, SectionHeader, Timeline, TimelineItem, TimelineIcon, TimelineContent, DateFilterDropdown, ComboBox } from '@/components/ui';
+import { H2, Subtext, Input, Button, Label, Avatar, SectionHeader, Timeline, TimelineItem, TimelineIcon, TimelineContent, DateFilterDropdown, ComboBox, Checkbox } from '@/components/ui';
 import { Search, Calendar, MessageSquare, RefreshCw, Layers, Target, Users, Megaphone, CheckCircle, ArrowRight, Loader2, ArrowUp, Link as LinkIcon, FileText, ChevronRight, Filter } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 
 interface Props {
     user: Profile;
@@ -18,7 +19,7 @@ export const LogActivityView: React.FC<Props> = ({ user, companyId }) => {
     // Filters
     const [startDateFilter, setStartDateFilter] = useState<string>('');
     const [endDateFilter, setendDateFilter] = useState<string>('');
-    const [dateFilterType, setDateFilterType] = useState<string>('all');
+    const [dateFilterType, setDateFilterType] = useState<string>('30');
 
     const [searchQuery, setSearchQuery] = useState('');
     const [userFilter, setUserFilter] = useState<string>(user.id);
@@ -29,7 +30,17 @@ export const LogActivityView: React.FC<Props> = ({ user, companyId }) => {
     const [activities, setActivities] = useState<LogActivity[]>([]);
     const [quotations, setQuotations] = useState<Quotation[]>([]);
     const [leadsCount, setLeadsCount] = useState(0);
+    const [leadsData, setLeadsData] = useState<any[]>([]);
+    const [chartDateRange, setChartDateRange] = useState({ start: '', end: '' });
     const [isLoading, setIsLoading] = useState(true);
+
+    const [selectedMetrics, setSelectedMetrics] = useState({
+        leadsCount: true,
+        statusChangeLeads: true,
+        quotationsCount: true,
+        followUpCount: true,
+        statusChangeDeals: true
+    });
 
     const fetchData = useCallback(async () => {
         if (!companyId) return;
@@ -77,6 +88,8 @@ export const LogActivityView: React.FC<Props> = ({ user, companyId }) => {
                     toDateStr = now.toISOString();
                 }
             }
+
+            setChartDateRange({ start: fromDateStr, end: toDateStr });
 
             // Fetch Members and Check Admin Status
             const { data: membersData } = await supabase
@@ -144,16 +157,19 @@ export const LogActivityView: React.FC<Props> = ({ user, companyId }) => {
             if (quoteError) console.error("Error fetching quotes:", quoteError);
             else setQuotations(quoteData as any);
 
-            // Fetch Leads count
-            const { count: lCount, error: leadsError } = await supabase
+            // Fetch Leads for chart
+            const { data: leadsFetched, count: lCount, error: leadsError } = await supabase
                 .from('leads')
-                .select('*', { count: 'exact', head: true })
+                .select('id, created_at', { count: 'exact' })
                 .eq('company_id', companyId)
                 .gte('created_at', fromDateStr)
                 .lte('created_at', toDateStr);
 
             if (leadsError) console.error("Error fetching leads:", leadsError);
-            else setLeadsCount(lCount || 0);
+            else {
+                setLeadsCount(lCount || 0);
+                setLeadsData(leadsFetched || []);
+            }
 
         } catch (err) {
             console.error(err);
@@ -196,6 +212,76 @@ export const LogActivityView: React.FC<Props> = ({ user, companyId }) => {
         };
     }, [activities, leadsCount, quotations]);
 
+    const chartData = useMemo(() => {
+        if (!chartDateRange.start || !chartDateRange.end) return [];
+        
+        const start = new Date(chartDateRange.start);
+        const end = new Date(chartDateRange.end);
+        
+        // Use exactly the start / end dates derived from the filter to ensure we show the days linearly
+        const diffTime = Math.abs(end.getTime() - start.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        // Safety cap (e.g. max 365 days)
+        if (diffDays > 365) return []; 
+        
+        const dateMap: Record<string, any> = {};
+        
+        for (let i = 0; i <= diffDays; i++) {
+            const d = new Date(start);
+            d.setDate(d.getDate() + i);
+            const dateStr = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+            dateMap[dateStr] = {
+                name: dateStr,
+                'Jumlah Leads': 0,
+                'Status Leads Berubah': 0,
+                'Penawaran Dibuat': 0,
+                'Follow Up Tercatat': 0,
+                'Status Deals Berubah': 0,
+            };
+        }
+        
+        leadsData.forEach(lead => {
+            const dateStr = new Date(lead.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+            if (dateMap[dateStr]) dateMap[dateStr]['Jumlah Leads']++;
+        });
+        
+        quotations.forEach(q => {
+             const dateStr = new Date(q.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+            if (dateMap[dateStr]) dateMap[dateStr]['Penawaran Dibuat']++;
+        });
+        
+        activities.forEach(a => {
+            const dateStr = new Date(a.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+            if (!dateMap[dateStr]) return;
+            
+            if (a.activity_type === 'status_change' && a.lead_id && !a.deal_id) {
+                dateMap[dateStr]['Status Leads Berubah']++;
+            }
+            if (a.activity_type === 'status_change' && a.deal_id) {
+                dateMap[dateStr]['Status Deals Berubah']++;
+            }
+            if (a.content.toLowerCase().includes('follow up baru dicatat')) {
+                dateMap[dateStr]['Follow Up Tercatat']++;
+            }
+        });
+        
+        const result = Object.values(dateMap).map(day => {
+            const newDay = { name: day.name } as any;
+            if (selectedMetrics.leadsCount) newDay['Jumlah Leads'] = day['Jumlah Leads'];
+            if (selectedMetrics.statusChangeLeads) newDay['Status Leads Berubah'] = day['Status Leads Berubah'];
+            if (selectedMetrics.quotationsCount) newDay['Penawaran Dibuat'] = day['Penawaran Dibuat'];
+            if (selectedMetrics.followUpCount) newDay['Follow Up Tercatat'] = day['Follow Up Tercatat'];
+            if (selectedMetrics.statusChangeDeals) newDay['Status Deals Berubah'] = day['Status Deals Berubah'];
+            return newDay;
+        });
+
+        // If no metrics selected, return empty array to trigger empty state
+        if (result.length > 0 && Object.keys(result[0]).length === 1) return [];
+
+        return result;
+    }, [activities, leadsData, quotations, chartDateRange, selectedMetrics]);
+
 
     return (
         <div className="flex flex-col bg-white space-y-6 min-h-full">
@@ -232,6 +318,7 @@ export const LogActivityView: React.FC<Props> = ({ user, companyId }) => {
                             endDate={endDateFilter}
                             onStartDateChange={setStartDateFilter}
                             onEndDateChange={setendDateFilter}
+                            hideAllOption={true}
                         />
                     </div>
                 </div>
@@ -284,6 +371,89 @@ export const LogActivityView: React.FC<Props> = ({ user, companyId }) => {
                 />
             </div>
 
+            {/* SUMMARY CHART */}
+            <div className="bg-white border border-gray-100 rounded-2xl p-6 shrink-0 flex flex-col gap-6">
+                <div>
+                    <H2 className="text-sm font-semibold text-gray-900 !capitalize !">Grafik Ringkasan Aktivitas</H2>
+                    <Subtext className="text-xs text-gray-500 mt-1">Visualisasi tren aktivitas berdasarkan filter.</Subtext>
+                </div>
+                
+                <div className="h-64 w-full">
+                    {chartData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10, fontWeight: 'bold' }} dy={10} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10 }} />
+                                <Tooltip
+                                    cursor={{ stroke: '#f3f4f6', strokeWidth: 2 }}
+                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontWeight: 'bold', fontSize: '12px' }}
+                                />
+                                
+                                {selectedMetrics.leadsCount && (
+                                    <Line type="monotone" dataKey="Jumlah Leads" stroke="#6366f1" strokeWidth={3} dot={{ stroke: '#6366f1', strokeWidth: 2, r: 4, fill: '#fff' }} activeDot={{ r: 6 }} />
+                                )}
+                                {selectedMetrics.statusChangeLeads && (
+                                    <Line type="monotone" dataKey="Status Leads Berubah" stroke="#3b82f6" strokeWidth={3} dot={{ stroke: '#3b82f6', strokeWidth: 2, r: 4, fill: '#fff' }} activeDot={{ r: 6 }} />
+                                )}
+                                {selectedMetrics.quotationsCount && (
+                                    <Line type="monotone" dataKey="Penawaran Dibuat" stroke="#10b981" strokeWidth={3} dot={{ stroke: '#10b981', strokeWidth: 2, r: 4, fill: '#fff' }} activeDot={{ r: 6 }} />
+                                )}
+                                {selectedMetrics.followUpCount && (
+                                    <Line type="monotone" dataKey="Follow Up Tercatat" stroke="#f59e0b" strokeWidth={3} dot={{ stroke: '#f59e0b', strokeWidth: 2, r: 4, fill: '#fff' }} activeDot={{ r: 6 }} />
+                                )}
+                                {selectedMetrics.statusChangeDeals && (
+                                    <Line type="monotone" dataKey="Status Deals Berubah" stroke="#f43f5e" strokeWidth={3} dot={{ stroke: '#f43f5e', strokeWidth: 2, r: 4, fill: '#fff' }} activeDot={{ r: 6 }} />
+                                )}
+                            </LineChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                            <span className="text-sm text-gray-400 font-medium">Pilih metrik untuk menampilkan grafik</span>
+                        </div>
+                    )}
+                </div>
+
+                {/* Custom Interactive Legend (Filters) below chart */}
+                <div className="flex items-center gap-4 flex-wrap justify-center border-t border-gray-50 pt-4 mt-2">
+                    <div 
+                        onClick={() => setSelectedMetrics(s => ({ ...s, leadsCount: !s.leadsCount }))}
+                        className={`flex items-center gap-2 cursor-pointer transition-all px-3 py-1.5 rounded-full ${selectedMetrics.leadsCount ? 'bg-indigo-50' : 'hover:bg-gray-50 opacity-50 grayscale'}`}
+                    >
+                        <div className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
+                        <span className={`text-[11px] font-bold uppercase ${selectedMetrics.leadsCount ? 'text-indigo-600' : 'text-gray-500'}`}>Jumlah Leads</span>
+                    </div>
+                    <div 
+                        onClick={() => setSelectedMetrics(s => ({ ...s, statusChangeLeads: !s.statusChangeLeads }))}
+                        className={`flex items-center gap-2 cursor-pointer transition-all px-3 py-1.5 rounded-full ${selectedMetrics.statusChangeLeads ? 'bg-blue-50' : 'hover:bg-gray-50 opacity-50 grayscale'}`}
+                    >
+                        <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                        <span className={`text-[11px] font-bold uppercase ${selectedMetrics.statusChangeLeads ? 'text-blue-600' : 'text-gray-500'}`}>Status Leads Berubah</span>
+                    </div>
+                    <div 
+                        onClick={() => setSelectedMetrics(s => ({ ...s, quotationsCount: !s.quotationsCount }))}
+                        className={`flex items-center gap-2 cursor-pointer transition-all px-3 py-1.5 rounded-full ${selectedMetrics.quotationsCount ? 'bg-emerald-50' : 'hover:bg-gray-50 opacity-50 grayscale'}`}
+                    >
+                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                        <span className={`text-[11px] font-bold uppercase ${selectedMetrics.quotationsCount ? 'text-emerald-600' : 'text-gray-500'}`}>Penawaran Dibuat</span>
+                    </div>
+                    <div 
+                        onClick={() => setSelectedMetrics(s => ({ ...s, followUpCount: !s.followUpCount }))}
+                        className={`flex items-center gap-2 cursor-pointer transition-all px-3 py-1.5 rounded-full ${selectedMetrics.followUpCount ? 'bg-amber-50' : 'hover:bg-gray-50 opacity-50 grayscale'}`}
+                    >
+                        <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                        <span className={`text-[11px] font-bold uppercase ${selectedMetrics.followUpCount ? 'text-amber-600' : 'text-gray-500'}`}>Follow Up Tercatat</span>
+                    </div>
+                    <div 
+                        onClick={() => setSelectedMetrics(s => ({ ...s, statusChangeDeals: !s.statusChangeDeals }))}
+                        className={`flex items-center gap-2 cursor-pointer transition-all px-3 py-1.5 rounded-full ${selectedMetrics.statusChangeDeals ? 'bg-rose-50' : 'hover:bg-gray-50 opacity-50 grayscale'}`}
+                    >
+                        <div className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                        <span className={`text-[11px] font-bold uppercase ${selectedMetrics.statusChangeDeals ? 'text-rose-600' : 'text-gray-500'}`}>Status Deals Berubah</span>
+                    </div>
+                </div>
+            </div>
+
             {/* ACTIVITY TIMELINE LIST */}
             <div className="flex-1 bg-white border border-gray-100 rounded-2xl flex flex-col">
                 <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/30 flex items-center justify-between shrink-0">
@@ -323,58 +493,56 @@ export const LogActivityView: React.FC<Props> = ({ user, companyId }) => {
                                             <Icon size={14} />
                                         </TimelineIcon>
                                         <TimelineContent>
-                                            <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow relative group">
-                                                <div className="flex items-start justify-between mb-3">
-                                                    <div className="flex items-center gap-3">
-                                                        <Avatar name={act.profile?.full_name || 'User'} src={act.profile?.avatar_url} size="sm" />
-                                                        <div>
-                                                            <Label className="text-xs font-bold text-gray-900">{act.profile?.full_name}</Label>
-                                                            <div className="flex items-center gap-2 mt-0.5">
-                                                                <Subtext className="text-[10px] text-gray-400 font-medium">
-                                                                    {new Date(act.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} pukul {new Date(act.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-                                                                </Subtext>
-                                                                <span className="w-1 h-1 rounded-full bg-gray-200" />
-                                                                <Label className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase  ${isDeals ? 'bg-indigo-50 text-indigo-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                                                                    {contextLabel}
-                                                                </Label>
-                                                            </div>
+                                            <div className="bg-white border border-gray-100 rounded-lg p-2.5 shadow-sm hover:shadow-md transition-shadow relative group">
+                                                <div className="flex items-center justify-between mb-1.5">
+                                                    <div className="flex items-center gap-2">
+                                                        <Avatar name={act.profile?.full_name || 'User'} src={act.profile?.avatar_url} size="sm" className="w-6 h-6" />
+                                                        <div className="flex items-center gap-2">
+                                                            <Label className="text-[11px] font-bold text-gray-900">{act.profile?.full_name}</Label>
+                                                            <Subtext className="text-[9px] text-gray-400 font-medium">
+                                                                {new Date(act.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                                                                <span className="mx-1">•</span>
+                                                                {new Date(act.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                                                            </Subtext>
                                                         </div>
                                                     </div>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Label className={`text-[8px] px-1.5 py-0.5 rounded font-bold uppercase ${isDeals ? 'bg-indigo-50 text-indigo-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                                                            {contextLabel}
+                                                        </Label>
+                                                        {contextName && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="!p-1 h-auto text-gray-400 hover:text-blue-600 hover:bg-transparent opacity-0 group-hover:opacity-100 transition-all"
+                                                                onClick={() => {
+                                                                    if (isDeals) router.push(`/dashboard/deals`);
+                                                                    else if (isLeads) router.push(`/dashboard/leads`);
+                                                                }}
+                                                            >
+                                                                <ChevronRight size={12} />
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                </div>
 
+                                                <div className="text-[13px] text-gray-600 leading-snug pl-1">
+                                                    {act.content}
                                                     {contextName && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            className="!p-1.5 h-auto text-gray-400 hover:text-blue-600 hover:bg-blue-50 opacity-0 group-hover:opacity-100 transition-all flex hidden lg:flex items-center gap-2"
-                                                            onClick={() => {
-                                                                if (isDeals) router.push(`/dashboard/deals`); // Provide logic to open specific deal if possible, else push to deals list
-                                                                else if (isLeads) router.push(`/dashboard/leads`);
-                                                            }}
-                                                            title={`Buka ${contextLabel}`}
-                                                        >
-                                                            <span className="text-[10px] font-bold uppercase">Lihat {contextLabel}</span>
-                                                            <ChevronRight size={14} />
-                                                        </Button>
+                                                        <span className="ml-2 inline-flex items-center gap-1.5">
+                                                            <span className="text-gray-300 text-[10px]">/</span>
+                                                            <span
+                                                                className="text-[10px] font-semibold text-blue-500 hover:bg-blue-50 px-1 rounded cursor-pointer transition-colors"
+                                                                onClick={() => {
+                                                                    if (isDeals) router.push(`/dashboard/deals`);
+                                                                    else if (isLeads) router.push(`/dashboard/leads`);
+                                                                }}
+                                                            >
+                                                                {contextName}
+                                                            </span>
+                                                        </span>
                                                     )}
                                                 </div>
-
-                                                <div className="text-sm text-gray-700 leading-relaxed pl-1 mb-3">
-                                                    {act.content}
-                                                </div>
-
-                                                {contextName && (
-                                                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-50">
-                                                        <span className="text-[10px] text-gray-400 font-medium uppercase ">Terkait:</span>
-                                                        <span className="text-xs font-semibold text-gray-700 !capitalize hover:text-blue-600 cursor-pointer transition-colors"
-                                                            onClick={() => {
-                                                                if (isDeals) router.push(`/dashboard/deals`);
-                                                                else if (isLeads) router.push(`/dashboard/leads`);
-                                                            }}
-                                                        >
-                                                            {contextName}
-                                                        </span>
-                                                    </div>
-                                                )}
                                             </div>
                                         </TimelineContent>
                                     </TimelineItem>

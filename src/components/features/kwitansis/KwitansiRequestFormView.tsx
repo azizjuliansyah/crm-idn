@@ -5,10 +5,10 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Textarea, Button, H1, Subtext, Label, ComboBox, Toast, ToastType } from '@/components/ui';
 
 import { supabase } from '@/lib/supabase';
-import { Company, Profile, Client, Invoice } from '@/lib/types';
+import { Company, Profile, Client, Invoice, UrgencyLevel } from '@/lib/types';
 import {
     ArrowLeft, Save, Loader2, User, FileText, FileCheck,
-    FileQuestion, AlertCircle, Info, ChevronRight, CheckCircle2
+    FileQuestion, AlertCircle, Info, ChevronRight, CheckCircle2, Zap
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -22,13 +22,18 @@ export const KwitansiRequestFormView: React.FC<Props> = ({ company, user, onNavi
     const router = useRouter();
     const searchParams = useSearchParams();
     const initialInvoiceId = searchParams.get('invoiceId');
+    const initialProformaId = searchParams.get('proformaId');
     const [loading, setLoading] = useState(false);
     const [clients, setClients] = useState<Client[]>([]);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
+    const [proformas, setProformas] = useState<any[]>([]);
 
     const [clientId, setClientId] = useState('');
+    const [docType, setDocType] = useState<'invoice' | 'proforma'>('invoice');
     const [docId, setDocId] = useState('');
     const [notes, setNotes] = useState('');
+    const [urgencyLevels, setUrgencyLevels] = useState<UrgencyLevel[]>([]);
+    const [urgencyId, setUrgencyId] = useState<number | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
         isOpen: false,
@@ -39,13 +44,22 @@ export const KwitansiRequestFormView: React.FC<Props> = ({ company, user, onNavi
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const [cRes, iRes] = await Promise.all([
+            const [cRes, iRes, pRes, uRes] = await Promise.all([
                 supabase.from('clients').select('*, client_company:client_companies(*)').eq('company_id', company.id).order('name'),
-                supabase.from('invoices').select('*').eq('company_id', company.id).order('id', { ascending: false })
+                supabase.from('invoices').select('*').eq('company_id', company.id).order('id', { ascending: false }),
+                supabase.from('proformas').select('*').eq('company_id', company.id).order('id', { ascending: false }),
+                supabase.from('urgency_levels').select('*').eq('company_id', company.id).order('sort_order', { ascending: true })
             ]);
 
             if (cRes.data) setClients(cRes.data);
             if (iRes.data) setInvoices(iRes.data as any);
+            if (pRes.data) setProformas(pRes.data);
+            if (uRes.data) {
+                setUrgencyLevels(uRes.data as any);
+                if (uRes.data.length > 0) {
+                    setUrgencyId(uRes.data[0].id); // Set default to the first one
+                }
+            }
         } finally {
             setLoading(false);
         }
@@ -60,15 +74,27 @@ export const KwitansiRequestFormView: React.FC<Props> = ({ company, user, onNavi
             const inv = invoices.find(x => x.id.toString() === initialInvoiceId);
             if (inv) {
                 setClientId(String(inv.client_id));
+                setDocType('invoice');
                 setDocId(String(inv.id));
             }
+        } else if (initialProformaId && proformas.length > 0) {
+            const prof = proformas.find(x => x.id.toString() === initialProformaId);
+            if (prof) {
+                setClientId(String(prof.client_id));
+                setDocType('proforma');
+                setDocId(String(prof.id));
+            }
         }
-    }, [initialInvoiceId, invoices]);
+    }, [initialInvoiceId, initialProformaId, invoices, proformas]);
 
     const filteredDocs = useMemo(() => {
         if (!clientId) return [];
-        return invoices.filter(inv => inv.client_id === parseInt(clientId) && inv.status === 'Paid');
-    }, [clientId, invoices]);
+        if (docType === 'invoice') {
+            return invoices.filter(inv => inv.client_id === parseInt(clientId) && inv.status === 'Paid');
+        } else {
+            return proformas.filter(p => p.client_id === parseInt(clientId));
+        }
+    }, [clientId, docType, invoices, proformas]);
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -80,8 +106,10 @@ export const KwitansiRequestFormView: React.FC<Props> = ({ company, user, onNavi
                 company_id: company.id,
                 requester_id: user.id,
                 client_id: parseInt(clientId),
-                invoice_id: parseInt(docId),
+                invoice_id: docType === 'invoice' ? parseInt(docId) : null,
+                proforma_id: docType === 'proforma' ? parseInt(docId) : null,
                 notes: notes.trim(),
+                urgency_id: urgencyId,
                 status: 'Pending'
             });
 
@@ -136,18 +164,31 @@ export const KwitansiRequestFormView: React.FC<Props> = ({ company, user, onNavi
                             <div className="flex gap-4">
                                 <Button
                                     type="button"
-                                    variant="primary"
-                                    className={`flex-1 p-6 h-auto !justify-start !items-center gap-3 border border-indigo-200 cursor-default`}
+                                    onClick={() => { setDocType('invoice'); setDocId(''); }}
+                                    variant={docType === 'invoice' ? 'primary' : 'ghost'}
+                                    className={`flex-1 p-6 h-auto !justify-start !items-center gap-3 border ${docType === 'invoice' ? 'border-indigo-200 shadow-lg shadow-indigo-100' : 'border-gray-100 text-gray-400 hover:bg-gray-50'}`}
                                 >
-                                    <FileCheck size={20} className="text-white" />
+                                    <FileCheck size={20} className={docType === 'invoice' ? 'text-white' : 'text-gray-300'} />
                                     <div className="text-left">
-                                        <Subtext className="text-[10px] !text-white">Dari Tagihan</Subtext>
-                                        <Subtext className="text-[9px] font-medium !text-white/80">Invoice</Subtext>
+                                        <Subtext className={`text-[10px] ${docType === 'invoice' ? '!text-white' : '!text-gray-400'}`}>Dari Tagihan</Subtext>
+                                        <Subtext className={`text-[9px] font-medium ${docType === 'invoice' ? '!text-white/80' : '!text-gray-300'}`}>Invoice</Subtext>
+                                    </div>
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={() => { setDocType('proforma'); setDocId(''); }}
+                                    variant={docType === 'proforma' ? 'primary' : 'ghost'}
+                                    className={`flex-1 p-6 h-auto !justify-start !items-center gap-3 border ${docType === 'proforma' ? 'border-indigo-200 shadow-lg shadow-indigo-100' : 'border-gray-100 text-gray-400 hover:bg-gray-50'}`}
+                                >
+                                    <FileText size={20} className={docType === 'proforma' ? 'text-white' : 'text-gray-300'} />
+                                    <div className="text-left">
+                                        <Subtext className={`text-[10px] ${docType === 'proforma' ? '!text-white' : '!text-gray-400'}`}>Dari Penawaran</Subtext>
+                                        <Subtext className={`text-[9px] font-medium ${docType === 'proforma' ? '!text-white/80' : '!text-gray-300'}`}>Proforma</Subtext>
                                     </div>
                                 </Button>
                             </div>
 
-                            <ComboBox
+                             <ComboBox
                                 value={docId}
                                 onChange={(val: string | number) => setDocId(val.toString())}
                                 disabled={!clientId}
@@ -158,10 +199,9 @@ export const KwitansiRequestFormView: React.FC<Props> = ({ company, user, onNavi
                                 }))}
                                 className="h-14 font-medium disabled:opacity-30"
                             />
-                            {!clientId && <Subtext className="text-[9px] text-gray-400 italic px-2">Silakan pilih client terlebih dahulu untuk melihat daftar invoice.</Subtext>}
-                            {clientId && filteredDocs.length === 0 && <Subtext className="text-[9px] text-rose-500  px-2">Tidak ada invoice yang tersedia untuk client ini.</Subtext>}
+                            {!clientId && <Subtext className="text-[9px] text-gray-400 italic px-2">Silakan pilih client terlebih dahulu untuk melihat daftar {docType}.</Subtext>}
+                            {clientId && filteredDocs.length === 0 && <Subtext className="text-[9px] text-rose-500  px-2">Tidak ada {docType} {docType === 'invoice' ? 'dengan status PAID' : ''} tersedia untuk client ini.</Subtext>}
                         </div>
-
                         <Textarea
                             label="Catatan Tambahan"
                             value={notes}
@@ -169,6 +209,22 @@ export const KwitansiRequestFormView: React.FC<Props> = ({ company, user, onNavi
                             className="h-32"
                             placeholder="Misal: Tolong kwitansi ini dibuat sesuai dengan total pembayaran termin 2..."
                         />
+
+                        {urgencyLevels.length > 0 && (
+                            <div className="space-y-3">
+                                <Label className="uppercase ml-1">Tingkat Urgensi</Label>
+                                <ComboBox
+                                    value={urgencyId?.toString() || ''}
+                                    onChange={(val: string | number) => setUrgencyId(Number(val))}
+                                    options={urgencyLevels.map(u => ({
+                                        value: u.id.toString(),
+                                        label: u.name
+                                    }))}
+                                    className="h-14 font-medium"
+                                />
+                                <Subtext className="text-[10px] text-gray-400 mt-1 pl-1">Pilih tingkat prioritas untuk request ini.</Subtext>
+                            </div>
+                        )}
                     </div>
 
                     <div className="p-6 bg-blue-50/50 border border-blue-100 rounded-2xl flex gap-4">
@@ -182,7 +238,7 @@ export const KwitansiRequestFormView: React.FC<Props> = ({ company, user, onNavi
                             disabled={isProcessing || !clientId || !docId}
                             isLoading={isProcessing}
                             leftIcon={<Save size={18} />}
-                            className="px-10 py-6 h-auto"
+                            variant="primary"
                         >
                             Kirim Pengajuan
                         </Button>

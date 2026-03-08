@@ -13,6 +13,7 @@ interface DateFilterDropdownProps {
     onStartDateChange: (value: string) => void;
     onEndDateChange: (value: string) => void;
     className?: string;
+    hideAllOption?: boolean;
 }
 
 export const DateFilterDropdown: React.FC<DateFilterDropdownProps> = ({
@@ -22,20 +23,24 @@ export const DateFilterDropdown: React.FC<DateFilterDropdownProps> = ({
     endDate,
     onStartDateChange,
     onEndDateChange,
-    className = ''
+    className = '',
+    hideAllOption = false
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    const options = useMemo(() => [
-        { label: 'Semua Tanggal', value: 'all' },
-        { label: '1 Hari Yang Lalu', value: '1' },
-        { label: '7 Hari Yang Lalu', value: '7' },
-        { label: '14 Hari Yang Lalu', value: '14' },
-        { label: '30 Hari Yang Lalu', value: '30' },
-        { label: '60 Hari Yang Lalu', value: '60' },
-        { label: 'Custom Tanggal', value: 'custom' }
-    ], []);
+    const options = useMemo(() => {
+        const baseOptions = [
+            { label: 'Semua Tanggal', value: 'all' },
+            { label: '1 Hari Yang Lalu', value: '1' },
+            { label: '7 Hari Yang Lalu', value: '7' },
+            { label: '14 Hari Yang Lalu', value: '14' },
+            { label: '30 Hari Yang Lalu', value: '30' },
+            { label: '60 Hari Yang Lalu', value: '60' },
+            { label: 'Custom Tanggal', value: 'custom' }
+        ];
+        return hideAllOption ? baseOptions.filter(o => o.value !== 'all') : baseOptions;
+    }, [hideAllOption]);
 
     const selectedOption = options.find(opt => opt.value === value);
 

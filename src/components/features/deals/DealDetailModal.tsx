@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { Deal, Company, CompanyMember, Pipeline, Client, ClientCompany, ClientCompanyCategory, LogActivity, Profile } from '@/lib/types';
 import {
   ArrowUp, MessageSquare, RefreshCw, Pencil,
-  Clock, FileText, FilePlus, UserCircle, Target, Star, Trash2, ChevronLeft, ChevronRight, X, Loader2, Save, Minus, Plus, Check as CheckIcon
+  Clock, FileText, FilePlus, UserCircle, Target, Star, Trash2, ChevronLeft, ChevronRight, X, Loader2, Save, Minus, Plus, Check as CheckIcon, Briefcase
 } from 'lucide-react';
 import { ClientFormModal } from '@/components/features/clients/components/ClientFormModal';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
@@ -24,6 +24,7 @@ interface Props {
   onDelete: (id: number) => void;
   onCreateQuotation?: (clientId: number, dealId: number) => void;
   onEditQuotation?: (quotationId: number) => void;
+  onConvertToProject?: () => void;
   categories: ClientCompanyCategory[];
   setClientCompanies: React.Dispatch<React.SetStateAction<ClientCompany[]>>;
   setCategories: React.Dispatch<React.SetStateAction<ClientCompanyCategory[]>>;
@@ -33,7 +34,7 @@ interface Props {
 export const DealDetailModal: React.FC<Props> = ({
   isOpen, onClose, deal, company, user, members, pipeline,
   clients, clientCompanies, categories, onUpdate, onDelete, onCreateQuotation, onEditQuotation,
-  setClientCompanies, setCategories, setToast
+  onConvertToProject, setClientCompanies, setCategories, setToast
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activities, setActivities] = useState<LogActivity[]>([]);
@@ -321,6 +322,8 @@ export const DealDetailModal: React.FC<Props> = ({
 
   // Robust handling for 1:1 relation where quotations can be an object or an array
   const quotation: any = Array.isArray(deal.quotations) ? deal.quotations[0] : deal.quotations;
+  const currentStageName = pipeline?.stages?.find(s => s.id === form.stage_id)?.name.toLowerCase() || '';
+  const isClosingWon = currentStageName.includes('won') || currentStageName.includes('closing');
 
   return (
     <Modal
@@ -359,10 +362,9 @@ export const DealDetailModal: React.FC<Props> = ({
             />
             {quotation ? (
               <Button
-                variant="ghost"
+                variant="indigo"
                 size='sm'
                 onClick={() => onEditQuotation?.(quotation.id)}
-                className="bg-emerald-50 text-emerald-600 border border-emerald-100"
                 leftIcon={<FileText size={14} />}
               >
                 EDIT PENAWARAN
@@ -371,7 +373,7 @@ export const DealDetailModal: React.FC<Props> = ({
               onCreateQuotation && deal.client_id && (
                 <Button
                   onClick={() => onCreateQuotation(deal.client_id!, deal.id)}
-                  variant="success"
+                  variant="indigo"
                   size='sm'
                   leftIcon={<FilePlus size={14} />}
                 >
@@ -379,6 +381,19 @@ export const DealDetailModal: React.FC<Props> = ({
                 </Button>
               )
             )}
+
+            {/* Convert to Project Button - Only show when closing/won */}
+            {onConvertToProject && isClosingWon && (
+              <Button
+                onClick={onConvertToProject}
+                variant="success"
+                size="sm"
+                leftIcon={<Briefcase size={14} />}
+              >
+                CONVERT TO PROJECT
+              </Button>
+            )}
+
             <Button
               onClick={handleSave}
               variant='primary'

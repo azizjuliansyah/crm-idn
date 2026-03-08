@@ -492,15 +492,27 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
         <div className="flex flex-col gap-3 py-4">
           <Subtext className="text-sm text-gray-500 mb-2">Silakan pilih jenis request yang ingin Anda ajukan berdasarkan proforma ini:</Subtext>
 
+
           {requestModal.proformaStatus !== 'Draft' && (
-            <Button
-              variant="ghost"
-              className="w-full justify-start !py-4 text-left border border-amber-200 bg-amber-50/50 hover:bg-amber-50"
-              leftIcon={<FileText className="text-amber-500" size={18} />}
-              onClick={() => router.push(`/dashboard/sales/invoice-requests/create?proformaId=${requestModal.proformaId}`)}
-            >
-              Request Invoice
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                className="w-full justify-start !py-4 text-left border border-amber-200 bg-amber-50/50 hover:bg-amber-50"
+                leftIcon={<FileText className="text-amber-500" size={18} />}
+                onClick={() => router.push(`/dashboard/sales/invoice-requests/create?proformaId=${requestModal.proformaId}`)}
+              >
+                Request Invoice
+              </Button>
+
+              <Button
+                variant="ghost"
+                className="w-full justify-start !py-4 text-left border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-50"
+                leftIcon={<FileText className="text-emerald-500" size={18} />}
+                onClick={() => router.push(`/dashboard/sales/kwitansi-requests/create?proformaId=${requestModal.proformaId}`)}
+              >
+                Request Kwitansi
+              </Button>
+            </>
           )}
 
           {requestCategories.map(cat => (

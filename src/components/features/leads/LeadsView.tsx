@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Input, Button, H2, Subtext, Label, SearchInput, DateFilterDropdown, ComboBox, Toast, ToastType } from '@/components/ui';
 
 import { supabase } from '@/lib/supabase';
-import { Company, CompanyMember, LeadStage, Lead, ClientCompany, ClientCompanyCategory, LeadSource } from '@/lib/types';
+import { Company, CompanyMember, LeadStage, Lead, ClientCompany, ClientCompanyCategory, LeadSource, Profile } from '@/lib/types';
 import { Plus, Search, LayoutGrid, List } from 'lucide-react';
 import { LeadAddModal } from './LeadAddModal';
 import { LeadDetailModal } from './LeadDetailModal';
+import { ConvertLeadModal } from './ConvertLeadModal';
 import { LeadsTableView } from './LeadsTableView';
 import { LeadsKanbanView } from './LeadsKanbanView';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
@@ -14,15 +15,17 @@ import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModa
 interface Props {
   activeCompany: Company | null;
   activeView: string;
+  user: Profile;
 }
 
-export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
+export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [stages, setStages] = useState<LeadStage[]>([]);
   const [members, setMembers] = useState<CompanyMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>('table');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean, id: number | null }>({ isOpen: false, id: null });
 
@@ -144,6 +147,25 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
     }
   };
 
+  const handleToggleUrgency = async (id: number, current: boolean) => {
+    try {
+      const { error } = await supabase.from('leads').update({ is_urgent: !current }).eq('id', id);
+      if (error) throw error;
+      setLeads(prev => prev.map(l => l.id === id ? { ...l, is_urgent: !current } : l));
+      setToast({
+        isOpen: true,
+        message: !current ? 'Lead ditandai sebagai urgent!' : 'Status urgent dihapus.',
+        type: 'success'
+      });
+    } catch (error: any) {
+      setToast({
+        isOpen: true,
+        message: 'Gagal mengubah status urgensi: ' + error.message,
+        type: 'error'
+      });
+    }
+  };
+
   const handleSort = (key: any) => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -185,6 +207,11 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
 
     return matchesSearch && matchesStatus && matchesAssignee && matchesDate;
   }).sort((a, b) => {
+    // Priority 1: Urgency
+    if (a.is_urgent && !b.is_urgent) return -1;
+    if (!a.is_urgent && b.is_urgent) return 1;
+
+    // Priority 2: Custom Sort
     if (!sortConfig) {
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     }
@@ -251,8 +278,19 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
       ));
 
       // Network update
+      const oldStatus = draggedCard.status;
       const { error } = await supabase.from('leads').update({ status: newStatus.toLowerCase(), kanban_order: newOrder }).eq('id', leadId);
       if (error) throw error;
+
+      // Log activity
+      if (oldStatus !== newStatus.toLowerCase()) {
+        await supabase.from('log_activities').insert({
+          lead_id: leadId,
+          user_id: user.id,
+          content: `Status changed from ${oldStatus.toLowerCase()} to ${newStatus.toLowerCase()}`,
+          activity_type: 'status_change',
+        });
+      }
 
       setToast({
         isOpen: true,
@@ -368,6 +406,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
             onDelete={handleDelete}
             onReorder={handleDrop}
             formatIDR={formatIDR}
+            hasUrgency={activeCompany?.has_lead_urgency}
           />
         ) : (
           <LeadsTableView
@@ -379,6 +418,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
             onToggleSelectAll={handleToggleSelectAll}
             onEdit={setSelectedLead}
             onDelete={handleDelete}
+            onToggleUrgency={handleToggleUrgency}
             formatIDR={formatIDR}
           />
         )}
@@ -411,94 +451,29 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView }) => {
           onClose={() => setSelectedLead(null)}
           onUpdate={handleUpdate}
           onDelete={() => handleDelete(selectedLead.id)}
-          onConvertToDeal={async () => {
-            try {
-              // 1. Get first Pipeline and its first Stage
-              const { data: pipelines } = await supabase.from('pipelines')
-                .select('id, stages:pipeline_stages(id)')
-                .eq('company_id', activeCompany.id)
-                .order('id')
-                .limit(1);
-
-              if (!pipelines || pipelines.length === 0) {
-                throw new Error("Tidak ada Pipeline Deal yang tersedia untuk workspace ini.");
-              }
-              const firstPipelineId = pipelines[0].id;
-              const firstStageId = pipelines[0].stages?.[0]?.id;
-
-              if (!firstStageId) {
-                throw new Error("Tidak ada Stage Deal yang tersedia di Pipeline ini.");
-              }
-
-              // 2. Find if Client exists by name and email (to prevent exact duplicates)
-              let clientId = null;
-              const { data: existingClients } = await supabase.from('clients')
-                .select('id')
-                .eq('company_id', activeCompany.id)
-                .eq('name', selectedLead.name)
-                .limit(1);
-
-              if (existingClients && existingClients.length > 0) {
-                clientId = existingClients[0].id;
-              } else {
-                // Create new client from Lead data
-                const { data: newClient, error: clientError } = await supabase.from('clients')
-                  .insert({
-                    company_id: activeCompany.id,
-                    name: selectedLead.name,
-                    salutation: selectedLead.salutation || '-',
-                    email: selectedLead.email || null,
-                    whatsapp: selectedLead.whatsapp || null,
-                    client_company_id: selectedLead.client_company_id,
-                  }).select('id').single();
-
-                if (clientError) throw clientError;
-                clientId = newClient.id;
-              }
-
-              // 3. Create the Deal
-              const { error: dealError } = await supabase.from('deals').insert({
-                company_id: activeCompany.id,
-                pipeline_id: firstPipelineId,
-                stage_id: firstStageId,
-                name: `Deal: ${selectedLead.name}`,
-                expected_value: selectedLead.expected_value || 0,
-                sales_id: selectedLead.sales_id,
-                client_id: clientId,
-                contact_name: selectedLead.name,
-                customer_company: selectedLead.client_company?.name || 'Perorangan',
-                email: selectedLead.email,
-                whatsapp: selectedLead.whatsapp,
-                source: selectedLead.source,
-                input_date: new Date().toISOString().split('T')[0]
-              });
-
-              if (dealError) throw dealError;
-
-              // 4. Delete the lead
-              await supabase.from('leads').delete().eq('id', selectedLead.id);
-
-              setToast({
-                isOpen: true,
-                message: 'Berhasil mengonversi Lead menjadi Deal!',
-                type: 'success',
-              });
-              setSelectedLead(null);
-              fetchData();
-            } catch (err: any) {
-              setToast({
-                isOpen: true,
-                message: 'Gagal mengonversi ke Deal: ' + err.message,
-                type: 'error',
-              });
-            }
-          }}
+          onConvertToDeal={() => setIsConvertModalOpen(true)}
           user={members.find(m => m.user_id === selectedLead.sales_id)?.profile as any}
           sources={sources}
           clientCompanies={clientCompanies}
           categories={categories}
           setClientCompanies={setClientCompanies}
           setCategories={setCategories}
+          setToast={setToast}
+        />
+      )}
+
+      {isConvertModalOpen && selectedLead && activeCompany && (
+        <ConvertLeadModal
+          isOpen={isConvertModalOpen}
+          onClose={() => setIsConvertModalOpen(false)}
+          lead={selectedLead}
+          companyId={activeCompany.id}
+          userId={user.id}
+          onSuccess={() => {
+            setIsConvertModalOpen(false);
+            setSelectedLead(null);
+            fetchData();
+          }}
           setToast={setToast}
         />
       )}

@@ -623,7 +623,7 @@ export const ProformaFormView: React.FC<Props> = ({ company, editingId, initialC
             <Input type="date" label="Batas Pembayaran" value={dueDate} onChange={(e: any) => setDueDate(e.target.value)} />
             <ComboBox
               label="Referensi Penawaran"
-              value={quotationId || ''}
+              value={quotationId?.toString() || ''}
               onChange={(val: string | number) => setQuotationId(val ? Number(val) : null)}
               options={[
                 { value: '', label: '-- Tanpa Referensi --' },

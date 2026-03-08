@@ -3,7 +3,7 @@ import { Input, Textarea, Button, H2, H3, Subtext, Label, Modal, Toast, ToastTyp
 
 import { supabase } from '@/lib/supabase';
 import { Company, CompanyMember, CompanyRole, Profile } from '@/lib/types';
-import { ShieldAlert, TrendingUp, Trash2, Edit2, Loader2, AlertTriangle, CheckCircle2, ShieldCheck, Mail, Save, X, Plus, Upload, Building2, Camera, UserPlus } from 'lucide-react';
+import { ShieldAlert, TrendingUp, Trash2, Edit2, Loader2, AlertTriangle, CheckCircle2, ShieldCheck, Mail, Save, X, Plus, Upload, Building2, Camera, UserPlus, Zap, FileText, FileCheck } from 'lucide-react';
 
 // Helper for image compression
 const compressImage = (file: File, maxWidth: number = 800, quality: number = 0.8): Promise<Blob> => {

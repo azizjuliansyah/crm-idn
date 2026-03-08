@@ -11,7 +11,7 @@ import {
   Plus, Search, Edit2, Trash2, Loader2, FileBadge,
   ChevronRight, ArrowUpDown, ChevronUp, ChevronDown,
   AlertTriangle, CheckCircle2, X, Filter,
-  FileDown, Download, FileText
+  FileDown, Download, FileText, FilePlus
 } from 'lucide-react';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
@@ -19,6 +19,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { generateTemplate1, generateTemplate5, generateTemplate6 } from '@/lib/pdf-templates';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useDashboard } from '@/app/dashboard/DashboardContext';
 
 interface Props {
   company: Company;
@@ -39,6 +40,7 @@ const getImgDimensions = (url: string): Promise<{ width: number, height: number,
 
 export const InvoicesView: React.FC<Props> = ({ company }) => {
   const router = useRouter();
+  const { activeCompanyMembers, user } = useDashboard();
   const searchParams = useSearchParams();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,7 +63,7 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
     try {
       const { data, error } = await supabase
         .from('invoices')
-        .select('*, client:clients(*, client_company:client_companies(*)), invoice_items(*, products(*))')
+        .select('*, client:clients(*, client_company:client_companies(*)), invoice_items(*, products(*)), kwitansis(id)')
         .eq('company_id', company.id)
         .order('id', { ascending: false });
 
@@ -318,6 +320,135 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
     doc.save(`${inv.number}.pdf`);
   };
 
+  const hasApprovalPermission = useMemo(() => {
+    if (user?.platform_role === 'ADMIN') return true;
+    const currentMember = activeCompanyMembers.find(m => m.user_id === user?.id);
+    return currentMember?.company_roles?.permissions.includes('Persetujuan Request Kwitansi') || false;
+  }, [user, activeCompanyMembers]);
+
+  const handleCreateKwitansi = async (inv: Invoice) => {
+    setIsProcessing(true);
+    try {
+      // Create Kwitansi
+      const kwtNumber = `KWT-${Date.now().toString().slice(-6)}`;
+      const { data: kwt, error: kwtErr } = await supabase
+        .from('kwitansis')
+        .insert({
+          company_id: company.id,
+          client_id: inv.client_id,
+          invoice_id: inv.id,
+          number: kwtNumber,
+          date: new Date().toISOString().split('T')[0],
+          status: 'Paid',
+          total: inv.total || 0,
+          subtotal: inv.subtotal || 0,
+          tax_type: inv.tax_type || null,
+          tax_value: inv.tax_value || 0,
+          discount_type: inv.discount_type || 'Rp',
+          discount_value: inv.discount_value || 0
+        })
+        .select()
+        .single();
+
+      if (kwtErr) throw kwtErr;
+
+      // Create Kwitansi Items
+      if (inv.invoice_items && inv.invoice_items.length > 0) {
+        const { error: itemsErr } = await supabase
+          .from('kwitansi_items')
+          .insert(inv.invoice_items.map((it: any) => ({
+            kwitansi_id: kwt.id,
+            product_id: it.product_id,
+            description: it.description,
+            qty: it.qty,
+            price: it.price,
+            total: it.total,
+            unit_name: it.unit_name
+          })));
+        if (itemsErr) throw itemsErr;
+      }
+
+      setToast({ isOpen: true, message: `Kwitansi berhasil dibuat.`, type: 'success' });
+      fetchData();
+    } catch (err: any) {
+      setToast({ isOpen: true, message: err.message, type: 'error' });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDownloadKwitansi = async (inv: Invoice) => {
+    setIsProcessing(true);
+    try {
+      const { data: kwt, error: kwtErr } = await supabase
+        .from('kwitansis')
+        .select('*, client:clients(*, client_company:client_companies(*)), kwitansi_items(*, products(*))')
+        .eq('invoice_id', inv.id)
+        .order('id', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (kwtErr) throw kwtErr;
+
+      if (!kwt) {
+        setToast({ isOpen: true, message: 'Kwitansi untuk invoice ini belum dibuat.', type: 'error' });
+        setIsProcessing(false);
+        return;
+      }
+
+      const { data: templateSetting } = await supabase
+        .from('document_template_settings')
+        .select('*')
+        .eq('company_id', company.id)
+        .eq('document_type', 'kwitansi')
+        .maybeSingle();
+
+      const templateId = templateSetting?.template_id || 'template1';
+      const config = templateSetting?.config || {};
+      config.document_type = 'kwitansi';
+
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const padX = 18;
+
+      if (templateId === 'template1') {
+        await generateTemplate1(doc, kwt, config, company, pageWidth, padX);
+      } else if (templateId === 'template5') {
+        // Fallback for template 5 if needed, but usually we use template 1 or 6
+        await generateTemplate5(doc, kwt, config, company, pageWidth, padX);
+      } else if (templateId === 'template6') {
+        await generateTemplate6(doc, kwt, config, company, pageWidth, padX);
+      } else {
+        doc.setFillColor('#4F46E5');
+        doc.rect(0, 0, pageWidth, 40, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(24);
+        doc.setFont('helvetica', 'bold');
+        doc.text('KWITANSI PENJUALAN', 20, 25);
+
+        autoTable(doc, {
+          startY: 50,
+          head: [['Produk', 'Deskripsi', 'Qty', 'Harga', 'Total']],
+          body: kwt.kwitansi_items?.map((it: any) => [
+            String(it.products?.name || ''),
+            String(it.description || ''),
+            `${it.qty} ${it.unit_name || ''}`,
+            new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(it.price),
+            new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(it.total)
+          ]) || [],
+          theme: 'striped',
+          headStyles: { fillColor: '#4F46E5' }
+        });
+      }
+
+      doc.save(`${kwt.number}.pdf`);
+    } catch (err: any) {
+      setToast({ isOpen: true, message: err.message, type: 'error' });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4"><Loader2 className="animate-spin text-blue-600" /><Subtext className="text-[10px]  uppercase  text-gray-400">Sinkronisasi Invoice...</Subtext></div>;
 
   return (
@@ -434,12 +565,20 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
                         onClick={() => handleDownloadPDF(inv)}
                         title="Unduh PDF"
                       />
-                      {inv.status === 'Paid' && (
+                      {inv.status === 'Paid' && (inv as any).kwitansis?.length > 0 && (
                         <ActionButton
-                          icon={FileText}
-                          variant="amber"
-                          onClick={() => router.push(`/dashboard/sales/kwitansi-requests/create?invoiceId=${inv.id}`)}
-                          title="Request Kwitansi"
+                          icon={Download}
+                          variant="rose"
+                          onClick={() => handleDownloadKwitansi(inv)}
+                          title="Unduh Kwitansi"
+                        />
+                      )}
+                      {inv.status === 'Paid' && (inv as any).kwitansis?.length === 0 && hasApprovalPermission && (
+                        <ActionButton
+                          icon={FilePlus}
+                          variant="indigo"
+                          onClick={() => handleCreateKwitansi(inv)}
+                          title="Buat Kwitansi"
                         />
                       )}
                       <ActionButton

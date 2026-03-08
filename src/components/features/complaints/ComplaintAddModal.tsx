@@ -167,14 +167,17 @@ export const ComplaintAddModal: React.FC<Props> = ({
       title="Daftarkan Keluhan Client"
       size="lg"
       footer={
-        <div className="flex gap-3">
-          <Button variant="ghost" onClick={onClose}>Batal</Button>
+        <div className="flex items-center justify-end gap-3 w-full">
+          <Button variant="ghost" onClick={onClose} disabled={isProcessing} className="rounded-md">
+            Batal
+          </Button>
           <Button
+            variant="primary"
             onClick={handleSave}
             disabled={isProcessing}
             isLoading={isProcessing}
             leftIcon={<Save size={14} />}
-            variant="danger"
+            className="rounded-md"
           >
             Simpan Complaint
           </Button>

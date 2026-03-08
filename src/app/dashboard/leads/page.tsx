@@ -5,6 +5,7 @@ import { useDashboard } from '../DashboardContext';
 import { LeadsView } from '@/components/features/leads/LeadsView';
 
 export default function LeadsPage() {
-  const { activeCompany } = useDashboard();
-  return <LeadsView activeCompany={activeCompany} activeView="leads" />;
+  const { activeCompany, user } = useDashboard();
+  if (!user) return null;
+  return <LeadsView activeCompany={activeCompany} activeView="leads" user={user} />;
 }

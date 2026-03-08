@@ -11,7 +11,7 @@ import {
     ChevronRight, ArrowUpDown, ChevronUp, ChevronDown,
     AlertTriangle, CheckCircle2, X, Filter,
     FileText, Clock, User, Building,
-    FileCheck, Check, Trash2, FilePlus, ExternalLink
+    FileCheck, Check, Trash2, FilePlus, ExternalLink, Zap
 } from 'lucide-react';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
@@ -52,7 +52,7 @@ export const SalesRequestsView: React.FC<Props> = ({ company, categoryId }) => {
             const [reqRes, catRes] = await Promise.all([
                 supabase
                     .from('sales_requests')
-                    .select('*, client:clients(*, client_company:client_companies(*)), quotation:quotations(number), proforma:proformas(number)')
+                    .select('*, client:clients(*, client_company:client_companies(*)), quotation:quotations(number), proforma:proformas(number), urgency_level:urgency_levels(id, name, color, sort_order)')
                     .eq('company_id', company.id)
                     .eq('category_id', categoryId)
                     .order('id', { ascending: false }),
@@ -106,6 +106,12 @@ export const SalesRequestsView: React.FC<Props> = ({ company, categoryId }) => {
 
         if (sortConfig) {
             result.sort((a, b) => {
+                // Sort by urgency first (if category has urgency)
+                // Sort by urgency first
+                const orderA = a.urgency_level?.sort_order ?? 999;
+                const orderB = b.urgency_level?.sort_order ?? 999;
+                if (orderA !== orderB) return orderA - orderB;
+
                 let valA: any, valB: any;
                 switch (sortConfig.key) {
                     case 'client': valA = a.client?.name || ''; valB = b.client?.name || ''; break;
@@ -115,6 +121,14 @@ export const SalesRequestsView: React.FC<Props> = ({ company, categoryId }) => {
                 }
                 if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
                 if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        } else {
+            // Even if no specific sort, show urgent first
+            result.sort((a, b) => {
+                const orderA = a.urgency_level?.sort_order ?? 999;
+                const orderB = b.urgency_level?.sort_order ?? 999;
+                if (orderA !== orderB) return orderA - orderB;
                 return 0;
             });
         }
@@ -146,6 +160,8 @@ export const SalesRequestsView: React.FC<Props> = ({ company, categoryId }) => {
             setIsProcessing(false);
         }
     };
+
+
 
     const executeDelete = async () => {
         if (!confirmDelete.id) return;
@@ -242,8 +258,16 @@ export const SalesRequestsView: React.FC<Props> = ({ company, categoryId }) => {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {filteredRequests.map(r => (
-                            <TableRow key={r.id} className="group hover:bg-indigo-50/30 transition-colors border-b border-gray-50/50 last:border-0">
+                        {filteredRequests.map((r, idx) => (
+                            <TableRow
+                                key={r.id}
+                                className={`group transition-all border-b border-gray-50/50 last:border-0 ${(r.urgency_level)
+                                    ? (idx % 2 === 0
+                                        ? 'bg-amber-50/20 hover:bg-amber-100/30'
+                                        : 'bg-amber-50/10 hover:bg-amber-100/20')
+                                    : 'hover:bg-indigo-50/30'
+                                    }`}
+                            >
                                 <TableCell className="text-[10px] text-gray-500 py-5">#{r.id}</TableCell>
                                 <TableCell className="py-5">
                                     <div className="flex items-center gap-2 text-gray-400">
@@ -293,16 +317,27 @@ export const SalesRequestsView: React.FC<Props> = ({ company, categoryId }) => {
                                     </Subtext>
                                 </TableCell>
                                 <TableCell className="text-center py-5">
-                                    <Badge variant={
-                                        r.status === 'Pending' ? 'neutral' :
-                                            r.status === 'Approved' ? 'emerald' :
-                                                'rose'
-                                    }>
-                                        {r.status}
-                                    </Badge>
+                                    <div className="flex flex-col items-center gap-2">
+                                        <Badge variant={
+                                            r.status === 'Pending' ? 'neutral' :
+                                                r.status === 'Approved' ? 'emerald' :
+                                                    'rose'
+                                        }>
+                                            {r.status}
+                                        </Badge>
+                                        {(r.urgency_level) && (
+                                            <div className={`px-2 py-1 rounded-full text-[9px] font-bold tracking-wide uppercase flex items-center gap-1 shadow-sm border ${
+                                                r.urgency_level ? `bg-${r.urgency_level.color}-100 text-${r.urgency_level.color}-700 border-${r.urgency_level.color}-200` : 'bg-amber-100 text-amber-700 border-amber-200'
+                                            }`}>
+                                                <Zap size={10} fill="currentColor" />
+                                                {r.urgency_level?.name || 'Urgent'}
+                                            </div>
+                                        )}
+                                    </div>
                                 </TableCell>
                                 <TableCell>
                                     <div className="flex items-center justify-center gap-2">
+
                                         {r.status === 'Pending' && hasApprovalPermission && (
                                             <>
                                                 <ActionButton

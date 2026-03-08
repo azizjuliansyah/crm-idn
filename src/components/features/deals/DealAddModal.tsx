@@ -191,8 +191,11 @@ export const DealAddModal: React.FC<Props> = ({
       title="Daftarkan Transaksi Baru"
       size="lg"
       footer={
-        <div className="flex items-center gap-3">
-          <Button onClick={handleSave} isLoading={isProcessing} leftIcon={<Save size={14} />} className="rounded-md">
+        <div className="flex items-center justify-end gap-3 w-full">
+          <Button variant="ghost" onClick={onClose} disabled={isProcessing} className="rounded-md">
+            Batal
+          </Button>
+          <Button variant="primary" onClick={handleSave} isLoading={isProcessing} leftIcon={<Save size={14} />} className="rounded-md">
             Simpan Transaksi
           </Button>
         </div>

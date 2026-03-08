@@ -27,9 +27,14 @@ export const ClientCompanyCategoryFormModal: React.FC<ClientCompanyCategoryFormM
       title={form.id ? "Edit Kategori" : "Tambah Kategori Baru"}
       size="md"
       footer={
-        <Button onClick={(e) => onSave(form)} disabled={isProcessing} variant="primary">
-          {isProcessing && <Loader2 className="animate-spin" size={14} />} Simpan Kategori
-        </Button>
+        <div className="flex items-center justify-end gap-3 w-full">
+          <Button variant="ghost" onClick={onClose} disabled={isProcessing} className="rounded-md">
+            Batal
+          </Button>
+          <Button onClick={(e) => onSave(form)} disabled={isProcessing} variant="primary" className="rounded-md">
+            {isProcessing && <Loader2 className="animate-spin" size={14} />} Simpan Kategori
+          </Button>
+        </div>
       }
     >
       <div className="space-y-4 pb-2">
@@ -39,7 +44,6 @@ export const ClientCompanyCategoryFormModal: React.FC<ClientCompanyCategoryFormM
             type="text"
             value={form.name || ''}
             onChange={e => setForm({ ...form, name: e.target.value })}
-            className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-md  outline-none focus:bg-white focus:border-indigo-500 transition-all shadow-sm"
             placeholder="Misal: Prospektif, High-Value, Corporate..."
           />
         </div>

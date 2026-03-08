@@ -5,10 +5,10 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Textarea, Button, H1, Subtext, Label, ComboBox, Toast, ToastType } from '@/components/ui';
 
 import { supabase } from '@/lib/supabase';
-import { Company, Profile, Client, SalesRequestCategory, Quotation, ProformaInvoice } from '@/lib/types';
+import { Company, Profile, Client, SalesRequestCategory, Quotation, ProformaInvoice, UrgencyLevel } from '@/lib/types';
 import {
     ArrowLeft, Save, Loader2, User, FileText, FileCheck,
-    FileQuestion, AlertCircle, Info, ChevronRight, CheckCircle2
+    FileQuestion, AlertCircle, Info, ChevronRight, CheckCircle2, Zap
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -35,6 +35,8 @@ export const SalesRequestFormView: React.FC<Props> = ({ company, user, categoryI
     const [refType, setRefType] = useState<'quotation' | 'proforma'>('quotation');
     const [docId, setDocId] = useState('');
     const [notes, setNotes] = useState('');
+    const [urgencyLevels, setUrgencyLevels] = useState<UrgencyLevel[]>([]);
+    const [urgencyId, setUrgencyId] = useState<number | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
         isOpen: false,
@@ -45,17 +47,24 @@ export const SalesRequestFormView: React.FC<Props> = ({ company, user, categoryI
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const [cRes, catRes, qRes, pRes] = await Promise.all([
+            const [cRes, catRes, qRes, pRes, uRes] = await Promise.all([
                 supabase.from('clients').select('*, client_company:client_companies(*)').eq('company_id', company.id).order('name'),
                 supabase.from('sales_request_categories').select('*').eq('id', categoryId).single(),
                 supabase.from('quotations').select('*').eq('company_id', company.id).order('id', { ascending: false }),
-                supabase.from('proformas').select('*').eq('company_id', company.id).order('id', { ascending: false })
+                supabase.from('proformas').select('*').eq('company_id', company.id).order('id', { ascending: false }),
+                supabase.from('urgency_levels').select('*').eq('company_id', company.id).order('sort_order', { ascending: true })
             ]);
 
             if (cRes.data) setClients(cRes.data);
             if (catRes.data) setCategory(catRes.data as any);
             if (qRes.data) setQuotations(qRes.data);
             if (pRes.data) setProformas(pRes.data as any);
+            if (uRes.data) {
+                setUrgencyLevels(uRes.data as any);
+                if (uRes.data.length > 0) {
+                    setUrgencyId(uRes.data[0].id); // Set default to the first one (usually normal)
+                }
+            }
         } finally {
             setLoading(false);
         }
@@ -106,6 +115,7 @@ export const SalesRequestFormView: React.FC<Props> = ({ company, user, categoryI
                 quotation_id: refType === 'quotation' ? parseInt(docId) : null,
                 proforma_id: refType === 'proforma' ? parseInt(docId) : null,
                 notes: notes.trim(),
+                urgency_id: urgencyId,
                 status: 'Pending'
             });
 
@@ -194,7 +204,6 @@ export const SalesRequestFormView: React.FC<Props> = ({ company, user, categoryI
                             {!clientId && <Subtext className="text-[9px] text-gray-400 italic px-2">Silakan pilih client terlebih dahulu untuk melihat daftar dokumen.</Subtext>}
                             {clientId && filteredDocs.length === 0 && <Subtext className="text-[9px] text-rose-500 px-2">Tidak ada dokumen {refType} yang tersedia untuk client ini.</Subtext>}
                         </div>
-
                         <Textarea
                             label="Detail / Catatan Permintaan"
                             value={notes}
@@ -202,6 +211,22 @@ export const SalesRequestFormView: React.FC<Props> = ({ company, user, categoryI
                             className="h-32"
                             placeholder="Jelaskan secara detail apa yang menjadi permintaan khusus Anda untuk client ini..."
                         />
+
+                        {urgencyLevels.length > 0 && (
+                            <div className="space-y-3">
+                                <Label className="uppercase ml-1">Tingkat Urgensi</Label>
+                                <ComboBox
+                                    value={urgencyId?.toString() || ''}
+                                    onChange={(val: string | number) => setUrgencyId(Number(val))}
+                                    options={urgencyLevels.map(u => ({
+                                        value: u.id.toString(),
+                                        label: u.name
+                                    }))}
+                                    className="h-14 font-medium"
+                                />
+                                <Subtext className="text-[10px] text-gray-400 mt-1 pl-1">Pilih tingkat prioritas untuk request ini.</Subtext>
+                            </div>
+                        )}
                     </div>
 
                     <div className="p-6 bg-blue-50/50 border border-blue-100 rounded-2xl flex gap-4">
@@ -215,7 +240,7 @@ export const SalesRequestFormView: React.FC<Props> = ({ company, user, categoryI
                             disabled={isProcessing || !clientId || !docId}
                             isLoading={isProcessing}
                             leftIcon={<Save size={18} />}
-                            className="px-10 py-6 h-auto"
+                            variant="primary"
                         >
                             Kirim Pengajuan
                         </Button>

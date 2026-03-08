@@ -96,9 +96,23 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
       title={form.id ? "Edit Data Client" : "Tambah Client Baru"}
       size="lg"
       footer={
-        <Button onClick={(e) => onSave(form)} disabled={isProcessing} variant='success'>
-          {isProcessing && <Loader2 className="animate-spin" size={14} />} Simpan Client
-        </Button>
+        <div className="flex items-center justify-end gap-3 w-full">
+          <Button variant="ghost" onClick={() => {
+            onClose();
+            setIsAddingCo(false);
+            setIsAddingCatInCo(false);
+          }} disabled={isProcessing} className="rounded-md">
+            Batal
+          </Button>
+          <Button
+            variant="primary"
+            onClick={(e) => onSave(form)}
+            disabled={isProcessing}
+            className="rounded-md"
+          >
+            {isProcessing ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} className="mr-2" />} Simpan Client
+          </Button>
+        </div>
       }
     >
       <div className="flex flex-col gap-6 pb-4">

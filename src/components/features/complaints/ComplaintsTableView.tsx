@@ -2,7 +2,7 @@ import React from 'react';
 import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, Subtext, Label, Badge } from '@/components/ui';
 import { SupportTicket } from '@/lib/types';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
-import { Trash2, Edit2 } from 'lucide-react';
+import { Trash2, Edit2, Zap } from 'lucide-react';
 
 interface Props {
   tickets: SupportTicket[];
@@ -32,10 +32,6 @@ export const ComplaintsTableView: React.FC<Props> = ({ tickets, onEdit, onDelete
                 {t.title}
                 <div className="flex items-center gap-2 mt-1">
                   <Label className="text-[9px] text-gray-600 uppercase ">{t.client?.name || 'Umum'}</Label>
-                  <Label className="text-gray-200 ">•</Label>
-                  <Label className={`!p-0 text-[8px] uppercase  ${t.priority === 'urgent' ? 'text-rose-500' : 'text-gray-400'}`}>
-                    URGENSI: {t.priority}
-                  </Label>
                 </div>
               </TableCell>
               <TableCell>
@@ -54,9 +50,19 @@ export const ComplaintsTableView: React.FC<Props> = ({ tickets, onEdit, onDelete
                 </div>
               </TableCell>
               <TableCell className="text-center">
-                <Badge variant={t.status?.toLowerCase() === 'closed' ? 'secondary' : 'danger'} className="w-20 justify-center">
-                  {t.status}
-                </Badge>
+                <div className="flex flex-col items-center gap-2">
+                  <Badge variant={t.status?.toLowerCase() === 'closed' ? 'secondary' : t.status?.toLowerCase() === 'in progress' ? 'danger' : 'neutral'} className="min-w-[90px] w-auto whitespace-nowrap justify-center text-[9px] py-1 uppercase">
+                    {t.status}
+                  </Badge>
+                  {t.priority && t.priority.toLowerCase() !== 'normal' && (
+                    <div className={`px-2 py-1 rounded-full text-[9px] font-bold tracking-wide uppercase flex items-center gap-1 shadow-sm border ${
+                      t.priority.toLowerCase() === 'urgent' || t.priority.toLowerCase() === 'high' ? 'bg-rose-100 text-rose-700 border-rose-200' : 'bg-amber-100 text-amber-700 border-amber-200'
+                    }`}>
+                      <Zap size={10} fill="currentColor" />
+                      {t.priority}
+                    </div>
+                  )}
+                </div>
               </TableCell>
               <TableCell>
                 <div className="flex items-center justify-center gap-2">

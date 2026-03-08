@@ -18,7 +18,7 @@ export default function CreateInvoiceRequestsPage() {
         company={company}
         user={user}
         onNavigate={(path) => {
-          if (path === 'request_invoice') {
+          if (path.startsWith('request_invoice')) {
             router.push('/dashboard/sales/invoice-requests');
           }
         }}

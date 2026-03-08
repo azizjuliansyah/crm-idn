@@ -109,8 +109,7 @@ export const ProductUnitsView: React.FC<Props> = ({ company }) => {
         <Button
           onClick={() => { setForm({ name: '' }); setIsModalOpen(true); }}
           leftIcon={<Plus size={14} strokeWidth={3} />}
-          className="!px-6 py-2.5 text-[10px] uppercase shadow-lg shadow-emerald-100"
-          variant='success'
+          variant='primary'
           size='sm'
         >
           Satuan Baru
@@ -176,15 +175,20 @@ export const ProductUnitsView: React.FC<Props> = ({ company }) => {
         title={form.id ? "Edit Satuan" : "Tambah Satuan Baru"}
         size="md"
         footer={
-          <Button
-            onClick={handleSave}
-            isLoading={isProcessing}
-            disabled={isProcessing}
-            variant="success"
-            className="px-10 py-4 shadow-xl flex items-center gap-2"
-          >
-            Simpan Satuan
-          </Button>
+          <div className="flex items-center justify-end gap-3 w-full">
+            <Button variant="ghost" onClick={() => setIsModalOpen(false)} disabled={isProcessing} className="rounded-md">
+              Batal
+            </Button>
+            <Button
+              onClick={handleSave}
+              isLoading={isProcessing}
+              disabled={isProcessing}
+              variant="primary"
+              className="rounded-md"
+            >
+              Simpan Satuan
+            </Button>
+          </div>
         }
       >
         <div className="space-y-4 pb-2 text-left">

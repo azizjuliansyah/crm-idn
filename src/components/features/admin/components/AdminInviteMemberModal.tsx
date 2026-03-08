@@ -22,8 +22,22 @@ export const AdminInviteMemberModal: React.FC<AdminInviteMemberModalProps> = ({
   roles
 }) => {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Undang Anggota">
-      <div className="space-y-6">
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      title="Undang Anggota"
+      footer={
+        <div className="flex items-center justify-end gap-3 w-full">
+          <Button variant="ghost" onClick={onClose} disabled={isProcessing} className="rounded-md">
+            Batal
+          </Button>
+          <Button onClick={onInvite} isLoading={isProcessing} variant='primary' className="rounded-md">
+            Undang Sekarang
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-6 pb-4">
         <Input
           label="Email User"
           type="email"
@@ -39,9 +53,6 @@ export const AdminInviteMemberModal: React.FC<AdminInviteMemberModalProps> = ({
             ...roles.map(r => ({ value: r.id, label: r.name }))
           ]}
         />
-        <Button onClick={onInvite} isLoading={isProcessing} variant='primary' className="w-full">
-          Undang Sekarang
-        </Button>
       </div>
     </Modal>
   );

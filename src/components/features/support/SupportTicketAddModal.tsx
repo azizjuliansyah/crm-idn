@@ -166,14 +166,16 @@ export const SupportTicketAddModal: React.FC<Props> = ({
       title="Daftarkan Ticket Bantuan"
       size="lg"
       footer={
-        <div className="flex w-full gap-3">
-          <Button variant="ghost" onClick={onClose} className="flex-1  text-xs uppercase ">Batal</Button>
+        <div className="flex items-center justify-end gap-3 w-full">
+          <Button variant="ghost" onClick={onClose} disabled={isProcessing} className="rounded-md">
+            Batal
+          </Button>
           <Button
+            variant="primary"
             onClick={handleSave}
             isLoading={isProcessing}
             leftIcon={<Save size={14} />}
-            variant="danger"
-            className="flex-1  text-xs uppercase  shadow-lg shadow-rose-100"
+            className="rounded-md"
           >
             Buat Ticket
           </Button>

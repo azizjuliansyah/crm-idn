@@ -6,6 +6,7 @@ import { Company, CompanyMember, PipelineStage, Deal, Pipeline, Client, ClientCo
 import { Plus, Search, LayoutGrid, List } from 'lucide-react';
 import { DealAddModal } from './DealAddModal';
 import { DealDetailModal } from './DealDetailModal';
+import { ConvertDealToProjectModal } from './ConvertDealToProjectModal';
 import { DealsTableView } from './DealsTableView';
 import { DealsKanbanView } from './DealsKanbanView';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
@@ -27,6 +28,7 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>('table');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean, id: number | null }>({ isOpen: false, id: null });
   const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
@@ -178,6 +180,25 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
     }
   };
 
+  const handleToggleUrgency = async (id: number, current: boolean) => {
+    try {
+      const { error } = await supabase.from('deals').update({ is_urgent: !current }).eq('id', id);
+      if (error) throw error;
+      setDeals(prev => prev.map(d => d.id === id ? { ...d, is_urgent: !current } : d));
+      setToast({
+        isOpen: true,
+        message: !current ? 'Deal ditandai sebagai urgent!' : 'Status urgent dihapus.',
+        type: 'success'
+      });
+    } catch (error: any) {
+      setToast({
+        isOpen: true,
+        message: 'Gagal mengubah status urgensi: ' + error.message,
+        type: 'error'
+      });
+    }
+  };
+
   const handleCreateQuotation = (clientId: number, dealId: number) => {
     router.push(`/dashboard/sales/quotations/create?client_id=${clientId}&deal_id=${dealId}`);
   };
@@ -228,7 +249,14 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
 
     return matchesSearch && matchesStatus && matchesAssignee && matchesDate && matchesFollowUp;
   }).sort((a, b) => {
-    if (!sortConfig) return 0;
+    // Priority 1: Urgency
+    if (a.is_urgent && !b.is_urgent) return -1;
+    if (!a.is_urgent && b.is_urgent) return 1;
+
+    // Priority 2: Custom/Default Sort
+    if (!sortConfig) {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
     const valA = (a as any)[sortConfig.key];
     const valB = (b as any)[sortConfig.key];
 
@@ -285,8 +313,22 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
       ));
 
       // Network Update
+      const oldStageId = draggedCard.stage_id;
       const { error } = await supabase.from('deals').update({ stage_id: newStageId, kanban_order: newOrder }).eq('id', dealId);
       if (error) throw error;
+
+      // Log activity
+      if (oldStageId !== newStageId) {
+        const oldStageName = pipeline?.stages?.find(s => s.id === oldStageId)?.name || 'Unknown';
+        const newStageName = pipeline?.stages?.find(s => s.id === newStageId)?.name || 'Unknown';
+
+        await supabase.from('log_activities').insert({
+          deal_id: dealId,
+          user_id: user.id,
+          content: `Stage changed from ${oldStageName.toLowerCase()} to ${newStageName.toLowerCase()}`,
+          activity_type: 'status_change',
+        });
+      }
 
       setToast({
         isOpen: true,
@@ -336,7 +378,7 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
               onClick={() => setIsAddModalOpen(true)}
               leftIcon={<Plus size={14} strokeWidth={3} />}
               size='sm'
-              variant='success'
+              variant='primary'
             >
               Buat Deal
             </Button>
@@ -428,6 +470,7 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
             onToggleSelectAll={handleToggleSelectAll}
             onEdit={setSelectedDeal}
             onDelete={handleDelete}
+            onToggleUrgency={handleToggleUrgency}
             formatIDR={formatIDR}
             pipeline={pipeline}
             onCreateQuotation={handleCreateQuotation}
@@ -467,12 +510,29 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
           onClose={() => setSelectedDeal(null)}
           onUpdate={handleUpdate}
           onDelete={() => handleDelete(selectedDeal.id)}
+          onConvertToProject={() => setIsConvertModalOpen(true)}
           user={user as any}
           onCreateQuotation={handleCreateQuotation}
           onEditQuotation={handleEditQuotation}
           categories={categories}
           setClientCompanies={setClientCompanies}
           setCategories={setCategories}
+          setToast={setToast}
+        />
+      )}
+
+      {isConvertModalOpen && selectedDeal && activeCompany && (
+        <ConvertDealToProjectModal
+          isOpen={isConvertModalOpen}
+          onClose={() => setIsConvertModalOpen(false)}
+          deal={selectedDeal}
+          companyId={activeCompany.id}
+          userId={user.id}
+          onSuccess={() => {
+            setIsConvertModalOpen(false);
+            setSelectedDeal(null);
+            fetchData();
+          }}
           setToast={setToast}
         />
       )}

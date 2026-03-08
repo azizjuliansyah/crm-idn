@@ -176,14 +176,20 @@ export const ProductCategoriesView: React.FC<Props> = ({ company }) => {
         title={form.id ? "Edit Kategori" : "Tambah Kategori Baru"}
         size="md"
         footer={
-          <Button
-            onClick={handleSave}
-            isLoading={isProcessing}
-            disabled={isProcessing}
-            variant="primary"
-          >
-            Simpan Kategori
-          </Button>
+          <div className="flex items-center justify-end gap-3 w-full">
+            <Button variant="ghost" onClick={() => setIsModalOpen(false)} disabled={isProcessing} className="rounded-md">
+              Batal
+            </Button>
+            <Button
+              onClick={handleSave}
+              isLoading={isProcessing}
+              disabled={isProcessing}
+              variant="primary"
+              className="rounded-md"
+            >
+              Simpan Kategori
+            </Button>
+          </div>
         }
       >
         <div className="space-y-4 pb-2 text-left">

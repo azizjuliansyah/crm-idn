@@ -676,6 +676,17 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
             </Button>
           )}
 
+          {requestModal.quotationStatus === 'Accepted' && (
+            <Button
+              variant="ghost"
+              className="w-full justify-start !py-4 text-left border border-blue-200 bg-blue-50/50 hover:bg-blue-50"
+              leftIcon={<FileText className="text-blue-500" size={18} />}
+              onClick={() => router.push(`/dashboard/sales/invoice-requests/create?quotationId=${requestModal.quotationId}`)}
+            >
+              Request Invoice
+            </Button>
+          )}
+
           {requestCategories.map(cat => (
             <Button
               key={cat.id}

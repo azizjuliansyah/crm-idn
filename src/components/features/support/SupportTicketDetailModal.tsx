@@ -230,7 +230,7 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
           <div className="flex items-center gap-4">
             <Button variant="ghost" onClick={onClose} className="!p-1.5 text-gray-400 border border-transparent hover:border-gray-100 hover:text-gray-900 transition-all rounded-xl"><ChevronLeft size={20} /></Button>
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-rose-100 group">
+              <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-rose-100 group">
                 <Headset size={18} className="group-hover:rotate-12 transition-transform" />
               </div>
               <H2 className="text-base   uppercase">{form.title}</H2>
@@ -243,10 +243,11 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
               onClick={() => onDelete(ticket.id)}
               title="Hapus Tiket"
             />
-            <Button onClick={handleSave} disabled={isProcessing} isLoading={isProcessing} leftIcon={<Save size={14} />} variant="danger" size='sm'>
+            <Button onClick={handleSave} disabled={isProcessing} isLoading={isProcessing} leftIcon={<Save size={14} />} variant="primary" size='sm' className="rounded-md">
               UPDATE TICKET
             </Button>
-            <Button variant="ghost" onClick={onClose} className="!p-1.5 text-gray-400 ml-2 hover:text-gray-900 rounded-xl"><X size={20} /></Button>
+            <div className="w-px h-6 bg-gray-200 mx-1"></div>
+            <Button variant="ghost" onClick={onClose} className="!p-1.5 text-gray-400 hover:text-gray-900 rounded-xl"><X size={20} /></Button>
           </div>
         </header>
 
@@ -292,11 +293,11 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
                     value={newComment}
                     onChange={e => setNewComment(e.target.value)}
                     placeholder="Tulis update penyelesaian di sini..."
-                    className="min-h-[90px] rounded-2xl border-gray-100 focus:border-rose-400 focus:ring-rose-400/10 transition-all text-xs font-medium placeholder:text-gray-300"
+                    className="min-h-[90px] rounded-2xl border-gray-100 focus:border-primary focus:ring-primary/10 transition-all text-xs font-medium placeholder:text-gray-300"
                   />
                   <div className="absolute right-2.5 bottom-2.5">
                     <Button
-                      variant="danger"
+                      variant="primary"
                       onClick={handleAddComment}
                       disabled={!newComment.trim()}
                       className="!p-2 mb-1 !h-auto !rounded-md"

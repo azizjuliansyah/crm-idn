@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, Subtext, Label } from '@/components/ui';
 import { Deal, Pipeline } from '@/lib/types';
-import { User as UserIcon, ChevronRight, Trash2, Target, FileText, Plus, FilePlus } from 'lucide-react';
+import { User as UserIcon, ChevronRight, Trash2, Target, FileText, Plus, FilePlus, Zap } from 'lucide-react';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { KanbanBoard, KanbanItem, KanbanStage } from '@/components/shared/KanbanBoard/KanbanBoard';
 
@@ -17,6 +17,7 @@ interface Props {
   onEditQuotation?: (quotationId: number) => void;
   formatIDR: (num?: number) => string;
   onReorder: (itemId: number, newStageId: string, newIndex?: number) => void;
+  hasUrgency?: boolean;
 }
 
 const getStageColor = (name: string, index: number) => {
@@ -40,7 +41,7 @@ const getStageColor = (name: string, index: number) => {
 
 export const DealsKanbanView: React.FC<Props> = ({
   pipeline, dealsByStage, onEdit, onDelete,
-  onCreateQuotation, onEditQuotation, formatIDR, onReorder
+  onCreateQuotation, onEditQuotation, formatIDR, onReorder, hasUrgency
 }) => {
   if (!pipeline) return null;
 
@@ -56,8 +57,14 @@ export const DealsKanbanView: React.FC<Props> = ({
     return (
       <div
         onClick={() => onEdit(deal)}
-        className={`group p-3 bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-grab active:cursor-grabbing transform hover:-translate-y-1 relative ${isDragged ? 'opacity-30' : ''}`}
+        className={`group p-3 bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-grab active:cursor-grabbing transform hover:-translate-y-1 relative ${isDragged ? 'opacity-30' : ''
+          } ${hasUrgency && deal.is_urgent ? 'border-l-3 border-l-amber-400 bg-amber-50 shadow-amber-100/50' : ''}`}
       >
+        {hasUrgency && deal.is_urgent && (
+          <div className="absolute top-1 left-2">
+            <Zap size={10} className="text-amber-500 fill-amber-500 animate-pulse" />
+          </div>
+        )}
         <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
           {quotation ? (
             <ActionButton

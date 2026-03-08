@@ -157,6 +157,7 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
     if (pathname.startsWith('/dashboard/settings/profile')) return 'profil_saya';
     if (pathname.startsWith('/dashboard/settings/ticket-topic')) return 'pengaturan_ticket_topic';
     if (pathname.startsWith('/dashboard/settings/ai')) return 'pengaturan_ai';
+    if (pathname.startsWith('/dashboard/settings/urgencies')) return 'pengaturan_urgensi_request';
 
     // Project Settings
     if (pathname.startsWith('/dashboard/settings/projects/pipelines')) return 'pengaturan_project_pipeline';
@@ -236,6 +237,7 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
       case 'profil_saya': router.push('/dashboard/settings/profile'); break;
       case 'pengaturan_ticket_topic': router.push('/dashboard/settings/ticket-topic'); break;
       case 'pengaturan_ai': router.push('/dashboard/settings/ai'); break;
+      case 'pengaturan_urgensi_request': router.push('/dashboard/settings/urgencies'); break;
 
       // Project Settings
       case 'pengaturan_project_pipeline': router.push('/dashboard/settings/projects/pipelines'); break;

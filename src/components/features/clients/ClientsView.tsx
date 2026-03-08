@@ -273,8 +273,8 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
                 setIsModalOpen(true);
               }}
               leftIcon={<Plus size={14} strokeWidth={3} />}
-              className="!px-6 py-2.5 text-[10px] uppercase  shadow-lg shadow-emerald-100"
-              variant="success"
+              className="!px-6 py-2.5 text-[10px] uppercase  shadow-lg shadow-blue-100"
+              variant="primary"
               size="sm"
             >
               Client Baru
@@ -283,7 +283,7 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
         </div>
 
         <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-gray-50">
-          <div className="w-[400px] shrink-0">
+          <div className="w-[400px] shrink-0">  
             <SearchInput
               placeholder="Cari client atau perusahaan..."
               value={searchTerm}

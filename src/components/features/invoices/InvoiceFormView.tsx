@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Company, Client, Product, Invoice, InvoiceItem, TaxSetting, ProductCategory, ProductUnit, ClientCompany, ClientCompanyCategory, Quotation, ProformaInvoice, AutonumberSetting } from '@/lib/types';
+import { Company, Client, Product, Invoice, InvoiceItem, Kwitansi, TaxSetting, ProductCategory, ProductUnit, ClientCompany, ClientCompanyCategory, Quotation, ProformaInvoice, AutonumberSetting } from '@/lib/types';
 import {
   ArrowLeft, Save, Plus, Trash2, Calendar, FileBadge,
   User, ChevronDown, Package, Loader2, CheckCircle2, X, AlertCircle, Tags, Weight,
-  Building, Mail, Phone, Search, FileText, Check as CheckIcon, FileDown, DollarSign
+  Building, Mail, Phone, Search, FileText, Check as CheckIcon, FileDown, DollarSign, FilePlus
 } from 'lucide-react';
 import { Modal, Button, Input, Textarea, SectionHeader, Label, Subtext, Table, TableHeader, TableBody, TableRow, TableCell, ComboBox, H2, Card, Toast, ToastType } from '@/components/ui';
 import { ClientFormModal } from '@/components/features/clients/components/ClientFormModal';
@@ -15,6 +15,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { generateTemplate1, generateTemplate5, generateTemplate6 } from '@/lib/pdf-templates';
 import { useRouter } from 'next/navigation';
+import { useDashboard } from '@/app/dashboard/DashboardContext';
 
 interface Props {
   company: Company;
@@ -80,7 +81,9 @@ const generateFormattedNumber = (pattern: string, nextNum: number, digitCount: n
 
 export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialClientId, initialProformaId, initialQuotationId, initialRequestId, onSaveSuccess }) => {
   const router = useRouter();
+  const { activeCompanyMembers, user } = useDashboard();
   const [loading, setLoading] = useState(false);
+  const [existingKwitansi, setExistingKwitansi] = useState<Kwitansi | null>(null);
   const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
     isOpen: false,
     message: '',
@@ -261,6 +264,17 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
         setSelectedTaxIds(taxIds);
       }
     }
+    
+    // Check for existing Kwitansi if editing
+    if (editingId) {
+      const { data: kwt } = await supabase
+        .from('kwitansis')
+        .select('*')
+        .eq('invoice_id', editingId)
+        .maybeSingle();
+      if (kwt) setExistingKwitansi(kwt);
+    }
+
     setLoading(false);
   }, [company.id, editingId, initialClientId, initialProformaId, initialQuotationId]);
 
@@ -278,6 +292,8 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
 
   const totalTaxAmount = useMemo(() => selectedTaxesList.reduce((acc, curr) => acc + curr.calculated_value, 0), [selectedTaxesList]);
   const total = useMemo(() => subtotal - discountAmount + totalTaxAmount, [subtotal, discountAmount, totalTaxAmount]);
+
+  const taxTypeString = useMemo(() => selectedTaxesList.map(t => `${t.name} ${t.rate}%`).join(', '), [selectedTaxesList]);
 
   const handleAddItem = () => setItems([...items, { productId: '', description: '', qty: 1, unit: 'pcs', price: 0, total: 0 }]);
   const handleRemoveItem = (idx: number) => {
@@ -423,6 +439,136 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
     doc.save(`${inv.number}.pdf`);
   };
 
+  const hasApprovalPermission = useMemo(() => {
+    if (user?.platform_role === 'ADMIN') return true;
+    const currentMember = activeCompanyMembers.find(m => m.user_id === user?.id);
+    return currentMember?.company_roles?.permissions.includes('Persetujuan Request Kwitansi') || false;
+  }, [user, activeCompanyMembers]);
+
+  const handleCreateKwitansi = async () => {
+    setLoading(true);
+    try {
+      // Create Kwitansi
+      const kwtNumber = `KWT-${Date.now().toString().slice(-6)}`;
+      const { data: kwt, error: kwtErr } = await supabase
+        .from('kwitansis')
+        .insert({
+          company_id: company.id,
+          client_id: parseInt(clientId),
+          invoice_id: editingId,
+          number: kwtNumber,
+          date: new Date().toISOString().split('T')[0],
+          status: 'Paid',
+          total: total || 0,
+          subtotal: subtotal || 0,
+          tax_type: taxTypeString || null,
+          tax_value: totalTaxAmount || 0,
+          discount_type: discountType || 'Rp',
+          discount_value: discountValue || 0
+        })
+        .select()
+        .single();
+
+      if (kwtErr) throw kwtErr;
+
+      // Create Kwitansi Items
+      if (items.length > 0) {
+        const { error: itemsErr } = await supabase
+          .from('kwitansi_items')
+          .insert(items.map((it: any) => ({
+            kwitansi_id: kwt.id,
+            product_id: it.productId ? parseInt(it.productId) : null,
+            description: it.description,
+            qty: it.qty,
+            price: it.price,
+            total: it.total,
+            unit_name: it.unit
+          })));
+        if (itemsErr) throw itemsErr;
+      }
+
+      setToast({ isOpen: true, message: `Kwitansi berhasil dibuat.`, type: 'success' });
+      setExistingKwitansi(kwt);
+    } catch (err: any) {
+      setToast({ isOpen: true, message: err.message, type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownloadKwitansi = async () => {
+    if (!editingId) return;
+    setLoading(true);
+
+    try {
+      const { data: kwt, error: kwtErr } = await supabase
+        .from('kwitansis')
+        .select('*, client:clients(*, client_company:client_companies(*)), kwitansi_items(*, products(*))')
+        .eq('invoice_id', editingId)
+        .order('id', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (kwtErr) throw kwtErr;
+
+      if (!kwt) {
+        setToast({ isOpen: true, message: 'Kwitansi untuk invoice ini belum dibuat.', type: 'error' });
+        setLoading(false);
+        return;
+      }
+
+      const { data: templateSetting } = await supabase
+        .from('document_template_settings')
+        .select('*')
+        .eq('company_id', company.id)
+        .eq('document_type', 'kwitansi')
+        .maybeSingle();
+
+      const templateId = templateSetting?.template_id || 'template1';
+      const config = templateSetting?.config || {};
+      config.document_type = 'kwitansi';
+
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const padX = 18;
+
+      if (templateId === 'template1') {
+        await generateTemplate1(doc, kwt, config, company, pageWidth, padX);
+      } else if (templateId === 'template5') {
+        await generateTemplate5(doc, kwt, config, company, pageWidth, padX);
+      } else if (templateId === 'template6') {
+        await generateTemplate6(doc, kwt, config, company, pageWidth, padX);
+      } else {
+        doc.setFillColor('#4F46E5');
+        doc.rect(0, 0, pageWidth, 40, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(24);
+        doc.setFont('helvetica', 'bold');
+        doc.text('KWITANSI PENJUALAN', 20, 25);
+
+        autoTable(doc, {
+          startY: 50,
+          head: [['Produk', 'Deskripsi', 'Qty', 'Harga', 'Total']],
+          body: kwt.kwitansi_items?.map((it: any) => [
+            String(it.products?.name || ''),
+            String(it.description || ''),
+            `${it.qty} ${it.unit_name || ''}`,
+            formatIDRVal(it.price),
+            formatIDRVal(it.total)
+          ]) || [],
+          theme: 'striped',
+          headStyles: { fillColor: '#4F46E5' }
+        });
+      }
+
+      doc.save(`${kwt.number}.pdf`);
+    } catch (err: any) {
+      setToast({ isOpen: true, message: err.message, type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   // --- Quick Add Handlers ---
 
@@ -519,14 +665,27 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
             <Button variant="ghost" onClick={() => router.push('/dashboard/sales/invoices')}>Batal</Button>
             {editingId && (
               <div className="flex gap-2">
-                <Button
-                  variant="secondary"
-                  onClick={() => router.push(`/dashboard/sales/kwitansi-requests/create?invoiceId=${editingId}`)}
-                  leftIcon={<FileText size={16} />}
-                  className="border-amber-200 text-amber-600 hover:bg-amber-50"
-                >
-                  Request Kwitansi
-                </Button>
+                {status === 'Paid' && !existingKwitansi && hasApprovalPermission && (
+                  <Button
+                    variant="secondary"
+                    onClick={handleCreateKwitansi}
+                    leftIcon={<FilePlus size={16} />}
+                    className="border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+                    disabled={loading}
+                  >
+                    Buat Kwitansi
+                  </Button>
+                )}
+                {status === 'Paid' && existingKwitansi && (
+                  <Button
+                    variant="secondary"
+                    onClick={handleDownloadKwitansi}
+                    leftIcon={<FileDown size={16} />}
+                    className="border-emerald-200 text-emerald-600 hover:bg-emerald-50"
+                  >
+                    Unduh Kwitansi
+                  </Button>
+                )}
                 <Button
                   variant="secondary"
                   onClick={handleDownloadPDF}

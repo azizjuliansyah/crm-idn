@@ -114,7 +114,7 @@ export const Layout: React.FC<LayoutProps> = ({
     'Produk', 'Kategori Produk', 'Satuan', 'Penjualan', 'Penawaran', 'Proforma Invoice',
     'Invoice', 'Kwitansi', 'Pengaturan Penjualan', 'Penomoran Otomatis', 'Pengaturan Pajak',
     'Template Dokumen', 'Knowledge Base', 'Pengaturan AI', 'Customer Support',
-    'Support Pipeline', 'Konfigurasi Email', 'Request Invoice', 'SOP', 'AI Assistant', 'Ticket Topic'
+    'Support Pipeline', 'Konfigurasi Email', 'Request Invoice', 'SOP', 'AI Assistant', 'Ticket Topic', 'Tingkat Urgensi'
   ];
 
   const fetchPipelines = useCallback(async () => {
@@ -144,7 +144,7 @@ export const Layout: React.FC<LayoutProps> = ({
       'pengaturan_project_pipeline', 'pengaturan_task_pipeline', 'support_pipeline',
       'pengaturan_kategori_client', 'penomoran_otomatis', 'pengaturan_pajak',
       'pengaturan_template_pdf', 'kategori_produk', 'satuan_produk', 'pengaturan_ai',
-      'pengaturan_ticket_topic', 'request_category_settings', 'sop_category_settings'
+      'pengaturan_ticket_topic', 'request_category_settings', 'sop_category_settings', 'pengaturan_urgensi_request'
     ].includes(activeView)
   }), [activeView]);
 
@@ -505,7 +505,6 @@ export const Layout: React.FC<LayoutProps> = ({
                       {canShow('Penawaran') && renderSubMenuLevel1('daftar_penawaran', 'Penawaran', <FileText />, activeView === 'daftar_penawaran' || activeView === 'buat_penawaran' || activeView === 'edit_penawaran')}
                       {canShow('Proforma Invoice') && renderSubMenuLevel1('daftar_proforma', 'Proforma', <FileCheck />, activeView === 'daftar_proforma' || activeView === 'buat_proforma' || activeView === 'edit_proforma')}
                       {canShow('Invoice') && renderSubMenuLevel1('daftar_invoice', 'Invoice', <FileBadge />, activeView === 'daftar_invoice' || activeView === 'buat_invoice' || activeView === 'edit_invoice')}
-                      {canShow('Kwitansi') && renderSubMenuLevel1('daftar_kwitansi', 'Kwitansi', <FileBadge />, activeView === 'daftar_kwitansi' || activeView === 'buat_kwitansi' || activeView === 'edit_kwitansi')}
                       {(canShow('Request Invoice') || canShow('Request Kwitansi')) && (
                         <div className="space-y-0.5">
                           <Button
@@ -644,14 +643,18 @@ export const Layout: React.FC<LayoutProps> = ({
                     {isSettingsOpen && (
                       <div className="pl-4 space-y-0.5 mt-0.5 ml-6 pb-4">
                         {/* UMUM & TIM */}
-                        <div className="px-3 pb-1 pt-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Umum & Tim</div>
+                        {(canShow('Perusahaan') || canShow('Konfigurasi Email') || canShow('Anggota Tim') || canShow('Manajemen Role')) && (
+                          <div className="px-3 pb-1 pt-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Umum & Tim</div>
+                        )}
                         {canShow('Perusahaan') && renderSubMenuLevel1('pengaturan_perusahaan', 'Identitas Umum', <Building2 />, activeView === 'pengaturan_perusahaan')}
                         {canShow('Konfigurasi Email') && renderSubMenuLevel1('workspace_email_config', 'Konfigurasi Email', <Mail />, activeView === 'workspace_email_config')}
                         {canShow('Anggota Tim') && renderSubMenuLevel1('anggota_tim', 'Anggota Tim', <Users />, activeView === 'anggota_tim')}
                         {canShow('Manajemen Role') && renderSubMenuLevel1('manajemen_role', 'Manajemen Role', <ShieldAlert />, activeView === 'manajemen_role')}
 
                         {/* CRM & PIPELINES */}
-                        <div className="px-3 pb-1 pt-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Pipelines</div>
+                        {(canShow('Pengaturan Leads') || canShow('Pengaturan Deals Pipeline') || canShow('Project Pipeline') || canShow('Task Pipeline') || canShow('Support Pipeline')) && (
+                          <div className="px-3 pb-1 pt-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Pipelines</div>
+                        )}
                         {canShow('Pengaturan Leads') && renderSubMenuLevel1('pengaturan_leads', 'Leads Pipeline', <Target />, activeView === 'pengaturan_leads')}
                         {canShow('Pengaturan Deals Pipeline') && renderSubMenuLevel1('pengaturan_deals_pipeline', 'Deals Pipeline', <Layers />, activeView === 'pengaturan_deals_pipeline')}
                         {canShow('Project Pipeline') && renderSubMenuLevel1('pengaturan_project_pipeline', 'Project Pipeline', <Workflow />, activeView === 'pengaturan_project_pipeline')}
@@ -659,17 +662,22 @@ export const Layout: React.FC<LayoutProps> = ({
                         {canShow('Support Pipeline') && renderSubMenuLevel1('support_pipeline', 'Support Pipeline', <LifeBuoy />, activeView === 'support_pipeline')}
 
                         {/* MASTER DATA */}
-                        <div className="px-3 pb-1 pt-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Master Data</div>
+                        {(canShow('Pengaturan Kategori Client') || canShow('Pengaturan Sumber Leads') || canShow('Kategori Produk') || canShow('Satuan') || canShow('Pengaturan Kategori Request') || canShow('Tingkat Urgensi') || canShow('SOP') || canShow('Ticket Topic')) && (
+                          <div className="px-3 pb-1 pt-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Master Data</div>
+                        )}
                         {canShow('Pengaturan Kategori Client') && renderSubMenuLevel1('pengaturan_kategori_client', 'Kategori Client', <Tags />, activeView === 'pengaturan_kategori_client')}
                         {canShow('Pengaturan Sumber Leads') && renderSubMenuLevel1('pengaturan_sumber_leads', 'Lead Sources', <Globe />, activeView === 'pengaturan_sumber_leads')}
                         {canShow('Kategori Produk') && renderSubMenuLevel1('kategori_produk', 'Kategori Produk', <LayoutGrid />, activeView === 'kategori_produk')}
                         {canShow('Satuan') && renderSubMenuLevel1('satuan_produk', 'Satuan Produk', <Weight />, activeView === 'satuan_produk')}
                         {canShow('Pengaturan Kategori Request') && renderSubMenuLevel1('request_category_settings', 'Kategori Request', <FileQuestion />, activeView === 'request_category_settings')}
+                        {canShow('Tingkat Urgensi') && renderSubMenuLevel1('pengaturan_urgensi_request', 'Tingkat Urgensi', <ShieldAlert />, activeView === 'pengaturan_urgensi_request')}
                         {canShow('SOP') && renderSubMenuLevel1('sop_category_settings', 'Kategori SOP', <BookMarked />, activeView === 'sop_category_settings')}
                         {canShow('Ticket Topic') && renderSubMenuLevel1('pengaturan_ticket_topic', 'Ticket Topic', <Ticket />, activeView === 'pengaturan_ticket_topic')}
 
                         {/* FINANCE & DOCS */}
-                        <div className="px-3 pb-1 pt-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Finance & Tools</div>
+                        {(canShow('Penomoran Otomatis') || canShow('Pengaturan Pajak') || canShow('Template Dokumen') || canShow('Pengaturan AI')) && (
+                          <div className="px-3 pb-1 pt-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Finance & Tools</div>
+                        )}
                         {canShow('Penomoran Otomatis') && renderSubMenuLevel1('penomoran_otomatis', 'Format Nomor', <Hash />, activeView === 'penomoran_otomatis')}
                         {canShow('Pengaturan Pajak') && renderSubMenuLevel1('pengaturan_pajak', 'Pajak & Fee', <Coins />, activeView === 'pengaturan_pajak')}
                         {canShow('Template Dokumen') && renderSubMenuLevel1('pengaturan_template_pdf', 'PDF Templates', <Palette />, activeView === 'pengaturan_template_pdf')}

@@ -1,7 +1,7 @@
 import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, Subtext, Label, Badge, Checkbox } from '@/components/ui';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { Lead } from '@/lib/types';
-import { Table as TableIcon, Trash2, ChevronUp, ChevronDown, Clock } from 'lucide-react';
+import { Table as TableIcon, Trash2, ChevronUp, ChevronDown, Clock, Zap } from 'lucide-react';
 
 interface Props {
   leads: Lead[];
@@ -13,12 +13,14 @@ interface Props {
   onToggleSelectAll: () => void;
   onEdit: (lead: Lead) => void;
   onDelete: (id: number) => void;
+  onToggleUrgency: (id: number, current: boolean) => void;
   formatIDR: (num?: number) => string;
+  hasUrgency?: boolean;
 }
 
 export const LeadsTableView: React.FC<Props> = ({
   leads, sortConfig, onSort, selectedIds, onToggleSelect,
-  onToggleSelectAll, onEdit, onDelete, formatIDR
+  onToggleSelectAll, onEdit, onDelete, onToggleUrgency, formatIDR, hasUrgency
 }) => {
   const SortIndicator = ({ column }: { column: string }) => {
     if (sortConfig?.key !== column) return <ChevronUp size={12} className="text-gray-200 opacity-0 group-hover:opacity-100 transition-opacity ml-1" />;
@@ -71,7 +73,7 @@ export const LeadsTableView: React.FC<Props> = ({
             <TableEmpty colSpan={7} message="Tidak ada lead yang ditemukan" />
           ) : (
             leads.map(lead => (
-              <TableRow key={lead.id}>
+              <TableRow key={lead.id} className={lead.is_urgent ? '!border-l-3 !border-l-amber-400 !bg-amber-50 even:!bg-amber-100/60 hover:!bg-amber-100/60 transition-colors' : ''}>
                 <TableCell className="text-center">
                   <Checkbox
                     checked={selectedIds.includes(lead.id)}
@@ -88,10 +90,10 @@ export const LeadsTableView: React.FC<Props> = ({
                 </TableCell>
                 <TableCell>
                   {lead.salutation && <span className="!text-blue-400 mr-1">{lead.salutation}</span>}
-                  {lead.name}
+                  <span className={lead.is_urgent ? 'font-bold' : ''}>{lead.name}</span>
                   <Subtext className="text-[10px] !text-gray-400 mt-1 uppercase ">{lead.client_company?.name || 'Perorangan'}</Subtext>
                 </TableCell>
-                <TableCell className=" text-gray-600">{formatIDR(lead.expected_value)}</TableCell>
+                <TableCell className=" text-gray-600 font-medium">{formatIDR(lead.expected_value)}</TableCell>
                 <TableCell className="py-4 w-[150px]">
                   <Label className="text-gray-700">
                     {lead.sales_profile?.full_name?.split(' ')[0] || '-'}
@@ -103,14 +105,23 @@ export const LeadsTableView: React.FC<Props> = ({
                 <TableCell>
                   <div className="flex items-center justify-center gap-2">
                     <ActionButton
+                      icon={Zap}
+                      variant={lead.is_urgent ? 'amber' : 'gray'}
+                      onClick={(e) => { e.stopPropagation(); onToggleUrgency(lead.id, !!lead.is_urgent); }}
+                      title={lead.is_urgent ? 'Hapus Urgensi' : 'Tandai Urgent'}
+                      className={lead.is_urgent ? 'animate-pulse' : ''}
+                    />
+                    <ActionButton
                       icon={TableIcon}
                       variant="blue"
                       onClick={() => onEdit(lead)}
+                      title="Detail Lead"
                     />
                     <ActionButton
                       icon={Trash2}
                       variant="rose"
                       onClick={(e) => { e.stopPropagation(); onDelete(lead.id); }}
+                      title="Hapus Lead"
                     />
                   </div>
                 </TableCell>

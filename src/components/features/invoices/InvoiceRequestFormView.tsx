@@ -6,10 +6,10 @@ import { Textarea, Button, H1, Subtext, Label, ComboBox, Toast, ToastType } from
 
 
 import { supabase } from '@/lib/supabase';
-import { Company, Profile, Client, Quotation, ProformaInvoice } from '@/lib/types';
+import { Company, Profile, Client, Quotation, ProformaInvoice, UrgencyLevel } from '@/lib/types';
 import {
   ArrowLeft, Save, Loader2, User, FileText, FileCheck,
-  FileQuestion, AlertCircle, Info, ChevronRight, CheckCircle2
+  FileQuestion, AlertCircle, Info, ChevronRight, CheckCircle2, Zap
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -23,6 +23,7 @@ export const InvoiceRequestFormView: React.FC<Props> = ({ company, user, onNavig
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialProformaId = searchParams.get('proformaId');
+  const initialQuotationId = searchParams.get('quotationId');
   const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -32,6 +33,8 @@ export const InvoiceRequestFormView: React.FC<Props> = ({ company, user, onNavig
   const [refType, setRefType] = useState<'quotation' | 'proforma'>('quotation');
   const [docId, setDocId] = useState('');
   const [notes, setNotes] = useState('');
+  const [urgencyLevels, setUrgencyLevels] = useState<UrgencyLevel[]>([]);
+  const [urgencyId, setUrgencyId] = useState<number | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
     isOpen: false,
@@ -42,15 +45,22 @@ export const InvoiceRequestFormView: React.FC<Props> = ({ company, user, onNavig
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [cRes, qRes, pRes] = await Promise.all([
+      const [cRes, qRes, pRes, uRes] = await Promise.all([
         supabase.from('clients').select('*, client_company:client_companies(*)').eq('company_id', company.id).order('name'),
         supabase.from('quotations').select('*').eq('company_id', company.id).eq('status', 'Accepted').order('id', { ascending: false }),
-        supabase.from('proformas').select('*').eq('company_id', company.id).order('id', { ascending: false })
+        supabase.from('proformas').select('*').eq('company_id', company.id).order('id', { ascending: false }),
+        supabase.from('urgency_levels').select('*').eq('company_id', company.id).order('sort_order', { ascending: true })
       ]);
 
       if (cRes.data) setClients(cRes.data);
       if (qRes.data) setQuotations(qRes.data);
       if (pRes.data) setProformas(pRes.data as any);
+      if (uRes.data) {
+          setUrgencyLevels(uRes.data as any);
+          if (uRes.data.length > 0) {
+              setUrgencyId(uRes.data[0].id); // Set default to the first one
+          }
+      }
     } finally {
       setLoading(false);
     }
@@ -68,8 +78,15 @@ export const InvoiceRequestFormView: React.FC<Props> = ({ company, user, onNavig
         setRefType('proforma');
         setDocId(String(p.id));
       }
+    } else if (initialQuotationId && quotations.length > 0) {
+      const q = quotations.find(x => x.id.toString() === initialQuotationId);
+      if (q) {
+        setClientId(String(q.client_id));
+        setRefType('quotation');
+        setDocId(String(q.id));
+      }
     }
-  }, [initialProformaId, proformas]);
+  }, [initialProformaId, initialQuotationId, proformas, quotations]);
 
   const filteredDocs = useMemo(() => {
     if (!clientId) return [];
@@ -93,6 +110,7 @@ export const InvoiceRequestFormView: React.FC<Props> = ({ company, user, onNavig
         quotation_id: refType === 'quotation' ? parseInt(docId) : null,
         proforma_id: refType === 'proforma' ? parseInt(docId) : null,
         notes: notes.trim(),
+        urgency_id: urgencyId,
         status: 'Pending'
       });
 
@@ -185,7 +203,6 @@ export const InvoiceRequestFormView: React.FC<Props> = ({ company, user, onNavig
               {!clientId && <Subtext className="text-[9px] text-gray-400 italic px-2">Silakan pilih client terlebih dahulu untuk melihat daftar dokumen.</Subtext>}
               {clientId && filteredDocs.length === 0 && <Subtext className="text-[9px] text-rose-500  px-2">Tidak ada dokumen {refType} yang tersedia untuk client ini.</Subtext>}
             </div>
-
             <Textarea
               label="Catatan Tambahan"
               value={notes}
@@ -193,6 +210,22 @@ export const InvoiceRequestFormView: React.FC<Props> = ({ company, user, onNavig
               className="h-32"
               placeholder="Misal: Tagihan ini untuk termin 1, tolong segera diproses..."
             />
+
+            {urgencyLevels.length > 0 && (
+              <div className="space-y-3">
+                  <Label className="uppercase ml-1">Tingkat Urgensi</Label>
+                  <ComboBox
+                      value={urgencyId?.toString() || ''}
+                      onChange={(val: string | number) => setUrgencyId(Number(val))}
+                      options={urgencyLevels.map(u => ({
+                          value: u.id.toString(),
+                          label: u.name
+                      }))}
+                      className="h-14 font-medium"
+                  />
+                  <Subtext className="text-[10px] text-gray-400 mt-1 pl-1">Pilih tingkat prioritas untuk request ini.</Subtext>
+              </div>
+            )}
           </div>
 
           <div className="p-6 bg-blue-50/50 border border-blue-100 rounded-2xl flex gap-4">
@@ -206,7 +239,7 @@ export const InvoiceRequestFormView: React.FC<Props> = ({ company, user, onNavig
               disabled={isProcessing || !clientId || !docId}
               isLoading={isProcessing}
               leftIcon={<Save size={18} />}
-              className="px-10 py-6 h-auto"
+              variant='primary'
             >
               Kirim Pengajuan
             </Button>

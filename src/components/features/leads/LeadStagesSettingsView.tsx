@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { LeadStage, Company } from '@/lib/types';
 import {
   Plus, Edit2, Trash2, Loader2, ArrowUp, ArrowDown, Save,
-  CheckCircle2, AlertTriangle, Target, X, Kanban
+  CheckCircle2, AlertTriangle, Target, X, Kanban, Zap
 } from 'lucide-react';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
@@ -141,18 +141,26 @@ export const LeadStagesSettingsView: React.FC<Props> = ({ company }) => {
   return (
     <div className="flex flex-col space-y-6 max-w-4xl">
       <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
-        <div>
-          <H2 className="text-xl ">Manajemen Lead Pipeline</H2>
-          <Subtext className="text-[10px] uppercase font-semibold text-gray-400">Atur alur kualifikasi prospek baru ke dalam sistem.</Subtext>
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 shadow-sm">
+            <Target size={20} />
+          </div>
+          <div>
+            <H2 className="text-xl ">Manajemen Lead Pipeline</H2>
+            <Subtext className="text-[10px] uppercase font-semibold text-gray-400">Atur alur kualifikasi prospek baru ke dalam sistem.</Subtext>
+          </div>
         </div>
-        <Button
-          onClick={() => { setForm({ id: '', name: '' }); setIsModalOpen(true); }}
-          leftIcon={<Plus size={14} strokeWidth={3} />}
-          variant='primary'
-          size='sm'
-        >
-          Tambah Stage
-        </Button>
+        <div className="flex items-center gap-3">
+
+          <Button
+            onClick={() => { setForm({ id: '', name: '' }); setIsModalOpen(true); }}
+            leftIcon={<Plus size={14} strokeWidth={3} />}
+            variant='primary'
+            size='sm'
+          >
+            Tambah Stage
+          </Button>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm p-6 space-y-3">
@@ -211,12 +219,16 @@ export const LeadStagesSettingsView: React.FC<Props> = ({ company }) => {
         onClose={() => setIsModalOpen(false)}
         title={form.id ? "Edit Tahapan Leads" : "Tambah Tahapan Leads"}
         footer={
-          <div className="flex w-full gap-3">
-            <Button variant="ghost" onClick={() => setIsModalOpen(false)} className="flex-1 text-[10px] uppercase font-bold">Batal</Button>
+          <div className="flex items-center justify-end gap-3 w-full">
+            <Button variant="ghost" onClick={() => setIsModalOpen(false)} disabled={isProcessing} className="rounded-md">
+              Batal
+            </Button>
             <Button
+              variant="primary"
               onClick={handleSave}
               isLoading={isProcessing}
-              variant='primary'
+              disabled={isProcessing}
+              className="rounded-md"
             >
               Simpan Tahapan
             </Button>

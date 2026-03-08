@@ -301,22 +301,24 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
         title={modalForm.id ? "Edit Project Pipeline" : "Daftarkan Pipeline Baru"}
         size="lg"
         footer={
-          <div className="flex w-full gap-3">
-            <Button variant="ghost" onClick={() => setIsModalOpen(false)} className="flex-1 text-[10px] uppercase font-bold">Batal</Button>
+          <div className="flex items-center justify-end gap-3 w-full">
+            <Button variant="ghost" onClick={() => setIsModalOpen(false)} disabled={isProcessing} className="rounded-md">
+              Batal
+            </Button>
             <Button
+              variant="primary"
               onClick={handleSave}
-              disabled={isProcessing}
               isLoading={isProcessing}
-              leftIcon={<Save size={14} />}
-              variant='primary'
+              disabled={isProcessing}
+              className="rounded-md"
             >
-              Simpan Perubahan
+              <Save size={14} className="mr-2" /> Simpan Perubahan
             </Button>
           </div>
         }
       >
-        <div className="space-y-10 py-2">
-          <div className="space-y-3">
+        <div className="space-y-6 py-2">
+          <div className="space-y-2">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
                 <Workflow size={12} />
@@ -328,13 +330,13 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
               value={modalForm.name}
               onChange={e => setModalForm(prev => ({ ...prev, name: e.target.value }))}
               placeholder="Misal: Pengembangan Software..."
-              className="!py-4"
+              className="!py-3 text-sm"
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Stages Section */}
-            <div className="space-y-5">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
@@ -344,19 +346,22 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
                 </div>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {modalForm.stages.map((s, idx) => (
-                  <div key={idx} className="flex items-center gap-4 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-blue-100 transition-all group">
-                    <div className="w-7 h-7 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-[9px] font-bold text-gray-400">
-                      {idx + 1}
+                  <div key={idx} className="flex items-center justify-between gap-3 p-3 bg-white border border-gray-100 rounded-xl shadow-sm hover:border-blue-100 transition-all group w-full">
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="w-6 h-6 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-[9px] font-bold text-gray-400 shrink-0">
+                        {idx + 1}
+                      </div>
+                      <Input
+                        type="text"
+                        value={s.name}
+                        onChange={(e) => handleUpdateStageName(idx, e.target.value)}
+                        className="bg-transparent border-none outline-none text-[13px] font-semibold text-gray-700 w-full"
+                        containerClassName="flex-1"
+                      />
                     </div>
-                    <Input
-                      type="text"
-                      value={s.name}
-                      onChange={(e) => handleUpdateStageName(idx, e.target.value)}
-                      className="flex-1 bg-transparent border-none outline-none text-[13px] font-semibold text-gray-700"
-                    />
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1 shrink-0">
                       <ActionButton icon={ArrowUp} onClick={() => handleMoveStage(idx, 'up')} disabled={idx === 0} variant="gray" />
                       <ActionButton icon={ArrowDown} onClick={() => handleMoveStage(idx, 'down')} disabled={idx === modalForm.stages.length - 1} variant="gray" />
                       <ActionButton icon={Trash2} onClick={() => removeStageFromForm(idx)} variant="rose" />
@@ -365,21 +370,22 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
                 ))}
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 w-full">
                 <Input
                   type="text"
                   value={newStageInput}
                   onChange={e => setNewStageInput(e.target.value)}
                   onKeyDown={(e: any) => e.key === 'Enter' && addStageToForm()}
                   placeholder="Nama stage..."
-                  className="flex-1 px-4 py-3 bg-gray-50 border border-transparent rounded-xl outline-none text-xs focus:bg-white focus:border-blue-200 transition-all"
+                  className="!py-2 text-sm"
+                  containerClassName="flex-1"
                 />
-                <Button onClick={addStageToForm} className="px-5 py-3 bg-gray-900 text-white rounded-xl text-[10px] uppercase font-bold">Tambah</Button>
+                <Button onClick={addStageToForm} variant="primary" className="!py-2 rounded-lg text-xs font-semibold px-4">Tambah</Button>
               </div>
             </div>
 
             {/* Custom Fields Section */}
-            <div className="space-y-5">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
@@ -389,35 +395,37 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
                 </div>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {modalForm.custom_fields.map((f, idx) => (
-                  <div key={idx} className="flex items-center gap-4 p-4 bg-emerald-50/30 border border-emerald-100 rounded-2xl group">
-                    <div className="w-7 h-7 bg-white border border-emerald-100 rounded-lg flex items-center justify-center text-emerald-600 shadow-sm">
-                      {f.type === 'text' ? <Type size={14} /> : f.type === 'number' ? <Hash size={14} /> : <CalendarIcon size={14} />}
+                  <div key={idx} className="flex items-center justify-between gap-3 p-3 bg-emerald-50/30 border border-emerald-100 rounded-xl group w-full">
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="w-6 h-6 bg-white border border-emerald-100 rounded-lg flex items-center justify-center text-emerald-600 shadow-sm shrink-0">
+                        {f.type === 'text' ? <Type size={12} /> : f.type === 'number' ? <Hash size={12} /> : <CalendarIcon size={12} />}
+                      </div>
+                      <div className="flex-1">
+                        <Label className="text-[12px] font-semibold text-gray-700">{f.label}</Label>
+                        <Subtext className="text-[8px] uppercase font-bold text-emerald-600">{f.type}</Subtext>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <Label className="text-[12px] font-semibold text-gray-700">{f.label}</Label>
-                      <Subtext className="text-[8px] uppercase font-bold text-emerald-600">{f.type}</Subtext>
-                    </div>
-                    <ActionButton icon={X} onClick={() => removeCustomField(idx)} variant="rose" className="opacity-0 group-hover:opacity-100" />
+                    <ActionButton icon={X} onClick={() => removeCustomField(idx)} variant="rose" className="shrink-0" />
                   </div>
                 ))}
                 {modalForm.custom_fields.length === 0 && (
-                  <div className="p-10 text-center border-2 border-dashed border-gray-100 rounded-2xl">
+                  <div className="p-6 text-center border-2 border-dashed border-gray-100 rounded-xl">
                     <Subtext className="text-[9px] uppercase font-bold text-gray-300">Belum ada field kustom</Subtext>
                   </div>
                 )}
               </div>
 
-              <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 space-y-3">
+              <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 space-y-3">
                 <Input
                   type="text"
                   value={newFieldLabel}
                   onChange={e => setNewFieldLabel(e.target.value)}
                   placeholder="Label field (misal: Lokasi)..."
-                  className="!py-3"
+                  className="w-full !py-2 text-xs"
                 />
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full">
                   <ComboBox
                     value={newFieldType}
                     onChange={(val: string | number) => setNewFieldType(val as any)}
@@ -427,9 +435,9 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
                       { value: 'date', label: 'Date' },
                     ]}
                     hideSearch={true}
-                    className="flex-1 w-32"
+                    className="flex-1"
                   />
-                  <Button onClick={addCustomField} className="px-5 py-3 bg-emerald-600 text-white rounded-xl text-[10px] uppercase shadow-lg shadow-emerald-100 font-bold">+ Add</Button>
+                  <Button onClick={addCustomField} variant="primary" className="!py-2 rounded-lg text-xs font-semibold px-4">Add</Button>
                 </div>
               </div>
             </div>

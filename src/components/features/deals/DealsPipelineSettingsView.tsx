@@ -5,7 +5,7 @@ import { Pipeline, Company } from '@/lib/types';
 import {
   Plus, Edit2, Trash2, GripVertical, Save, X,
   Loader2, GitMerge, AlertTriangle,
-  ArrowUp, ArrowDown
+  ArrowUp, ArrowDown, Zap
 } from 'lucide-react';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
@@ -34,12 +34,13 @@ export const DealsPipelineSettingsView: React.FC<Props> = ({ company }) => {
   };
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalForm, setModalForm] = useState<{ id: number | null, name: string, stages: StageForm[] }>({
+  const [modalForm, setModalForm] = useState<{ id: number | null, name: string, stages: StageForm[], has_urgency: boolean }>({
     id: null,
     name: '',
     stages: [
       { name: 'Lead' }, { name: 'Contacted' }, { name: 'Proposal' }, { name: 'Negotiation' }, { name: 'Won' }
-    ]
+    ],
+    has_urgency: false
   });
   const [newStageInput, setNewStageInput] = useState('');
 
@@ -79,7 +80,8 @@ export const DealsPipelineSettingsView: React.FC<Props> = ({ company }) => {
       name: '',
       stages: [
         { name: 'Lead' }, { name: 'Contacted' }, { name: 'Proposal' }, { name: 'Negotiation' }, { name: 'Won' }
-      ]
+      ],
+      has_urgency: false
     });
     setIsModalOpen(true);
   };
@@ -88,7 +90,8 @@ export const DealsPipelineSettingsView: React.FC<Props> = ({ company }) => {
     setModalForm({
       id: p.id,
       name: p.name,
-      stages: (p.stages || []).map(s => ({ id: s.id, name: s.name }))
+      stages: (p.stages || []).map(s => ({ id: s.id, name: s.name })),
+      has_urgency: p.has_urgency || false
     });
     setIsModalOpen(true);
   };
@@ -134,7 +137,8 @@ export const DealsPipelineSettingsView: React.FC<Props> = ({ company }) => {
 
       if (pipelineId) {
         await supabase.from('pipelines').update({
-          name: modalForm.name
+          name: modalForm.name,
+          has_urgency: modalForm.has_urgency
         }).eq('id', pipelineId);
 
         const currentStages = pipelines.find(p => p.id === pipelineId)?.stages || [];
@@ -156,7 +160,8 @@ export const DealsPipelineSettingsView: React.FC<Props> = ({ company }) => {
       } else {
         const { data: newP } = await supabase.from('pipelines').insert({
           company_id: company.id,
-          name: modalForm.name
+          name: modalForm.name,
+          has_urgency: modalForm.has_urgency
         }).select().single();
         pipelineId = newP.id;
 
@@ -276,21 +281,24 @@ export const DealsPipelineSettingsView: React.FC<Props> = ({ company }) => {
         title={modalForm.id ? "Edit Deals Pipeline" : "Buat Pipeline Baru"}
         size="lg"
         footer={
-          <div className="flex w-full gap-3">
-            <Button variant="ghost" onClick={() => setIsModalOpen(false)} className="flex-1 text-[10px] uppercase font-bold mt-1">Batal</Button>
+          <div className="flex items-center justify-end gap-3 w-full">
+            <Button variant="ghost" onClick={() => setIsModalOpen(false)} disabled={isProcessing} className="rounded-md">
+              Batal
+            </Button>
             <Button
+              variant="primary"
               onClick={handleSave}
               isLoading={isProcessing}
-              leftIcon={<Save size={14} />}
-              variant='primary'
+              disabled={isProcessing}
+              className="rounded-md"
             >
-              Simpan Perubahan
+              <Save size={14} className="mr-2" /> Simpan Perubahan
             </Button>
           </div>
         }
       >
-        <div className="space-y-10 py-2">
-          <div className="space-y-3">
+        <div className="space-y-6 py-2">
+          <div className="space-y-2">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
                 <GitMerge size={12} />
@@ -301,11 +309,11 @@ export const DealsPipelineSettingsView: React.FC<Props> = ({ company }) => {
               value={modalForm.name}
               onChange={e => setModalForm(prev => ({ ...prev, name: e.target.value }))}
               placeholder="Misal: Sales Pipeline Standard..."
-              className="!py-4"
+              className="!py-3 text-sm"
             />
           </div>
 
-          <div className="space-y-5">
+          <div className="space-y-3 w-full">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
@@ -315,19 +323,22 @@ export const DealsPipelineSettingsView: React.FC<Props> = ({ company }) => {
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
               {modalForm.stages.map((s, idx) => (
-                <div key={idx} className="flex items-center gap-4 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-blue-100 transition-all group">
-                  <div className="w-7 h-7 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-[9px] font-bold text-gray-400">
-                    {idx + 1}
+                <div key={idx} className="flex items-center justify-between gap-3 p-3 bg-white border border-gray-100 rounded-xl shadow-sm hover:border-blue-100 transition-all group w-full">
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="w-6 h-6 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-[9px] font-bold text-gray-400 shrink-0">
+                      {idx + 1}
+                    </div>
+                    <Input
+                      type="text"
+                      value={s.name}
+                      onChange={(e) => handleUpdateStageName(idx, e.target.value)}
+                      className="bg-transparent border-none outline-none text-[13px] font-semibold text-gray-700 w-full"
+                      containerClassName="flex-1"
+                    />
                   </div>
-                  <Input
-                    type="text"
-                    value={s.name}
-                    onChange={(e) => handleUpdateStageName(idx, e.target.value)}
-                    className="flex-1 bg-transparent border-none outline-none text-[13px] font-semibold text-gray-700"
-                  />
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1 shrink-0">
                     <ActionButton icon={ArrowUp} onClick={() => handleMoveStage(idx, 'up')} disabled={idx === 0} variant="gray" />
                     <ActionButton icon={ArrowDown} onClick={() => handleMoveStage(idx, 'down')} disabled={idx === modalForm.stages.length - 1} variant="gray" />
                     <ActionButton icon={Trash2} onClick={() => removeStageFromForm(idx)} variant="rose" />
@@ -336,16 +347,17 @@ export const DealsPipelineSettingsView: React.FC<Props> = ({ company }) => {
               ))}
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full">
               <Input
                 type="text"
                 value={newStageInput}
                 onChange={e => setNewStageInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && addStageToForm()}
                 placeholder="Nama stage..."
-                className="flex-1 px-4 py-3 bg-gray-50 border border-transparent rounded-xl outline-none text-xs focus:bg-white focus:border-blue-200 transition-all"
+                className="!py-2 text-sm"
+                containerClassName="flex-1"
               />
-              <Button onClick={addStageToForm} className="px-6 py-3 bg-gray-900 text-white rounded-xl text-[10px] uppercase font-bold">Tambah</Button>
+              <Button onClick={addStageToForm} variant="primary" className="!py-2 rounded-lg text-xs font-semibold px-4">Tambah</Button>
             </div>
           </div>
         </div>

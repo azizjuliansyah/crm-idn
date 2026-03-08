@@ -203,13 +203,19 @@ export const LeadSourcesSettingsView: React.FC<Props> = ({ company }) => {
         title={form.id ? "Edit Sumber Lead" : "Tambah Sumber Baru"}
         size="md"
         footer={
-          <Button
-            onClick={handleSave}
-            isLoading={isProcessing}
-            variant='primary'
-          >
-            Simpan Sumber
-          </Button>
+          <div className="flex items-center justify-end gap-3 w-full">
+            <Button variant="ghost" onClick={() => setIsModalOpen(false)} disabled={isProcessing} className="rounded-md">
+              Batal
+            </Button>
+            <Button
+              onClick={handleSave}
+              isLoading={isProcessing}
+              variant='primary'
+              className="rounded-md"
+            >
+              Simpan Sumber
+            </Button>
+          </div>
         }
       >
         <div className="space-y-4 pb-2">
