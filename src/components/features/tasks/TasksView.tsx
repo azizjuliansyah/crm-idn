@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import Link from 'next/link';
 
-import { Input, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, Modal, Avatar, Badge, SearchInput, ComboBox, Toast, ToastType } from '@/components/ui';
+import { Input, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, Modal, Avatar, Badge, SearchInput, ComboBox, Toast, ToastType, InfiniteScrollSentinel } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -16,7 +17,7 @@ import { GanttBoard } from '@/components/shared/GanttBoard/GanttBoard';
 import { KanbanBoard, KanbanItem, KanbanStage } from '@/components/shared/KanbanBoard/KanbanBoard';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
-// Removed legacy NotificationModal import
+import { useInfiniteScroll } from '@/lib/hooks/useInfiniteScroll';
 import { useRouter } from 'next/navigation';
 
 interface Props {
@@ -57,9 +58,8 @@ interface KanbanTask extends Task, KanbanItem { }
 export const TasksView: React.FC<Props> = ({ company, user, members, projectId }) => {
   const router = useRouter();
   const [project, setProject] = useState<Project | null>(null);
-  const [tasks, setTasks] = useState<Task[]>([]);
   const [stages, setStages] = useState<TaskStage[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingMetadata, setLoadingMetadata] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [searchTerm, setSearchTerm] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -84,26 +84,55 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
     start_date: '', end_date: ''
   });
 
-  const fetchData = useCallback(async (isInitial = false) => {
-    if (isInitial) setLoading(true);
+  const fetchTasks = useCallback(async ({ from, to }: { from: number, to: number }) => {
+    if (!projectId) return { data: [], error: null, count: 0 };
+    
+    let query = supabase.from('tasks')
+      .select('*, assigned_profile:profiles(*)', { count: 'exact' })
+      .eq('project_id', projectId);
+
+    if (searchTerm) {
+      query = query.ilike('title', `%${searchTerm}%`);
+    }
+
+    const { data, error, count } = await query
+      .order('id', { ascending: false })
+      .range(from, to);
+
+    return { data: data || [], error, count };
+  }, [projectId, searchTerm]);
+
+  const {
+    data: tasks,
+    isLoading: tasksLoading,
+    isLoadingMore,
+    hasMore,
+    loadMore,
+    refresh,
+    setData: setTasks
+  } = useInfiniteScroll<Task>(fetchTasks, {
+    pageSize: 20,
+    dependencies: [projectId, searchTerm]
+  });
+
+  const fetchMetadata = useCallback(async () => {
+    setLoadingMetadata(true);
     try {
-      const [projRes, stagesRes, tasksRes] = await Promise.all([
+      const [projRes, stagesRes] = await Promise.all([
         supabase.from('projects').select('*').eq('id', projectId).single(),
         supabase.from('task_stages').select('*').eq('company_id', company.id).order('sort_order', { ascending: true }),
-        supabase.from('tasks').select('*, assigned_profile:profiles(*)').eq('project_id', projectId).order('id', { ascending: false })
       ]);
 
       if (projRes.data) setProject(projRes.data);
       if (stagesRes.data) setStages(stagesRes.data);
-      if (tasksRes.data) setTasks(tasksRes.data as any);
     } finally {
-      if (isInitial) setLoading(false);
+      setLoadingMetadata(false);
     }
   }, [projectId, company.id]);
 
   useEffect(() => {
-    fetchData(true);
-  }, [fetchData]);
+    fetchMetadata();
+  }, [fetchMetadata]);
 
   const handleOpenAdd = () => {
     setForm({
@@ -175,7 +204,7 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
 
       setIsAddModalOpen(false);
       setIsDetailModalOpen(false);
-      fetchData(false);
+      refresh();
       showToast('Data task berhasil disimpan.');
     } catch (err: any) {
       showToast(err.message, 'error');
@@ -190,7 +219,7 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
     try {
       await supabase.from('tasks').delete().eq('id', confirmDelete.id);
       setConfirmDelete({ isOpen: false, id: null, title: '' });
-      fetchData(false);
+      refresh();
     } finally {
       setIsProcessing(false);
     }
@@ -202,7 +231,7 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
     setIsProcessing(true);
     try {
       await supabase.from('tasks').update({ stage_id: newStageId }).eq('id', taskId);
-      fetchData(false);
+      refresh();
     } finally {
       setIsProcessing(false);
     }
@@ -239,21 +268,19 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
     </div>
   );
 
-  const filteredTasks = useMemo(() => {
-    return tasks.filter(t =>
-      t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (t.assigned_profile?.full_name || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [tasks, searchTerm]);
-
   const tasksByStage = useMemo(() => {
-    const groups: Record<string, Task[]> = {};
+    const groups: Record<string, KanbanTask[]> = {};
     stages.forEach(s => groups[s.id] = []);
-    filteredTasks.forEach(t => {
-      if (groups[t.stage_id]) groups[t.stage_id].push(t);
+    tasks.forEach(t => {
+      if (groups[t.stage_id]) {
+        groups[t.stage_id].push({
+          ...t,
+          status: t.stage_id
+        });
+      }
     });
     return groups;
-  }, [filteredTasks, stages]);
+  }, [tasks, stages]);
 
   const handleBack = () => {
     if (project) {
@@ -263,7 +290,7 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
     }
   };
 
-  if (loading) return (
+  if (loadingMetadata || (tasksLoading && tasks.length === 0)) return (
     <div className="flex flex-col items-center justify-center py-24">
       <Loader2 className="animate-spin text-emerald-600 mb-4" size={32} />
       <Subtext className="!text-[10px]  uppercase  text-gray-400">Sinkronisasi Task Proyek...</Subtext>
@@ -274,14 +301,13 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
     <div className="flex flex-col gap-6 text-gray-900">
       <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0 overflow-x-auto custom-scrollbar">
         <div className="flex items-center gap-4 flex-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleBack}
-            className="!p-2.5 text-gray-400 hover:text-gray-900 border border-gray-100 rounded-xl hover:bg-gray-50 transition-all"
+          <Link
+            href={project ? `/dashboard/projects/${project.pipeline_id}` : '/dashboard/projects'}
+            onMouseEnter={() => project && router.prefetch(`/dashboard/projects/${project.pipeline_id}`)}
+            className="p-2.5 text-gray-400 hover:text-gray-900 border border-gray-100 rounded-xl hover:bg-gray-50 transition-all flex items-center justify-center shadow-sm"
           >
             <ArrowLeft size={16} />
-          </Button>
+          </Link>
           <div className="flex-1">
             <H2 className="text-sm  text-gray-900 leading-none truncate uppercase ">{project?.name}</H2>
             <Subtext className="!text-[9px]  text-emerald-600 uppercase  mt-1">Daftar Pekerjaan Proyek</Subtext>
@@ -328,7 +354,7 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredTasks.map(t => (
+                  {tasks.map(t => (
                     <TableRow key={t.id} className="hover:bg-gray-50/50 group transition-colors">
                       <TableCell>
                         <H2 className="text-sm text-gray-900 ">{t.title}</H2>
@@ -367,7 +393,13 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
                       </TableCell>
                     </TableRow>
                   ))}
-                  {filteredTasks.length === 0 && (
+                  <InfiniteScrollSentinel 
+                    onIntersect={loadMore}
+                    enabled={hasMore}
+                    isLoading={isLoadingMore}
+                    colSpan={5}
+                  />
+                  {tasks.length === 0 && !tasksLoading && (
                     <TableEmpty colSpan={5} message="Belum ada task pada proyek ini" />
                   )}
                 </TableBody>
@@ -384,10 +416,13 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
             itemsByStatus={tasksByStage as Record<string, KanbanTask[]>}
             renderCard={renderTaskCard as any}
             onReorder={handleStatusChange}
+            onLoadMore={loadMore}
+            hasMoreByStatus={stages.length > 0 ? { [stages[stages.length - 1].id]: hasMore } : {}}
+            isLoadingMoreByStatus={stages.length > 0 ? { [stages[stages.length - 1].id]: isLoadingMore } : {}}
           />
         ) : (
           <GanttBoard
-            items={filteredTasks as any[]}
+            items={tasks as any[]}
             stages={stages.map(s => ({
               id: s.id.toString(),
               name: s.name,

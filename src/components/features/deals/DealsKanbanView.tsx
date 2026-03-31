@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { Button, Subtext, Label } from '@/components/ui';
 import { Deal, Pipeline } from '@/lib/types';
 import { User as UserIcon, ChevronRight, Trash2, Target, FileText, Plus, FilePlus, Zap } from 'lucide-react';
@@ -18,6 +19,10 @@ interface Props {
   formatIDR: (num?: number) => string;
   onReorder: (itemId: number, newStageId: string, newIndex?: number) => void;
   hasUrgency?: boolean;
+
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
 }
 
 const getStageColor = (name: string, index: number) => {
@@ -41,7 +46,8 @@ const getStageColor = (name: string, index: number) => {
 
 export const DealsKanbanView: React.FC<Props> = ({
   pipeline, dealsByStage, onEdit, onDelete,
-  onCreateQuotation, onEditQuotation, formatIDR, onReorder, hasUrgency
+  onCreateQuotation, onEditQuotation, formatIDR, onReorder, hasUrgency,
+  hasMore, isLoadingMore, onLoadMore
 }) => {
   if (!pipeline) return null;
 
@@ -70,7 +76,7 @@ export const DealsKanbanView: React.FC<Props> = ({
             <ActionButton
               icon={FileText}
               variant="blue"
-              onClick={(e) => { e.stopPropagation(); onEditQuotation?.(quotation.id); }}
+              href={`/dashboard/sales/quotations/${quotation.id}`}
               title="Edit Penawaran"
               iconSize={12}
               className="!p-1 h-fit"
@@ -80,7 +86,7 @@ export const DealsKanbanView: React.FC<Props> = ({
               <ActionButton
                 icon={FilePlus}
                 variant="blue"
-                onClick={(e) => { e.stopPropagation(); onCreateQuotation(deal.client_id!, deal.id); }}
+                href={`/dashboard/sales/quotations/create?client_id=${deal.client_id}&deal_id=${deal.id}`}
                 title="Buat Penawaran"
                 iconSize={12}
                 className="!p-1 h-fit"
@@ -126,9 +132,13 @@ export const DealsKanbanView: React.FC<Props> = ({
 
         {quotation && (
           <div className="mb-2">
-            <Label className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-emerald-50 !text-emerald-600 border border-emerald-100 rounded text-[7px] font-medium !capitalize">
+            <Link
+              href={`/dashboard/sales/quotations/${quotation.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded text-[7px] font-medium !capitalize hover:bg-emerald-100 transition-colors"
+            >
               <FileText size={8} /> {quotation.number}
-            </Label>
+            </Link>
           </div>
         )}
 
@@ -150,20 +160,34 @@ export const DealsKanbanView: React.FC<Props> = ({
     );
   };
 
-  // Convert keys to uppercase to match target map standard (if needed, but KanbanBoard will iterate by stages map keys)
-  // `dealsByStage` keys are uuid strings. We need to map `status` to `stage_id`.
-  // First we need to transform Deals into KanbanItems
+  const hasMoreByStatus: Record<string, boolean> = {};
+  const isLoadingMoreByStatus: Record<string, boolean> = {};
+
+  // For now, map the global hasMore to the last stage only, or all stages
+  // This is a simplification for Kanban loading
+  kanbanStages.forEach((stage, idx) => {
+    if (idx === kanbanStages.length - 1) {
+      hasMoreByStatus[stage.id as string] = !!hasMore;
+      isLoadingMoreByStatus[stage.id as string] = !!isLoadingMore;
+    }
+  });
+
   const kanbanItemsByStatus: Record<string, KanbanDeal[]> = {};
   kanbanStages.forEach(stage => {
     kanbanItemsByStatus[stage.id as string] = (dealsByStage[stage.id as string] || []).map(d => ({ ...d, status: d.stage_id }));
   });
 
   return (
-    <KanbanBoard<KanbanDeal>
-      stages={kanbanStages}
-      itemsByStatus={kanbanItemsByStatus}
-      onReorder={onReorder}
-      renderCard={renderCard}
-    />
+    <div className="w-full h-full relative overflow-hidden">
+      <KanbanBoard<KanbanDeal>
+        stages={kanbanStages}
+        itemsByStatus={kanbanItemsByStatus}
+        onReorder={onReorder}
+        onLoadMore={onLoadMore}
+        hasMoreByStatus={hasMoreByStatus}
+        isLoadingMoreByStatus={isLoadingMoreByStatus}
+        renderCard={renderCard}
+      />
+    </div>
   );
 };

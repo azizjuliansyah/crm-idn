@@ -11,6 +11,7 @@ import {
 import { Modal, Button, Input, Textarea, SectionHeader, Label, Subtext, Table, TableHeader, TableBody, TableRow, TableCell, ComboBox, H2, Card, Toast, ToastType } from '@/components/ui';
 import { ClientFormModal } from '@/components/features/clients/components/ClientFormModal';
 import { ProductFormModal } from '@/components/features/products/components/ProductFormModal';
+import { useInfiniteScroll } from '@/lib/hooks/useInfiniteScroll';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { generateTemplate1, generateTemplate5, generateTemplate6 } from '@/lib/pdf-templates';
@@ -89,8 +90,12 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
     message: '',
     type: 'success',
   });
-  const [clients, setClients] = useState<Client[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [clientSearch, setClientSearch] = useState('');
+  const [productSearch, setProductSearch] = useState('');
+  
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
+  
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [proformas, setProformas] = useState<ProformaInvoice[]>([]);
   const [availableTaxes, setAvailableTaxes] = useState<TaxSetting[]>([]);
@@ -115,6 +120,66 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
   const [discountValue, setDiscountValue] = useState(0);
   const [selectedTaxIds, setSelectedTaxIds] = useState<number[]>([]);
   const [items, setItems] = useState<ItemRow[]>([{ productId: '', description: '', qty: 1, unit: 'pcs', price: 0, total: 0 }]);
+
+  // Infinite scroll for clients
+  const fetchClientsPaginated = useCallback(async ({ from, to }: { from: number, to: number }) => {
+    if (!company?.id) return { data: [], error: null, count: 0 };
+    let query = supabase.from('clients').select('*, client_company:client_companies(*)', { count: 'exact' }).eq('company_id', company.id);
+    if (clientSearch) query = query.ilike('name', `%${clientSearch}%`);
+    query = query.order('name', { ascending: true });
+    const { data, error, count } = await query.range(from, to);
+    return { data: data || [], error, count };
+  }, [company?.id, clientSearch]);
+
+  const {
+    data: scrolledClients,
+    isLoadingMore: isLoadingMoreClients,
+    hasMore: hasMoreClients,
+    loadMore: loadMoreClients,
+    refresh: refreshClients
+  } = useInfiniteScroll<Client>(fetchClientsPaginated, {
+    pageSize: 20,
+    dependencies: [company?.id, clientSearch]
+  });
+
+  // Infinite scroll for products
+  const fetchProductsPaginated = useCallback(async ({ from, to }: { from: number, to: number }) => {
+    if (!company?.id) return { data: [], error: null, count: 0 };
+    let query = supabase.from('products').select('*, product_units(*)', { count: 'exact' }).eq('company_id', company.id);
+    if (productSearch) query = query.ilike('name', `%${productSearch}%`);
+    query = query.order('name', { ascending: true });
+    const { data, error, count } = await query.range(from, to);
+    return { data: data || [], error, count };
+  }, [company?.id, productSearch]);
+
+  const {
+    data: scrolledProducts,
+    isLoadingMore: isLoadingMoreProducts,
+    hasMore: hasMoreProducts,
+    loadMore: loadMoreProducts,
+    refresh: refreshProducts
+  } = useInfiniteScroll<Product>(fetchProductsPaginated, {
+    pageSize: 20,
+    dependencies: [company?.id, productSearch]
+  });
+
+  const clients = useMemo(() => {
+    const list = [...scrolledClients];
+    if (selectedClient && !list.find(c => c.id === selectedClient.id)) {
+      list.unshift(selectedClient);
+    }
+    return list;
+  }, [scrolledClients, selectedClient]);
+
+  const products = useMemo(() => {
+    const list = [...scrolledProducts];
+    selectedProducts.forEach(sp => {
+      if (!list.find(p => p.id === sp.id)) {
+        list.unshift(sp);
+      }
+    });
+    return list;
+  }, [scrolledProducts, selectedProducts]);
 
   // Quick Add State (Modals)
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
@@ -164,9 +229,10 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
     let existing: any = null;
 
     if (editingId) {
-      const { data: invData } = await supabase.from('invoices').select('*, invoice_items(*)').eq('id', editingId).single();
+      const { data: invData } = await supabase.from('invoices').select('*, invoice_items(*), client:clients(*, client_company:client_companies(*))').eq('id', editingId).single();
       if (invData) {
         existing = invData;
+        setSelectedClient(invData.client);
         setClientId(String(invData.client_id));
         setProformaId(invData.proforma_id);
         setQuotationId(invData.quotation_id);
@@ -186,12 +252,17 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
           price: it.price,
           total: it.total
         })));
+
+        // Fetch selected products
+        const productIds = invData.invoice_items.map((it: any) => it.product_id);
+        if (productIds.length > 0) {
+          const { data: pData } = await supabase.from('products').select('*, product_units(*)').in('id', productIds);
+          if (pData) setSelectedProducts(pData);
+        }
       }
     }
 
-    const [cRes, pRes, tRes, nRes, qRes, pfRes, catRes, unitRes, coRes, coCatRes] = await Promise.all([
-      supabase.from('clients').select('*, client_company:client_companies(*)').eq('company_id', company.id).order('name'),
-      supabase.from('products').select('*, product_units(*)').eq('company_id', company.id).order('name'),
+    const [tRes, nRes, qRes, pfRes, catRes, unitRes, coRes, coCatRes] = await Promise.all([
       supabase.from('tax_settings').select('*').eq('company_id', company.id).eq('is_active', true).order('id'),
       supabase.from('autonumber_settings').select('*').eq('company_id', company.id).eq('document_type', 'invoice').maybeSingle(),
       supabase.from('quotations').select('*').eq('company_id', company.id).order('id', { ascending: false }),
@@ -202,8 +273,6 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
       supabase.from('client_company_categories').select('*').eq('company_id', company.id).order('name')
     ]);
 
-    if (cRes.data) setClients(cRes.data);
-    if (pRes.data) setProducts(pRes.data);
     if (tRes.data) setAvailableTaxes(tRes.data);
     if (qRes.data) setQuotations(qRes.data);
     if (pfRes.data) setProformas(pfRes.data);
@@ -213,12 +282,17 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
     if (coCatRes.data) setClientCategories(coCatRes.data);
 
     if (!editingId) {
-      if (initialClientId) setClientId(initialClientId.toString());
+      if (initialClientId) {
+        setClientId(initialClientId.toString());
+        const { data: cData } = await supabase.from('clients').select('*, client_company:client_companies(*)').eq('id', initialClientId).single();
+        if (cData) setSelectedClient(cData);
+      }
 
       if (initialProformaId) {
         setProformaId(initialProformaId);
-        const { data: pfData } = await supabase.from('proformas').select('*, proforma_items(*)').eq('id', initialProformaId).single();
+        const { data: pfData } = await supabase.from('proformas').select('*, proforma_items(*), client:clients(*, client_company:client_companies(*))').eq('id', initialProformaId).single();
         if (pfData) {
+          setSelectedClient(pfData.client);
           setClientId(String(pfData.client_id));
           setQuotationId(pfData.quotation_id);
           setDiscountType(pfData.discount_type as any);
@@ -231,11 +305,19 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
             price: it.price,
             total: it.total
           })));
+
+          // Fetch items products
+          const productIds = pfData.proforma_items.map((it: any) => it.product_id);
+          if (productIds.length > 0) {
+            const { data: pData } = await supabase.from('products').select('*, product_units(*)').in('id', productIds);
+            if (pData) setSelectedProducts(pData);
+          }
         }
       } else if (initialQuotationId) {
         setQuotationId(initialQuotationId);
-        const { data: qData } = await supabase.from('quotations').select('*, quotation_items(*)').eq('id', initialQuotationId).single();
+        const { data: qData } = await supabase.from('quotations').select('*, quotation_items(*), client:clients(*, client_company:client_companies(*))').eq('id', initialQuotationId).single();
         if (qData) {
+          setSelectedClient(qData.client);
           setClientId(String(qData.client_id));
           setDiscountType(qData.discount_type as any);
           setDiscountValue(qData.discount_value);
@@ -247,6 +329,13 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
             price: it.price,
             total: it.total
           })));
+
+          // Fetch items products
+          const productIds = qData.quotation_items.map((it: any) => it.product_id);
+          if (productIds.length > 0) {
+            const { data: pData } = await supabase.from('products').select('*, product_units(*)').in('id', productIds);
+            if (pData) setSelectedProducts(pData);
+          }
         }
       }
 
@@ -309,6 +398,12 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
       item.description = prod.description || '';
       item.price = prod.price;
       item.unit = prod.product_units?.name || 'pcs';
+      
+      // Ensure selected product is in the list
+      setSelectedProducts(prev => {
+        if (!prev.find(p => p.id === prod.id)) return [...prev, prod];
+        return prev;
+      });
     } else {
       item.productId = ''; item.description = ''; item.price = 0; item.unit = 'pcs';
     }
@@ -585,8 +680,10 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
         whatsapp: formData.whatsapp ? `+62${formData.whatsapp.replace(/\D/g, '')}` : null
       }).select().single();
       if (error) throw error;
-      const freshRes = await supabase.from('clients').select('*, client_company:client_companies(*)').eq('company_id', company.id).order('name');
-      if (freshRes.data) setClients(freshRes.data);
+      await refreshClients();
+      const freshSelect = await supabase.from('clients').select('*, client_company:client_companies(*)').eq('id', data.id).single();
+      if (freshSelect.data) setSelectedClient(freshSelect.data);
+      
       setClientId(String(data.id));
       setIsClientModalOpen(false);
       setClientForm({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
@@ -606,8 +703,10 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
         description: formData.description
       }).select().single();
       if (error) throw error;
-      const freshRes = await supabase.from('products').select('*, product_units(*)').eq('company_id', company.id).order('name');
-      if (freshRes.data) setProducts(freshRes.data);
+      await refreshProducts();
+      const freshSelect = await supabase.from('products').select('*, product_units(*)').eq('id', data.id).single();
+      if (freshSelect.data) setSelectedProducts(prev => [...prev, freshSelect.data]);
+      
       setIsProductModalOpen(false);
       setProductForm({ name: '', category_id: null, unit_id: null, price: 0, description: '' });
     } catch (err: any) { setToast({ isOpen: true, message: err.message, type: 'error' }); } finally { setIsProcessingQuick(false); }
@@ -725,6 +824,10 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
                 onAddNew={() => setIsClientModalOpen(true)}
                 addNewLabel="Tambah Pelanggan Baru"
                 leftIcon={<User size={16} />}
+                onLoadMore={loadMoreClients}
+                hasMore={hasMoreClients}
+                isLoadingMore={isLoadingMoreClients}
+                onSearchChange={setClientSearch}
               />
             </div>
             <Input
@@ -804,14 +907,18 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
                       placeholder="Pilih Produk"
                       value={item.productId}
                       onChange={(val: string | number) => handleSelectProduct(idx, products.find(p => p.id.toString() === val.toString()) || null)}
-                      options={products.map(p => ({
-                        value: p.id.toString(),
-                        label: p.name,
-                        sublabel: formatIDRVal(p.price)
-                      }))}
-                      onAddNew={() => setIsProductModalOpen(true)}
-                      addNewLabel="Daftar Produk Baru"
-                    />
+                        options={products.map(p => ({
+                          value: p.id.toString(),
+                          label: p.name,
+                          sublabel: formatIDRVal(p.price)
+                        }))}
+                        onAddNew={() => setIsProductModalOpen(true)}
+                        addNewLabel="Daftar Produk Baru"
+                        onLoadMore={loadMoreProducts}
+                        hasMore={hasMoreProducts}
+                        isLoadingMore={isLoadingMoreProducts}
+                        onSearchChange={setProductSearch}
+                      />
                   </TableCell>
                   <TableCell className="px-4">
                     <Input

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-
+import Link from 'next/link';
 import { Button, Table, TableHeader, TableBody, TableRow, TableCell, H2, H3, Subtext, Label, Modal, EmptyState, SearchInput, Badge, ComboBox, Toast, ToastType } from '@/components/ui';
 
 
@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
+import { InfiniteScrollSentinel } from '@/components/ui';
+import { useInfiniteScroll } from '@/lib/hooks/useInfiniteScroll';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { generateTemplate1, generateTemplate5, generateTemplate6 } from '@/lib/pdf-templates';
@@ -41,9 +43,8 @@ const getImgDimensions = (url: string): Promise<{ width: number, height: number,
 export const ProformasView: React.FC<Props> = ({ company }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [proformas, setProformas] = useState<ProformaInvoice[]>([]);
   const [requestCategories, setRequestCategories] = useState<SalesRequestCategory[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingMetadata, setLoadingMetadata] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClientId, setFilterClientId] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -58,37 +59,60 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
   });
   const [requestModal, setRequestModal] = useState<{ isOpen: boolean; proformaId: number | null; proformaStatus: string }>({ isOpen: false, proformaId: null, proformaStatus: '' });
 
-  const fetchData = useCallback(async () => {
-    if (!company?.id) return;
-    setLoading(true);
-    try {
-      const [pRes, catRes] = await Promise.all([
-        supabase
-          .from('proformas')
-          .select('*, client:clients(*, client_company:client_companies(*)), proforma_items(*, products(*))')
-          .eq('company_id', company.id)
-          .order('id', { ascending: false }),
-        supabase
-          .from('sales_request_categories')
-          .select('*')
-          .eq('company_id', company.id)
-          .order('sort_order', { ascending: false })
-      ]);
+  const fetchProformas = useCallback(async ({ from, to }: { from: number, to: number }) => {
+    if (!company?.id) return { data: [], error: null, count: 0 };
+    
+    let query = supabase
+      .from('proformas')
+      .select('*, client:clients(*, client_company:client_companies(*)), proforma_items(*, products(*))', { count: 'exact' })
+      .eq('company_id', company.id);
 
-      if (pRes.error) throw pRes.error;
-      if (pRes.data) setProformas(pRes.data as any);
-      if (catRes.error) throw catRes.error;
-      if (catRes.data) setRequestCategories(catRes.data);
-    } catch (err) {
-      console.error(err);
+    if (searchTerm) {
+      query = query.or(`number.ilike.%${searchTerm}%,client_name.ilike.%${searchTerm}%`);
+    }
+
+    if (filterClientId !== 'all') {
+      query = query.eq('client_id', parseInt(filterClientId));
+    }
+
+    const { data, error, count } = await query
+      .order('id', { ascending: false })
+      .range(from, to);
+
+    return { data: data || [], error, count };
+  }, [company?.id, searchTerm, filterClientId]);
+
+  const {
+    data: proformas,
+    isLoading: proformasLoading,
+    isLoadingMore,
+    hasMore,
+    loadMore,
+    refresh
+  } = useInfiniteScroll<ProformaInvoice>(fetchProformas, {
+    pageSize: 20,
+    dependencies: [company?.id, searchTerm, filterClientId]
+  });
+
+  const fetchMetadata = useCallback(async () => {
+    if (!company?.id) return;
+    setLoadingMetadata(true);
+    try {
+      const { data, error } = await supabase
+        .from('sales_request_categories')
+        .select('*')
+        .eq('company_id', company.id)
+        .order('sort_order', { ascending: false });
+
+      if (data) setRequestCategories(data);
     } finally {
-      setLoading(false);
+      setLoadingMetadata(false);
     }
   }, [company?.id]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchMetadata();
+  }, [fetchMetadata]);
 
   useEffect(() => {
     const success = searchParams.get('success');
@@ -115,16 +139,7 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
   }, [proformas]);
 
   const filteredProformas = useMemo(() => {
-    let result = proformas.filter(p => {
-      const matchesSearch = p.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (p.client?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (p.client?.client_company?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesClient = filterClientId === 'all' || p.client_id === parseInt(filterClientId);
-      const matchesStatus = filterStatus === 'all' || p.status === filterStatus;
-
-      return matchesSearch && matchesClient && matchesStatus;
-    });
+    let result = [...proformas];
 
     if (sortConfig) {
       result.sort((a, b) => {
@@ -144,7 +159,7 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
     }
 
     return result;
-  }, [proformas, searchTerm, filterClientId, filterStatus, sortConfig]);
+  }, [proformas, sortConfig]);
 
   const handleSort = (key: SortKey) => {
     setSortConfig(prev => {
@@ -165,7 +180,7 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
       if (error) throw error;
       setConfirmDelete({ isOpen: false, id: null, number: '' });
       showNotification('Berhasil', `Proforma Invoice ${confirmDelete.number} telah dihapus.`);
-      fetchData();
+      refresh();
     } catch (err: any) {
       showNotification('Gagal', err.message, 'error');
     } finally {
@@ -328,7 +343,7 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
     doc.save(`${p.number}.pdf`);
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4"><Loader2 className="animate-spin text-blue-600" /><Subtext className="text-[10px]  uppercase  text-gray-400">Sinkronisasi Proforma...</Subtext></div>;
+  if (loadingMetadata || (proformasLoading && proformas.length === 0)) return <div className="flex flex-col items-center justify-center py-24 gap-4"><Loader2 className="animate-spin text-blue-600" /><Subtext className="text-[10px]  uppercase  text-gray-400">Sinkronisasi Proforma...</Subtext></div>;
 
   return (
     <div className="flex flex-col gap-6 text-gray-900">
@@ -339,15 +354,14 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
             <Subtext className="text-[10px]  uppercase ">Kelola dan pantau seluruh proforma pelanggan.</Subtext>
           </div>
           <div className="flex items-center gap-3">
-            <Button
-              onClick={() => router.push('/dashboard/sales/proformas/create')}
-              leftIcon={<Plus size={14} strokeWidth={3} />}
-              className="!px-6 py-2.5 text-[10px] uppercase  shadow-lg shadow-blue-100"
-              variant="primary"
-              size="sm"
+            <Link
+              href="/dashboard/sales/proformas/create"
+              onMouseEnter={() => router.prefetch('/dashboard/sales/proformas/create')}
+              className="inline-flex items-center gap-2 px-6 py-2.5 text-[10px] font-bold uppercase tracking-wider text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all shadow-lg shadow-blue-100"
             >
+              <Plus size={14} strokeWidth={3} />
               Buat Proforma
-            </Button>
+            </Link>
           </div>
         </div>
 
@@ -437,7 +451,7 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
                       <ActionButton
                         icon={Edit2}
                         variant="blue"
-                        onClick={() => router.push(`/dashboard/sales/proformas/${p.id}`)}
+                        href={`/dashboard/sales/proformas/${p.id}`}
                         title="Edit"
                       />
                       <ActionButton
@@ -450,9 +464,15 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
                   </TableCell>
                 </TableRow>
               ))}
-              {filteredProformas.length === 0 && (
+              <InfiniteScrollSentinel 
+                onIntersect={loadMore}
+                enabled={hasMore}
+                isLoading={isLoadingMore}
+                colSpan={7}
+              />
+              {filteredProformas.length === 0 && !proformasLoading && (
                 <TableRow>
-                  <TableCell colSpan={6}>
+                  <TableCell colSpan={7}>
                     <EmptyState
                       icon={<FileCheck size={48} className="mx-auto mb-4" />}
                       title="Belum ada proforma"
@@ -495,36 +515,36 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
 
           {requestModal.proformaStatus !== 'Draft' && (
             <>
-              <Button
-                variant="ghost"
-                className="w-full justify-start !py-4 text-left border border-amber-200 bg-amber-50/50 hover:bg-amber-50"
-                leftIcon={<FileText className="text-amber-500" size={18} />}
-                onClick={() => router.push(`/dashboard/sales/invoice-requests/create?proformaId=${requestModal.proformaId}`)}
+              <Link
+                href={`/dashboard/sales/invoice-requests/create?proformaId=${requestModal.proformaId}`}
+                onMouseEnter={() => router.prefetch(`/dashboard/sales/invoice-requests/create?proformaId=${requestModal.proformaId}`)}
+                className="flex items-center gap-3 w-full !py-4 px-4 text-left border border-amber-200 bg-amber-50/50 hover:bg-amber-50 rounded-lg transition-all text-sm font-medium text-gray-700"
               >
+                <FileText className="text-amber-500" size={18} />
                 Request Invoice
-              </Button>
+              </Link>
 
-              <Button
-                variant="ghost"
-                className="w-full justify-start !py-4 text-left border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-50"
-                leftIcon={<FileText className="text-emerald-500" size={18} />}
-                onClick={() => router.push(`/dashboard/sales/kwitansi-requests/create?proformaId=${requestModal.proformaId}`)}
+              <Link
+                href={`/dashboard/sales/kwitansi-requests/create?proformaId=${requestModal.proformaId}`}
+                onMouseEnter={() => router.prefetch(`/dashboard/sales/kwitansi-requests/create?proformaId=${requestModal.proformaId}`)}
+                className="flex items-center gap-3 w-full !py-4 px-4 text-left border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-50 rounded-lg transition-all text-sm font-medium text-gray-700"
               >
+                <FileText className="text-emerald-500" size={18} />
                 Request Kwitansi
-              </Button>
+              </Link>
             </>
           )}
 
           {requestCategories.map(cat => (
-            <Button
+            <Link
               key={cat.id}
-              variant="ghost"
-              className="w-full justify-start !py-4 text-left border border-gray-200 uppercase"
-              leftIcon={<FilePlus className="text-gray-400" size={18} />}
-              onClick={() => router.push(`/dashboard/sales/requests/${cat.id}/create?proformaId=${requestModal.proformaId}`)}
+              href={`/dashboard/sales/requests/${cat.id}/create?proformaId=${requestModal.proformaId}`}
+              onMouseEnter={() => router.prefetch(`/dashboard/sales/requests/${cat.id}/create?proformaId=${requestModal.proformaId}`)}
+              className="flex items-center gap-3 w-full !py-4 px-4 text-left border border-gray-200 rounded-lg transition-all text-sm font-bold uppercase tracking-wider text-gray-600 hover:bg-gray-50"
             >
+              <FilePlus className="text-gray-400" size={18} />
               {cat.name}
-            </Button>
+            </Link>
           ))}
         </div>
       </Modal>

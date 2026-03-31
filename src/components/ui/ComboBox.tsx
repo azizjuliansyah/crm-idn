@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Search, ChevronDown, Plus, X, Check } from 'lucide-react';
+import { Search, ChevronDown, Plus, X, Check, Loader2 } from 'lucide-react';
 
 interface ComboBoxOption {
   value: string | number;
@@ -24,6 +24,11 @@ interface ComboBoxProps {
   placeholderSize?: string;
   size?: 'sm' | 'md' | 'lg';
   triggerClassName?: string;
+  // New props for infinite scroll and server-side search
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onSearchChange?: (term: string) => void;
 }
 
 export const ComboBox: React.FC<ComboBoxProps> = ({
@@ -42,6 +47,10 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
   placeholderSize = 'text-sm',
   size = 'md',
   triggerClassName = '',
+  onLoadMore,
+  hasMore = false,
+  isLoadingMore = false,
+  onSearchChange,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -54,12 +63,15 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
   );
 
   const filteredOptions = useMemo(() => {
+    // If we have a server-side search handler, we don't filter client-side
+    if (onSearchChange) return options;
+    
     if (hideSearch || !searchTerm) return options;
     return options.filter(opt =>
       opt.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (opt.sublabel && opt.sublabel.toLowerCase().includes(searchTerm.toLowerCase()))
     );
-  }, [options, searchTerm, hideSearch]);
+  }, [options, searchTerm, hideSearch, onSearchChange]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -94,6 +106,14 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
   const handleSelect = (optionValue: string | number) => {
     onChange(optionValue);
     setIsOpen(false);
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const term = e.target.value;
+    setSearchTerm(term);
+    if (onSearchChange) {
+      onSearchChange(term);
+    }
   };
 
   return (
@@ -179,7 +199,7 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
                 <input
                   type="text"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={handleSearchChange}
                   placeholder="Cari..."
                   className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border-none rounded-md text-sm font-medium outline-none focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all"
                   autoFocus
@@ -213,6 +233,14 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
                 <span className="text-xs text-gray-400">Tidak ada hasil ditemukan</span>
               </div>
             )}
+
+            {hasMore && (
+              <ComboBoxSentinel 
+                onIntersect={() => onLoadMore?.()}
+                enabled={isOpen}
+                isLoading={isLoadingMore}
+              />
+            )}
           </div>
 
           {onAddNew && (
@@ -236,6 +264,40 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
       )}
 
       {error && <p className="text-[9px] text-rose-500 uppercase ml-1 mt-1">{error}</p>}
+    </div>
+  );
+};
+
+const ComboBoxSentinel: React.FC<{
+  onIntersect: () => void;
+  enabled: boolean;
+  isLoading?: boolean;
+}> = ({ onIntersect, enabled, isLoading }) => {
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!enabled || !sentinelRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !isLoading) {
+          onIntersect();
+        }
+      },
+      { threshold: 0.1, rootMargin: '50px' }
+    );
+
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [enabled, onIntersect, isLoading]);
+
+  if (!enabled) return null;
+
+  return (
+    <div ref={sentinelRef} className="py-4 text-center">
+      {isLoading && (
+        <Loader2 className="animate-spin text-blue-500 mx-auto" size={16} />
+      )}
     </div>
   );
 };

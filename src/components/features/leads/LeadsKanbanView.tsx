@@ -16,6 +16,10 @@ interface Props {
   formatIDR: (num?: number) => string;
   onReorder: (itemId: number, newStatus: string, newIndex?: number) => void;
   hasUrgency?: boolean;
+  // Infinite scroll props
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
 }
 
 const getStageColor = (status: string) => {
@@ -29,7 +33,8 @@ const getStageColor = (status: string) => {
 };
 
 export const LeadsKanbanView: React.FC<Props> = ({
-  stages, leadsByStatus, onEdit, onDelete, formatIDR, onReorder, hasUrgency
+  stages, leadsByStatus, onEdit, onDelete, formatIDR, onReorder, hasUrgency,
+  hasMore, isLoadingMore, onLoadMore
 }) => {
 
   const kanbanStages: KanbanStage[] = stages.map(s => ({
@@ -96,12 +101,25 @@ export const LeadsKanbanView: React.FC<Props> = ({
     </div>
   );
 
+  const hasMoreByStatus = stages.reduce((acc, stage) => {
+    acc[stage.name.toLowerCase()] = !!hasMore;
+    return acc;
+  }, {} as Record<string, boolean>);
+
+  const isLoadingMoreByStatus = stages.reduce((acc, stage) => {
+    acc[stage.name.toLowerCase()] = !!isLoadingMore;
+    return acc;
+  }, {} as Record<string, boolean>);
+
   return (
     <KanbanBoard<KanbanLead>
       stages={kanbanStages}
       itemsByStatus={leadsByStatus as Record<string, KanbanLead[]>}
       onReorder={onReorder}
       renderCard={renderCard}
+      onLoadMore={onLoadMore}
+      hasMoreByStatus={hasMoreByStatus}
+      isLoadingMoreByStatus={isLoadingMoreByStatus}
     />
   );
 };

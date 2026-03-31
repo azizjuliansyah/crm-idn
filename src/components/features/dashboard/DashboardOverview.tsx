@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H3, Subtext, Label, Badge, H1, H2 } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { Company } from '@/lib/types';
@@ -18,6 +20,7 @@ interface DashboardProps {
 }
 
 export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalLeads: 0,
@@ -135,7 +138,11 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
     <div className="space-y-8 pb-20">
       {/* Overview Cards - Vibrant Gradients & Professional Corners */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-600 p-6 rounded-2xl shadow-xl shadow-blue-100 hover:translate-y-[-4px] transition-all group overflow-hidden relative">
+        <Link 
+          href="/dashboard/leads"
+          onMouseEnter={() => router.prefetch('/dashboard/leads')}
+          className="bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-600 p-6 rounded-2xl shadow-xl shadow-blue-100 hover:translate-y-[-4px] transition-all group overflow-hidden relative block"
+        >
           <div className="absolute top-0 right-0 p-4 opacity-10 scale-150 rotate-12"><Users size={80} /></div>
           <div className="flex items-center justify-between mb-4 relative z-10">
             <div className="w-12 h-12 rounded-xl bg-white/20 text-white flex items-center justify-center backdrop-blur-sm shadow-inner">
@@ -147,9 +154,13 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
           </div>
           <Subtext className="!text-blue-50 text-[10px]  uppercase tracking-[0.15em] mb-1 relative z-10">Total Leads</Subtext>
           <H2 className="text-white">{stats.totalLeads}</H2>
-        </div>
+        </Link>
 
-        <div className="bg-gradient-to-br from-violet-700 via-violet-600 to-purple-600 p-6 rounded-2xl shadow-xl shadow-purple-100 hover:translate-y-[-4px] transition-all group overflow-hidden relative">
+        <Link 
+          href="/dashboard/crm/deals"
+          onMouseEnter={() => router.prefetch('/dashboard/crm/deals')}
+          className="bg-gradient-to-br from-violet-700 via-violet-600 to-purple-600 p-6 rounded-2xl shadow-xl shadow-purple-100 hover:translate-y-[-4px] transition-all group overflow-hidden relative block"
+        >
           <div className="absolute top-0 right-0 p-4 opacity-10 scale-150 rotate-12"><Target size={80} /></div>
           <div className="flex items-center justify-between mb-4 relative z-10">
             <div className="w-12 h-12 rounded-xl bg-white/20 text-white flex items-center justify-center backdrop-blur-sm shadow-inner">
@@ -161,9 +172,13 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
           </div>
           <Subtext className="!text-purple-50 text-[10px]  uppercase tracking-[0.15em] mb-1 relative z-10">Active Deals</Subtext>
           <H2 className="text-white">{stats.totalDeals}</H2>
-        </div>
+        </Link>
 
-        <div className="bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 p-6 rounded-2xl shadow-xl shadow-emerald-100 hover:translate-y-[-4px] transition-all group overflow-hidden relative">
+        <Link 
+          href="/dashboard/sales/quotations"
+          onMouseEnter={() => router.prefetch('/dashboard/sales/quotations')}
+          className="bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 p-6 rounded-2xl shadow-xl shadow-emerald-100 hover:translate-y-[-4px] transition-all group overflow-hidden relative block"
+        >
           <div className="absolute top-0 right-0 p-4 opacity-10 scale-150 rotate-12"><ReceiptCent size={80} /></div>
           <div className="flex items-center justify-between mb-4 relative z-10">
             <div className="w-12 h-12 rounded-xl bg-white/20 text-white flex items-center justify-center backdrop-blur-sm shadow-inner">
@@ -175,9 +190,13 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
           </div>
           <Subtext className="!text-emerald-50 text-[10px]  uppercase tracking-[0.15em] mb-1 relative z-10">Total Revenue</Subtext>
           <H2 className="text-white">{formatIDR(stats.totalRevenue)}</H2>
-        </div>
+        </Link>
 
-        <div className="bg-gradient-to-br from-rose-600 via-rose-500 to-pink-500 p-6 rounded-2xl shadow-xl shadow-rose-100 hover:translate-y-[-4px] transition-all group overflow-hidden relative">
+        <Link 
+          href="/dashboard/customer-service/tickets"
+          onMouseEnter={() => router.prefetch('/dashboard/customer-service/tickets')}
+          className="bg-gradient-to-br from-rose-600 via-rose-500 to-pink-500 p-6 rounded-2xl shadow-xl shadow-rose-100 hover:translate-y-[-4px] transition-all group overflow-hidden relative block"
+        >
           <div className="absolute top-0 right-0 p-4 opacity-10 scale-150 rotate-12"><Ticket size={80} /></div>
           <div className="flex items-center justify-between mb-4 relative z-10">
             <div className="w-12 h-12 rounded-xl bg-white/20 text-white flex items-center justify-center backdrop-blur-sm shadow-inner">
@@ -189,7 +208,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
           </div>
           <Subtext className="!text-rose-50 text-[10px]  uppercase tracking-[0.15em] mb-1 relative z-10">Support Tickets</Subtext>
           <H2 className="text-white">{stats.activeTickets}</H2>
-        </div>
+        </Link>
       </div>
 
       {/* Main Charts Area */}

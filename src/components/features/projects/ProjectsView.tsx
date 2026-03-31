@@ -1,23 +1,17 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-
-import { Input, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, H4, Subtext, Label, Modal, Avatar, Badge, Card, SearchInput, ComboBox, Toast, ToastType } from '@/components/ui';
-
-
+import { Input, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, H4, Subtext, Label, Modal, Avatar, Badge, Card, SearchInput, ComboBox, Toast, ToastType, InfiniteScrollSentinel } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { Project, ProjectPipeline, Company, CompanyMember, Profile, Client, ClientCompany, ClientCompanyCategory } from '@/lib/types';
-import {
-  Plus, Search, Trello, Table as TableIcon, Loader2, Briefcase,
-  AlertTriangle, CheckCircle2, X, Trash2, Calendar, Clock,
-  Edit2, Save, FileText, ListTodo, Check, User as UserIcon
-} from 'lucide-react';
-import { KanbanBoard, KanbanItem, KanbanStage } from '@/components/shared/KanbanBoard/KanbanBoard';
+import { Plus, Trello, Table as TableIcon, Loader2, Briefcase, Calendar, Clock, Edit2, Save, FileText, ListTodo, Trash2 } from 'lucide-react';
+import { KanbanBoard, KanbanItem } from '@/components/shared/KanbanBoard/KanbanBoard';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { ClientFormModal } from '@/components/features/clients/components/ClientFormModal';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useInfiniteScroll } from '@/lib/hooks/useInfiniteScroll';
 
 interface Props {
   company: Company;
@@ -46,12 +40,11 @@ interface KanbanProject extends Project, KanbanItem { }
 
 export const ProjectsView: React.FC<Props> = ({ company, user, members, pipelineId }) => {
   const router = useRouter();
-  const [projects, setProjects] = useState<Project[]>([]);
   const [pipeline, setPipeline] = useState<ProjectPipeline | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [clientCompanies, setClientCompanies] = useState<ClientCompany[]>([]);
   const [categories, setCategories] = useState<ClientCompanyCategory[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingMetadata, setLoadingMetadata] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -84,23 +77,16 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
     custom_field_values: {} as Record<string, any>
   });
 
-  const fetchData = useCallback(async (showLoading = true) => {
-    if (showLoading) setLoading(true);
+  const fetchMetadata = useCallback(async () => {
+    setLoadingMetadata(true);
     try {
       const [
         pDataRes,
-        projectsDataRes,
         clientsDataRes,
         companiesDataRes,
         categoriesDataRes
       ] = await Promise.all([
         supabase.from('project_pipelines').select('*, stages:project_pipeline_stages(*)').eq('id', pipelineId).maybeSingle(),
-        supabase.from('projects').select(`
-          *,
-          client:clients(*),
-          lead_profile:profiles!projects_lead_id_fkey(*),
-          team_members:project_team_members(user_id, profile:profiles(*))
-        `).eq('pipeline_id', pipelineId).order('id', { ascending: false }),
         supabase.from('clients').select('*').eq('company_id', company.id).order('name'),
         supabase.from('client_companies').select('*').eq('company_id', company.id).order('name'),
         supabase.from('client_company_categories').select('*').eq('company_id', company.id).order('name')
@@ -112,19 +98,53 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
           stages: (pDataRes.data.stages || []).sort((a: any, b: any) => a.sort_order - b.sort_order)
         });
       }
-      if (projectsDataRes.data) setProjects(projectsDataRes.data);
       if (clientsDataRes.data) setClients(clientsDataRes.data);
       if (companiesDataRes.data) setClientCompanies(companiesDataRes.data);
       if (categoriesDataRes.data) setCategories(categoriesDataRes.data);
 
     } finally {
-      if (showLoading) setLoading(false);
+      setLoadingMetadata(false);
     }
   }, [pipelineId, company.id]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchMetadata();
+  }, [fetchMetadata]);
+
+  const fetchProjects = useCallback(async ({ from, to }: { from: number; to: number }) => {
+    let query = supabase.from('projects').select(`
+      *,
+      client:clients(*),
+      lead_profile:profiles!projects_lead_id_fkey(*),
+      team_members:project_team_members(user_id, profile:profiles(*))
+    `, { count: 'exact' })
+    .eq('pipeline_id', pipelineId);
+
+    if (searchTerm) {
+      query = query.ilike('name', `%${searchTerm}%`);
+      // Note: Supabase doesn't easily allow cross-table searching with 'or' easily for related fields in a single string, 
+      // but let's stick to project name for now to keep it simple and performant.
+    }
+
+    const { data, error, count } = await query
+      .order('id', { ascending: false })
+      .range(from, to);
+
+    return { data: data || [], error, count: count || 0 };
+  }, [pipelineId, searchTerm]);
+
+  const {
+    data: projects,
+    setData: setProjects,
+    isLoading: loadingProjects,
+    isLoadingMore,
+    hasMore,
+    loadMore,
+    refresh
+  } = useInfiniteScroll<Project>(fetchProjects, {
+    pageSize: 20,
+    dependencies: [pipelineId, searchTerm]
+  });
 
   const handleOpenAdd = () => {
     setForm({
@@ -197,7 +217,7 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
 
       setIsAddModalOpen(false);
       setIsDetailModalOpen(false);
-      fetchData(false);
+      refresh();
       setToast({ isOpen: true, message: `Proyek "${form.name}" berhasil disimpan!`, type: 'success' });
     } catch (err: any) {
       setToast({ isOpen: true, message: 'Gagal menyimpan proyek: ' + err.message, type: 'error' });
@@ -212,7 +232,7 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
     try {
       await supabase.from('projects').delete().eq('id', confirmDelete.id);
       setConfirmDelete({ isOpen: false, id: null, name: '' });
-      fetchData(false);
+      refresh();
       setToast({ isOpen: true, message: 'Proyek berhasil dihapus!', type: 'success' });
     } catch (err: any) {
       setToast({ isOpen: true, message: 'Gagal menghapus proyek: ' + err.message, type: 'error' });
@@ -228,11 +248,11 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
     try {
       const { error } = await supabase.from('projects').update({ stage_id: newStageId }).eq('id', taskId);
       if (error) throw error;
-      fetchData(false);
+      refresh();
       setToast({ isOpen: true, message: 'Tahapan proyek berhasil diperbarui!', type: 'success' });
     } catch (err: any) {
       setToast({ isOpen: true, message: 'Gagal memperbarui tahapan: ' + err.message, type: 'error' });
-      fetchData(false);
+      refresh();
     } finally {
       setIsProcessing(false);
     }
@@ -245,12 +265,14 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
       className={`group p-4 bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-lg hover:border-emerald-200 transition-all cursor-pointer relative ${isDragged ? 'opacity-30' : ''}`}
     >
       <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all">
-        <Button
-          onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/projects/tasks/${p.id}`); }}
-          className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg shadow-sm hover:bg-emerald-600 hover:text-white border border-emerald-100 transition-all"
+        <Link
+          href={`/dashboard/projects/tasks/${p.id}`}
+          onClick={(e) => e.stopPropagation()}
+          onMouseEnter={() => router.prefetch(`/dashboard/projects/tasks/${p.id}`)}
+          className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg shadow-sm hover:bg-emerald-600 hover:text-white border border-emerald-100 transition-all block"
         >
           <ListTodo size={12} />
-        </Button>
+        </Link>
       </div>
       <div className="flex items-center justify-between mb-2">
         <Badge variant="ghost" className="px-1.5 py-0 border border-gray-100 text-[7px] text-gray-400 uppercase bg-gray-50">PRJ-{String(p.id).padStart(4, '0')}</Badge>
@@ -332,23 +354,16 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
     return data;
   };
 
-  const processedProjects = useMemo(() => {
-    return projects.filter(p =>
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.client?.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [projects, searchTerm]);
-
   const projectsByStage = useMemo(() => {
     const groups: Record<string, Project[]> = {};
     if (pipeline?.stages) {
       pipeline.stages.forEach(s => groups[s.id] = []);
     }
-    processedProjects.forEach(p => {
+    projects.forEach(p => {
       if (groups[p.stage_id]) groups[p.stage_id].push(p);
     });
     return groups;
-  }, [processedProjects, pipeline]);
+  }, [projects, pipeline]);
 
   const handleCustomFieldChange = (label: string, value: any) => {
     setForm((prev: any) => ({
@@ -360,7 +375,7 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
     }));
   };
 
-  if (loading) return (
+  if (loadingMetadata || (loadingProjects && projects.length === 0)) return (
     <div className="flex flex-col items-center justify-center py-24 min-h-[400px]">
       <Loader2 className="animate-spin text-emerald-600 mb-4" size={32} />
       <Subtext className="text-[10px]  uppercase  text-gray-400">Sinkronisasi Proyek...</Subtext>
@@ -417,7 +432,7 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
         </div>
       </div>
 
-      <div className="h-[80vh] mb-4 overflow-hidden flex flex-col">
+      <div className="h-[80vh] mb-4 overflow-hidden flex flex-col relative">
         {viewMode === 'table' ? (
           <Card className="!p-0 h-full flex flex-col overflow-hidden">
             <div className="overflow-x-auto overflow-y-auto flex-1 custom-scrollbar">
@@ -433,7 +448,7 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {processedProjects.map(p => (
+                  {projects.map(p => (
                     <TableRow key={p.id} className="group hover:bg-gray-50/50 transition-colors text-gray-900">
                       <TableCell className="font-medium text-xs text-gray-500">
                         #{String(p.id).padStart(4, '0')}
@@ -500,7 +515,7 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
                           <ActionButton
                             icon={ListTodo}
                             variant="emerald"
-                            onClick={() => router.push(`/dashboard/projects/tasks/${p.id}`)}
+                            href={`/dashboard/projects/tasks/${p.id}`}
                             title="Buka Tasks Proyek"
                           />
                           <ActionButton
@@ -519,7 +534,13 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
                       </TableCell>
                     </TableRow>
                   ))}
-                  {processedProjects.length === 0 && (
+                  <InfiniteScrollSentinel 
+                    enabled={!!hasMore}
+                    onIntersect={() => loadMore?.()}
+                    isLoading={isLoadingMore}
+                    colSpan={6}
+                  />
+                  {projects.length === 0 && !isLoadingMore && (
                     <TableEmpty colSpan={6} icon={<Briefcase size={48} />} message="Belum ada proyek terdaftar" />
                   )}
                 </TableBody>
@@ -536,6 +557,9 @@ export const ProjectsView: React.FC<Props> = ({ company, user, members, pipeline
             itemsByStatus={projectsByStage as Record<string, KanbanProject[]>}
             renderCard={renderProjectCard as any}
             onReorder={handleStatusChange}
+            onLoadMore={loadMore}
+            hasMoreByStatus={pipeline?.stages ? { [pipeline.stages[pipeline.stages.length-1].id]: !!hasMore } : {}}
+            isLoadingMoreByStatus={pipeline?.stages ? { [pipeline.stages[pipeline.stages.length-1].id]: !!isLoadingMore } : {}}
           />
         )}
       </div>

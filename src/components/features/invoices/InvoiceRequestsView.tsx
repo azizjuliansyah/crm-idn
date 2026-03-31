@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-
+import Link from 'next/link';
 import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, Badge, SearchInput, ComboBox, Toast, ToastType } from '@/components/ui';
 
 
@@ -348,15 +348,14 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
             <Subtext className="text-[10px]  uppercase ">Kelola dan pantau seluruh permintaan pembuatan tagihan pelanggan.</Subtext>
           </div>
           <div className="flex items-center gap-3">
-            <Button
-              onClick={() => router.push('/dashboard/sales/invoice-requests/create')}
-              leftIcon={<Plus size={14} strokeWidth={3} />}
-              className="!px-6 py-2.5 text-[10px] uppercase  shadow-lg shadow-blue-100"
-              variant="primary"
-              size="sm"
+            <Link
+              href="/dashboard/sales/invoice-requests/create"
+              onMouseEnter={() => router.prefetch('/dashboard/sales/invoice-requests/create')}
+              className="inline-flex items-center gap-2 px-6 py-2.5 text-[10px] font-bold uppercase tracking-wider text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all shadow-lg shadow-blue-100"
             >
+              <Plus size={14} strokeWidth={3} />
               Request Baru
-            </Button>
+            </Link>
           </div>
         </div>
 
@@ -496,14 +495,7 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
                       <ActionButton
                         icon={FilePlus}
                         variant="indigo"
-                        onClick={() => {
-                          const params = new URLSearchParams();
-                          params.set('requestId', r.id.toString());
-                          params.set('clientId', r.client_id.toString());
-                          if (r.proforma_id) params.set('proformaId', r.proforma_id.toString());
-                          if (r.quotation_id) params.set('quotationId', r.quotation_id.toString());
-                          router.push(`/dashboard/sales/invoices/create?${params.toString()}`);
-                        }}
+                        href={`/dashboard/sales/invoices/create?requestId=${r.id}&clientId=${r.client_id}${r.proforma_id ? `&proformaId=${r.proforma_id}` : ''}${r.quotation_id ? `&quotationId=${r.quotation_id}` : ''}`}
                         title="Buat Invoice"
                       />
                     )}
@@ -518,7 +510,7 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
                         <ActionButton
                           icon={ExternalLink}
                           variant="blue"
-                          onClick={() => router.push(`/dashboard/sales/invoices/${r.invoice_id}`)}
+                          href={`/dashboard/sales/invoices/${r.invoice_id}`}
                           title={`Lihat Invoice ${r.invoice?.number || ''}`}
                         />
                       </>

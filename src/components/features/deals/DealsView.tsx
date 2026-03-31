@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Input, Button, H1, Subtext, Label, SearchInput, DateFilterDropdown, ComboBox } from '@/components/ui';
 
 import { supabase } from '@/lib/supabase';
@@ -13,6 +13,7 @@ import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { Toast, ToastType } from '@/components/ui';
 import { useRouter } from 'next/navigation';
+import { useInfiniteScroll } from '@/lib/hooks/useInfiniteScroll';
 
 interface Props {
   activeCompany: Company | null;
@@ -22,10 +23,9 @@ interface Props {
 }
 
 export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pipelineId }) => {
-  const [deals, setDeals] = useState<Deal[]>([]);
   const [pipeline, setPipeline] = useState<Pipeline | null>(null);
   const [members, setMembers] = useState<CompanyMember[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingMetadata, setLoadingMetadata] = useState(true);
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>('table');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
@@ -65,9 +65,9 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
     }).format(value || 0);
   };
 
-  const fetchData = async () => {
+  const fetchMetadata = async () => {
     if (!activeCompany) return;
-    setLoading(true);
+    setLoadingMetadata(true);
     try {
       let pipelineQuery = supabase
         .from('pipelines')
@@ -110,35 +110,87 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
       if (cosRes.data) setClientCompanies(cosRes.data as any[]);
       if (catsRes.data) setCategories(catsRes.data as any[]);
 
-      if (pipelinesData) {
-        const { data: dealsData } = await supabase
-          .from('deals')
-          .select(`
-            *,
-            sales_profile:profiles!deals_sales_id_fkey(full_name, avatar_url, email),
-            client:clients(*),
-            quotations(id, number)
-            `)
-          .eq('pipeline_id', pipelinesData.id)
-          .order('kanban_order', { ascending: true })
-          .order('created_at', { ascending: false });
-
-        if (dealsData) setDeals(dealsData as any);
-      }
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching metadata:', error);
     } finally {
-      setLoading(false);
+      setLoadingMetadata(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    fetchMetadata();
   }, [activeCompany, pipelineId]);
+
+  const fetchDeals = useCallback(async ({ from, to }: { from: number; to: number }) => {
+    if (!pipeline?.id) return { data: [], error: null, count: 0 };
+
+    let query = supabase
+      .from('deals')
+      .select(`
+        *,
+        sales_profile:profiles!deals_sales_id_fkey(full_name, avatar_url, email),
+        client:clients(*),
+        quotations(id, number)
+      `, { count: 'exact' })
+      .eq('pipeline_id', pipeline.id);
+
+    // Filters
+    if (searchTerm) {
+      query = query.or(`name.ilike.%${searchTerm}%,contact_name.ilike.%${searchTerm}%`);
+    }
+
+    if (statusFilter !== 'all') {
+      query = query.eq('stage_id', statusFilter);
+    }
+
+    if (assigneeFilter !== 'all') {
+      query = query.eq('sales_id', assigneeFilter);
+    }
+
+    if (dateFilterType === 'custom') {
+      if (startDateFilter) query = query.gte('input_date', startDateFilter);
+      if (endDateFilter) query = query.lte('input_date', endDateFilter);
+    } else if (dateFilterType !== 'all') {
+      const daysAgo = parseInt(dateFilterType);
+      if (!isNaN(daysAgo)) {
+        const filterDate = new Date();
+        filterDate.setDate(filterDate.getDate() - daysAgo);
+        query = query.gte('input_date', filterDate.toISOString().split('T')[0]);
+      }
+    }
+
+    if (followUpFilter !== 'all') {
+      query = query.eq('follow_up', parseInt(followUpFilter));
+    }
+
+    // Sorting - Always priority Urgency
+    let orderKey = sortConfig?.key || 'created_at';
+    let orderDirection = sortConfig?.direction || 'desc';
+
+    const { data, error, count } = await query
+      .order('is_urgent', { ascending: false })
+      .order(orderKey, { ascending: orderDirection === 'asc' })
+      .range(from, to);
+
+    return { data: data || [], error, count: count || 0 };
+  }, [pipeline?.id, searchTerm, statusFilter, assigneeFilter, dateFilterType, startDateFilter, endDateFilter, followUpFilter, sortConfig]);
+
+  const {
+    data: deals,
+    setData: setDeals,
+    isLoading: loadingDeals,
+    isLoadingMore,
+    hasMore,
+    loadMore,
+    refresh
+  } = useInfiniteScroll<Deal>(fetchDeals, {
+    pageSize: 20,
+    dependencies: [pipeline?.id, searchTerm, statusFilter, assigneeFilter, dateFilterType, startDateFilter, endDateFilter, followUpFilter, sortConfig]
+  });
 
   const handleCreateSuccess = () => {
     setIsAddModalOpen(false);
-    fetchData();
+    refresh();
     setToast({
       isOpen: true,
       message: 'Deal baru berhasil dibuat!',
@@ -147,7 +199,7 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
   };
 
   const handleUpdate = () => {
-    fetchData();
+    refresh();
     setToast({
       isOpen: true,
       message: 'Deal berhasil diperbarui!',
@@ -163,7 +215,7 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
     if (!confirmDelete.id) return;
     try {
       await supabase.from('deals').delete().eq('id', confirmDelete.id);
-      fetchData();
+      refresh();
       if (selectedDeal?.id === confirmDelete.id) setSelectedDeal(null);
       setToast({
         isOpen: true,
@@ -220,67 +272,29 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
   };
 
   const handleToggleSelectAll = () => {
-    if (selectedIds.length === filteredDeals.length) {
+    if (selectedIds.length === deals.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(filteredDeals.map(l => l.id));
+      setSelectedIds(deals.map(l => l.id));
     }
   };
 
-  // Filter Logic
-  const filteredDeals = deals.filter(deal => {
-    const matchesSearch =
-      deal.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (deal.contact_name || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || deal.stage_id === statusFilter;
-    const matchesAssignee = assigneeFilter === 'all' || deal.sales_id === assigneeFilter;
-
-    const dealDate = deal.input_date || deal.created_at.split('T')[0];
-    let matchesDate = true;
-    if (dateFilterType === 'custom') {
-      matchesDate = (!startDateFilter || dealDate >= startDateFilter) && (!endDateFilter || dealDate <= endDateFilter);
-    } else if (dateFilterType !== 'all') {
-      const daysAgo = parseInt(dateFilterType);
-      const filterDate = new Date();
-      filterDate.setDate(filterDate.getDate() - daysAgo);
-      matchesDate = dealDate >= filterDate.toISOString().split('T')[0];
-    }
-    const matchesFollowUp = followUpFilter === 'all' || (deal.follow_up || 0).toString() === followUpFilter;
-
-    return matchesSearch && matchesStatus && matchesAssignee && matchesDate && matchesFollowUp;
-  }).sort((a, b) => {
-    // Priority 1: Urgency
-    if (a.is_urgent && !b.is_urgent) return -1;
-    if (!a.is_urgent && b.is_urgent) return 1;
-
-    // Priority 2: Custom/Default Sort
-    if (!sortConfig) {
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    }
-    const valA = (a as any)[sortConfig.key];
-    const valB = (b as any)[sortConfig.key];
-
-    if (valA === valB) return 0;
-    if (valA === null || valA === undefined) return 1;
-    if (valB === null || valB === undefined) return -1;
-
-    if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-    if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-    return 0;
-  });
-
-  // Group by status for Kanban
-  const dealsByStage = (pipeline?.stages || []).reduce((acc, stage) => {
-    acc[stage.id] = filteredDeals
-      .filter(l => l.stage_id === stage.id)
-      .sort((a, b) => {
-        const orderA = a.kanban_order || 0;
-        const orderB = b.kanban_order || 0;
-        if (orderA !== orderB) return orderA - orderB;
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      });
-    return acc;
-  }, {} as Record<string, Deal[]>);
+  // Group by status for Kanban (Note: Kanban might need all data for reordering logic to be fully client-side smooth, 
+  // but for now we group current data or consider fetching more if needed)
+  const dealsByStage = useMemo(() => {
+    const grouped = (pipeline?.stages || []).reduce((acc, stage) => {
+      acc[stage.id] = deals
+        .filter(l => l.stage_id === stage.id)
+        .sort((a, b) => {
+          const orderA = a.kanban_order || 0;
+          const orderB = b.kanban_order || 0;
+          if (orderA !== orderB) return orderA - orderB;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
+      return acc;
+    }, {} as Record<string, Deal[]>);
+    return grouped;
+  }, [deals, pipeline?.stages]);
 
   // Network update based on the generic KanbanBoard's onReorder payload
   const handleDrop = async (dealId: number, newStageId: string, index?: number) => {
@@ -341,7 +355,7 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
         message: 'Gagal mengubah tahapan: ' + err.message,
         type: 'error'
       });
-      fetchData(); // Rollback
+      refresh(); // Rollback
     }
   };
 
@@ -408,9 +422,9 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
               onChange={(val: string | number) => setFollowUpFilter(val.toString())}
               options={[
                 { value: 'all', label: 'SEMUA FOLLOW UP' },
-                ...Array.from(new Set(deals.map(d => d.follow_up || 0))).sort((a, b) => a - b).map(fu => ({
+                ...[1, 2, 3, 4, 5].map(fu => ({
                   value: fu.toString(),
-                  label: fu === 0 ? 'BELUM FU' : `FU ${fu} KALI`
+                  label: `FU ${fu} KALI`
                 }))
               ]}
               className="w-40"
@@ -444,8 +458,8 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
         </div>
       </div>
 
-      <div className="h-[80vh] mb-4 overflow-hidden">
-        {loading ? (
+      <div className="h-[80vh] mb-4 overflow-hidden relative">
+        {loadingMetadata || (loadingDeals && deals.length === 0) ? (
           <div className="w-full h-full flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
@@ -454,15 +468,18 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
             pipeline={pipeline}
             dealsByStage={dealsByStage}
             onEdit={setSelectedDeal}
-            onDelete={handleDelete}
+            onDelete={(id, e) => handleDelete(id)}
             onReorder={handleDrop}
             formatIDR={formatIDR}
             onCreateQuotation={handleCreateQuotation}
             onEditQuotation={handleEditQuotation}
+            hasMore={hasMore}
+            isLoadingMore={isLoadingMore}
+            onLoadMore={loadMore}
           />
         ) : (
           <DealsTableView
-            deals={filteredDeals}
+            deals={deals}
             sortConfig={sortConfig}
             onSort={handleSort}
             selectedIds={selectedIds}
@@ -475,6 +492,9 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
             pipeline={pipeline}
             onCreateQuotation={handleCreateQuotation}
             onEditQuotation={handleEditQuotation}
+            hasMore={hasMore}
+            isLoadingMore={isLoadingMore}
+            onLoadMore={loadMore}
           />
         )}
       </div>
@@ -531,7 +551,7 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
           onSuccess={() => {
             setIsConvertModalOpen(false);
             setSelectedDeal(null);
-            fetchData();
+            refresh();
           }}
           setToast={setToast}
         />

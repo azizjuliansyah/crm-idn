@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import Link from 'next/link';
 
 import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, Badge, SearchInput, ComboBox, Toast, ToastType } from '@/components/ui';
 
@@ -203,15 +204,14 @@ export const SalesRequestsView: React.FC<Props> = ({ company, categoryId }) => {
                         <Subtext className="text-[10px] uppercase ">Kelola dan pantau seluruh permintaan dalam kategori ini.</Subtext>
                     </div>
                     <div className="flex items-center gap-3">
-                        <Button
-                            onClick={() => router.push(`/dashboard/sales/requests/${categoryId}/create`)}
-                            leftIcon={<Plus size={14} strokeWidth={3} />}
-                            className="!px-6 py-2.5 text-[10px] uppercase  shadow-lg shadow-blue-100"
-                            variant="primary"
-                            size="sm"
+                        <Link
+                            href={`/dashboard/sales/requests/${categoryId}/create`}
+                            onMouseEnter={() => router.prefetch(`/dashboard/sales/requests/${categoryId}/create`)}
+                            className="inline-flex items-center gap-2 px-6 py-2.5 text-[10px] font-bold uppercase tracking-wider text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all shadow-lg shadow-blue-100"
                         >
+                            <Plus size={14} strokeWidth={3} />
                             Request Baru
-                        </Button>
+                        </Link>
                     </div>
                 </div>
 

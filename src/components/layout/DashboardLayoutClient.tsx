@@ -11,6 +11,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useDashboard } from '@/app/dashboard/DashboardContext';
 import { Layout } from './Layout';
 import { Loader2 } from 'lucide-react';
+import { getPathFromViewId } from '@/lib/navigation';
 import { PlatformAdminView } from '../features/admin/PlatformAdminView';
 import { CompanyWizard } from '../features/settings/CompanyWizard';
 
@@ -170,106 +171,8 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
   };
 
   const handleNavigate = (viewId: string) => {
-    switch (viewId) {
-      case 'dashboard': router.push('/dashboard'); break;
-
-      // Platform Admin Views
-      case 'perusahaan': router.push('/dashboard/admin/companies'); break;
-      case 'pengguna': router.push('/dashboard/admin/users'); break;
-      case 'pengaturan': router.push('/dashboard/admin/platform'); break;
-      case 'pengaturan_email': router.push('/dashboard/admin/email'); break;
-
-      // CRM
-      case 'leads': router.push('/dashboard/leads'); break;
-      case 'pengaturan_leads': router.push('/dashboard/leads/settings'); break;
-      case 'pengaturan_sumber_leads': router.push('/dashboard/leads/sources'); break;
-      case 'deals': router.push('/dashboard/deals'); break;
-      case 'pengaturan_deals_pipeline': router.push('/dashboard/deals/pipelines'); break;
-      case 'log_activity': router.push('/dashboard/log-activity'); break;
-
-      // Support
-      case 'customer_support': router.push('/dashboard/support'); break;
-      case 'support_pipeline': router.push('/dashboard/support/pipelines'); break;
-      case 'complaints': router.push('/dashboard/complaints'); break;
-      case 'knowledge_base': router.push('/dashboard/knowledge-base'); break;
-      case 'ai_assistant': router.push('/dashboard/ai'); break;
-
-      // Products
-      case 'daftar_produk': router.push('/dashboard/products'); break;
-      case 'kategori_produk': router.push('/dashboard/products/categories'); break;
-      case 'satuan_produk': router.push('/dashboard/products/units'); break;
-
-      // SOPs
-      case 'sop_all': router.push('/dashboard/sops'); break;
-      case 'sop_category_settings': router.push('/dashboard/sops/categories'); break;
-      case 'sop_archive': router.push('/dashboard/sops/archive'); break;
-      case 'sop_editor': router.push('/dashboard/sops/create'); break; // Logic might vary if editing specific ID
-
-      // Clients
-      case 'perusahaan_client': router.push('/dashboard/clients/companies'); break;
-      case 'data_client': router.push('/dashboard/clients/contacts'); break;
-      case 'pengaturan_kategori_client': router.push('/dashboard/clients/categories'); break;
-
-      // Sales
-      case 'daftar_penawaran': router.push('/dashboard/sales/quotations'); break;
-      case 'buat_penawaran': router.push('/dashboard/sales/quotations/create'); break;
-      case 'daftar_proforma': router.push('/dashboard/sales/proformas'); break;
-      case 'buat_proforma': router.push('/dashboard/sales/proformas/create'); break;
-      case 'daftar_invoice': router.push('/dashboard/sales/invoices'); break;
-      case 'buat_invoice': router.push('/dashboard/sales/invoices/create'); break;
-      case 'daftar_kwitansi': router.push('/dashboard/sales/kwitansis'); break;
-      case 'buat_kwitansi': router.push('/dashboard/sales/kwitansis/create'); break;
-      case 'request_invoice': router.push('/dashboard/sales/invoice-requests'); break;
-      case 'buat_request_invoice': router.push('/dashboard/sales/invoice-requests/create'); break;
-      case 'request_kwitansi': router.push('/dashboard/sales/kwitansi-requests'); break;
-      case 'buat_request_kwitansi': router.push('/dashboard/sales/kwitansi-requests/create'); break;
-      case 'request_category_settings': router.push('/dashboard/sales/requests/settings'); break;
-
-      case 'penomoran_otomatis': router.push('/dashboard/sales/settings/autonumber'); break;
-      case 'pengaturan_pajak': router.push('/dashboard/sales/settings/tax'); break;
-      case 'pengaturan_template_pdf': router.push('/dashboard/sales/settings/templates'); break;
-
-      // Settings
-      case 'pengaturan_perusahaan': router.push('/dashboard/settings/company'); break;
-      case 'workspace_email_config': router.push('/dashboard/settings/email'); break;
-      case 'anggota_tim': router.push('/dashboard/settings/team'); break;
-      case 'manajemen_role': router.push('/dashboard/settings/roles'); break;
-      case 'profil_saya': router.push('/dashboard/settings/profile'); break;
-      case 'pengaturan_ticket_topic': router.push('/dashboard/settings/ticket-topic'); break;
-      case 'pengaturan_ai': router.push('/dashboard/settings/ai'); break;
-      case 'pengaturan_urgensi_request': router.push('/dashboard/settings/urgencies'); break;
-
-      // Project Settings
-      case 'pengaturan_project_pipeline': router.push('/dashboard/settings/projects/pipelines'); break;
-      case 'pengaturan_task_pipeline': router.push('/dashboard/settings/projects/task-stages'); break;
-
-      // Special cases
-      case 'create_workspace_wizard':
-        break;
-
-      default:
-        if (viewId.startsWith('deals_')) {
-          const id = viewId.split('_')[1];
-          router.push(`/dashboard/deals/${id}`);
-        } else if (viewId.startsWith('request_cat_')) {
-          const id = viewId.split('_')[2];
-          router.push(`/dashboard/sales/requests/${id}`);
-        } else if (viewId.startsWith('buat_request_cat_')) {
-          const id = viewId.split('_')[3];
-          router.push(`/dashboard/sales/requests/${id}/create`);
-        } else if (viewId.startsWith('projects_')) {
-          const id = viewId.split('_')[1];
-          router.push(`/dashboard/projects/${id}`);
-        } else if (viewId.startsWith('sop_cat_')) {
-          const id = viewId.split('_')[2];
-          router.push(`/dashboard/sops/category/${id}`);
-        } else {
-          console.warn("Unknown view or handled elsewhere:", viewId);
-          // Try to push to dashboard/viewId as fallback if simple mapping
-          // router.push(`/dashboard/${viewId}`);
-        }
-        break;
-    }
+    const path = getPathFromViewId(viewId);
+    router.push(path);
   };
 
   // State for wizard if needed, but we can also just use the fact that !activeCompany

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-
+import Link from 'next/link';
 import { Button, Table, TableHeader, TableBody, TableRow, TableCell, H2, H3, Subtext, Label, Modal, EmptyState, SearchInput, Badge, ComboBox, Toast, ToastType } from '@/components/ui';
 
 
@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
+import { InfiniteScrollSentinel } from '@/components/ui';
+import { useInfiniteScroll } from '@/lib/hooks/useInfiniteScroll';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { generateTemplate1, generateTemplate5, generateTemplate6 } from '@/lib/pdf-templates';
@@ -42,9 +44,8 @@ const getImgDimensions = (url: string): Promise<{ width: number, height: number,
 export const QuotationsView: React.FC<Props> = ({ company }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [requestCategories, setRequestCategories] = useState<SalesRequestCategory[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingMetadata, setLoadingMetadata] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClientId, setFilterClientId] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -59,37 +60,68 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
   });
   const [requestModal, setRequestModal] = useState<{ isOpen: boolean; quotationId: number | null; quotationStatus: string }>({ isOpen: false, quotationId: null, quotationStatus: '' });
 
-  const fetchData = useCallback(async () => {
-    if (!company?.id) return;
-    setLoading(true);
-    try {
-      const [qRes, catRes] = await Promise.all([
-        supabase
-          .from('quotations')
-          .select('*, client:clients(*, client_company:client_companies(*)), quotation_items(*, products(*))')
-          .eq('company_id', company.id)
-          .order('id', { ascending: false }),
-        supabase
-          .from('sales_request_categories')
-          .select('*')
-          .eq('company_id', company.id)
-          .order('sort_order', { ascending: false })
-      ]);
+  const fetchQuotations = useCallback(async ({ from, to }: { from: number, to: number }) => {
+    if (!company?.id) return { data: [], error: null, count: 0 };
+    
+    let query = supabase
+      .from('quotations')
+      .select('*, client:clients(*, client_company:client_companies(*)), quotation_items(*, products(*))', { count: 'exact' })
+      .eq('company_id', company.id);
 
-      if (qRes.error) throw qRes.error;
-      if (qRes.data) setQuotations(qRes.data);
-      if (catRes.error) throw catRes.error;
-      if (catRes.data) setRequestCategories(catRes.data);
-    } catch (err) {
-      console.error(err);
+    if (searchTerm) {
+      query = query.or(`number.ilike.%${searchTerm}%,client_name.ilike.%${searchTerm}%`);
+      // Note: client name search might need to be joined or handled differently if client_name is not direct.
+      // In this case, we use number and maybe client name if we can.
+      // Actually, since client is a join, we might need a better way if we want to search client name server-side.
+      // But for now let's stick to number search or basic ilike if possible.
+    }
+
+    if (filterStatus !== 'all') {
+      query = query.eq('status', filterStatus);
+    }
+
+    if (filterClientId !== 'all') {
+      query = query.eq('client_id', parseInt(filterClientId));
+    }
+
+    const { data, error, count } = await query
+      .order('id', { ascending: false })
+      .range(from, to);
+
+    return { data: data || [], error, count };
+  }, [company?.id, searchTerm, filterStatus, filterClientId]);
+
+  const {
+    data: quotations,
+    isLoading: quotationsLoading,
+    isLoadingMore,
+    hasMore,
+    loadMore,
+    refresh
+  } = useInfiniteScroll<Quotation>(fetchQuotations, {
+    pageSize: 20,
+    dependencies: [company?.id, searchTerm, filterStatus, filterClientId]
+  });
+
+  const fetchMetadata = useCallback(async () => {
+    if (!company?.id) return;
+    setLoadingMetadata(true);
+    try {
+      const { data, error } = await supabase
+        .from('sales_request_categories')
+        .select('*')
+        .eq('company_id', company.id)
+        .order('sort_order', { ascending: false });
+
+      if (data) setRequestCategories(data);
     } finally {
-      setLoading(false);
+      setLoadingMetadata(false);
     }
   }, [company?.id]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchMetadata();
+  }, [fetchMetadata]);
 
   useEffect(() => {
     const success = searchParams.get('success');
@@ -116,16 +148,7 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
   }, [quotations]);
 
   const filteredQuotations = useMemo(() => {
-    let result = quotations.filter(q => {
-      const matchesSearch = q.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (q.client?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (q.client?.client_company?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesClient = filterClientId === 'all' || q.client_id === parseInt(filterClientId);
-      const matchesStatus = filterStatus === 'all' || q.status === filterStatus;
-
-      return matchesSearch && matchesClient && matchesStatus;
-    });
+    let result = [...quotations];
 
     if (sortConfig) {
       result.sort((a, b) => {
@@ -145,7 +168,7 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
     }
 
     return result;
-  }, [quotations, searchTerm, filterClientId, filterStatus, sortConfig]);
+  }, [quotations, sortConfig]);
 
   const handleSort = (key: SortKey) => {
     setSortConfig(prev => {
@@ -166,7 +189,7 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
       if (error) throw error;
       setConfirmDelete({ isOpen: false, id: null, number: '' });
       showNotification('Berhasil', `Penawaran ${confirmDelete.number} telah dihapus.`);
-      fetchData();
+      refresh();
     } catch (err: any) {
       showNotification('Gagal', err.message, 'error');
     } finally {
@@ -503,7 +526,7 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
     doc.save(`${q.number}.pdf`);
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4"><Loader2 className="animate-spin text-blue-600" /><Subtext className="text-[10px]  uppercase  text-gray-400">Sinkronisasi Penawaran...</Subtext></div>;
+  if (loadingMetadata || (quotationsLoading && quotations.length === 0)) return <div className="flex flex-col items-center justify-center py-24 gap-4"><Loader2 className="animate-spin text-blue-600" /><Subtext className="text-[10px]  uppercase  text-gray-400">Sinkronisasi Penawaran...</Subtext></div>;
 
   return (
     <div className="flex flex-col gap-6 text-gray-900">
@@ -514,15 +537,14 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
             <Subtext className="text-[10px]  uppercase ">Kelola dan pantau seluruh penawaran pelanggan.</Subtext>
           </div>
           <div className="flex items-center gap-3">
-            <Button
-              onClick={() => router.push('/dashboard/sales/quotations/create')}
-              leftIcon={<Plus size={14} strokeWidth={3} />}
-              className="!px-6 py-2.5 text-[10px] uppercase  shadow-lg shadow-blue-100"
-              variant="primary"
-              size="sm"
+            <Link
+              href="/dashboard/sales/quotations/create"
+              onMouseEnter={() => router.prefetch('/dashboard/sales/quotations/create')}
+              className="inline-flex items-center gap-2 px-6 py-2.5 text-[10px] font-bold uppercase tracking-wider text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all shadow-lg shadow-blue-100"
             >
+              <Plus size={14} strokeWidth={3} />
               Buat Penawaran
-            </Button>
+            </Link>
           </div>
         </div>
 
@@ -618,7 +640,7 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
                       <ActionButton
                         icon={Edit2}
                         variant="blue"
-                        onClick={() => router.push(`/dashboard/sales/quotations/${q.id}`)}
+                        href={`/dashboard/sales/quotations/${q.id}`}
                         title="Edit"
                       />
                       <ActionButton
@@ -631,9 +653,15 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
                   </TableCell>
                 </TableRow>
               ))}
-              {filteredQuotations.length === 0 && (
+              <InfiniteScrollSentinel 
+                onIntersect={loadMore}
+                enabled={hasMore}
+                isLoading={isLoadingMore}
+                colSpan={7}
+              />
+              {filteredQuotations.length === 0 && !quotationsLoading && (
                 <TableRow>
-                  <TableCell colSpan={6} className="p-0">
+                  <TableCell colSpan={7} className="p-0">
                     <EmptyState icon={<FileText size={48} />} title="Belum ada penawaran tercatat" />
                   </TableCell>
                 </TableRow>
@@ -666,37 +694,37 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
           <Subtext className="text-sm text-gray-500 mb-2">Silakan pilih jenis request yang ingin Anda ajukan berdasarkan penawaran ini:</Subtext>
 
           {requestModal.quotationStatus === 'Accepted' && (
-            <Button
-              variant="ghost"
-              className="w-full justify-start !py-4 text-left border border-amber-200 bg-amber-50/50 hover:bg-amber-50"
-              leftIcon={<FileCheck className="text-amber-500" size={18} />}
-              onClick={() => router.push(`/dashboard/sales/proformas/create?quotationId=${requestModal.quotationId}`)}
+            <Link
+              href={`/dashboard/sales/proformas/create?quotationId=${requestModal.quotationId}`}
+              onMouseEnter={() => router.prefetch(`/dashboard/sales/proformas/create?quotationId=${requestModal.quotationId}`)}
+              className="flex items-center gap-3 w-full !py-4 px-4 text-left border border-amber-200 bg-amber-50/50 hover:bg-amber-50 rounded-lg transition-all text-sm font-medium text-gray-700"
             >
+              <FileCheck className="text-amber-500" size={18} />
               Jadikan Proforma
-            </Button>
+            </Link>
           )}
 
           {requestModal.quotationStatus === 'Accepted' && (
-            <Button
-              variant="ghost"
-              className="w-full justify-start !py-4 text-left border border-blue-200 bg-blue-50/50 hover:bg-blue-50"
-              leftIcon={<FileText className="text-blue-500" size={18} />}
-              onClick={() => router.push(`/dashboard/sales/invoice-requests/create?quotationId=${requestModal.quotationId}`)}
+            <Link
+              href={`/dashboard/sales/invoice-requests/create?quotationId=${requestModal.quotationId}`}
+              onMouseEnter={() => router.prefetch(`/dashboard/sales/invoice-requests/create?quotationId=${requestModal.quotationId}`)}
+              className="flex items-center gap-3 w-full !py-4 px-4 text-left border border-blue-200 bg-blue-50/50 hover:bg-blue-50 rounded-lg transition-all text-sm font-medium text-gray-700"
             >
+              <FileText className="text-blue-500" size={18} />
               Request Invoice
-            </Button>
+            </Link>
           )}
 
           {requestCategories.map(cat => (
-            <Button
+            <Link
               key={cat.id}
-              variant="ghost"
-              className="w-full justify-start !py-4 text-left border border-gray-200 uppercase"
-              leftIcon={<FilePlus className="text-gray-400" size={18} />}
-              onClick={() => router.push(`/dashboard/sales/requests/${cat.id}/create?quotationId=${requestModal.quotationId}`)}
+              href={`/dashboard/sales/requests/${cat.id}/create?quotationId=${requestModal.quotationId}`}
+              onMouseEnter={() => router.prefetch(`/dashboard/sales/requests/${cat.id}/create?quotationId=${requestModal.quotationId}`)}
+              className="flex items-center gap-3 w-full !py-4 px-4 text-left border border-gray-200 rounded-lg transition-all text-sm font-bold uppercase tracking-wider text-gray-600 hover:bg-gray-50"
             >
+              <FilePlus className="text-gray-400" size={18} />
               {cat.name}
-            </Button>
+            </Link>
           ))}
         </div>
       </Modal>

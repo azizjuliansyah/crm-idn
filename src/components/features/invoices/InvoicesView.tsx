@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-
+import Link from 'next/link';
 import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, SearchInput, ComboBox, Toast, ToastType } from '@/components/ui';
 
 
@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
+import { InfiniteScrollSentinel } from '@/components/ui';
+import { useInfiniteScroll } from '@/lib/hooks/useInfiniteScroll';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { generateTemplate1, generateTemplate5, generateTemplate6 } from '@/lib/pdf-templates';
@@ -42,8 +44,6 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
   const router = useRouter();
   const { activeCompanyMembers, user } = useDashboard();
   const searchParams = useSearchParams();
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClientId, setFilterClientId] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -57,28 +57,44 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
     type: 'success',
   });
 
-  const fetchData = useCallback(async () => {
-    if (!company?.id) return;
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('invoices')
-        .select('*, client:clients(*, client_company:client_companies(*)), invoice_items(*, products(*)), kwitansis(id)')
-        .eq('company_id', company.id)
-        .order('id', { ascending: false });
+  const fetchInvoices = useCallback(async ({ from, to }: { from: number, to: number }) => {
+    if (!company?.id) return { data: [], error: null, count: 0 };
+    
+    let query = supabase
+      .from('invoices')
+      .select('*, client:clients(*, client_company:client_companies(*)), invoice_items(*, products(*)), kwitansis(id)', { count: 'exact' })
+      .eq('company_id', company.id);
 
-      if (error) throw error;
-      if (data) setInvoices(data as any);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
+    if (searchTerm) {
+      query = query.or(`number.ilike.%${searchTerm}%,client_name.ilike.%${searchTerm}%`);
     }
-  }, [company?.id]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (filterStatus !== 'all') {
+      query = query.eq('status', filterStatus);
+    }
+
+    if (filterClientId !== 'all') {
+      query = query.eq('client_id', parseInt(filterClientId));
+    }
+
+    const { data, error, count } = await query
+      .order('id', { ascending: false })
+      .range(from, to);
+
+    return { data: data || [], error, count };
+  }, [company?.id, searchTerm, filterStatus, filterClientId]);
+
+  const {
+    data: invoices,
+    isLoading: invoicesLoading,
+    isLoadingMore,
+    hasMore,
+    loadMore,
+    refresh
+  } = useInfiniteScroll<Invoice>(fetchInvoices, {
+    pageSize: 20,
+    dependencies: [company?.id, searchTerm, filterStatus, filterClientId]
+  });
 
   useEffect(() => {
     const success = searchParams.get('success');
@@ -105,16 +121,7 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
   }, [invoices]);
 
   const filteredInvoices = useMemo(() => {
-    let result = invoices.filter(inv => {
-      const matchesSearch = inv.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (inv.client?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (inv.client?.client_company?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesClient = filterClientId === 'all' || inv.client_id === parseInt(filterClientId);
-      const matchesStatus = filterStatus === 'all' || inv.status === filterStatus;
-
-      return matchesSearch && matchesClient && matchesStatus;
-    });
+    let result = [...invoices];
 
     if (sortConfig) {
       result.sort((a, b) => {
@@ -134,7 +141,7 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
     }
 
     return result;
-  }, [invoices, searchTerm, filterClientId, filterStatus, sortConfig]);
+  }, [invoices, sortConfig]);
 
   const handleSort = (key: SortKey) => {
     setSortConfig(prev => {
@@ -155,7 +162,7 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
       if (error) throw error;
       setConfirmDelete({ isOpen: false, id: null, number: '' });
       showNotification('Berhasil', `Invoice ${confirmDelete.number} telah dihapus.`);
-      fetchData();
+      refresh();
     } catch (err: any) {
       showNotification('Gagal', err.message, 'error');
     } finally {
@@ -369,7 +376,7 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
       }
 
       setToast({ isOpen: true, message: `Kwitansi berhasil dibuat.`, type: 'success' });
-      fetchData();
+      refresh();
     } catch (err: any) {
       setToast({ isOpen: true, message: err.message, type: 'error' });
     } finally {
@@ -449,7 +456,7 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
     }
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24 gap-4"><Loader2 className="animate-spin text-blue-600" /><Subtext className="text-[10px]  uppercase  text-gray-400">Sinkronisasi Invoice...</Subtext></div>;
+  if (invoicesLoading && invoices.length === 0) return <div className="flex flex-col items-center justify-center py-24 gap-4"><Loader2 className="animate-spin text-blue-600" /><Subtext className="text-[10px]  uppercase  text-gray-400">Sinkronisasi Invoice...</Subtext></div>;
 
   return (
     <div className="flex flex-col gap-6 text-gray-900">
@@ -460,15 +467,14 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
             <Subtext className="text-[10px]  uppercase ">Kelola dan pantau seluruh tagihan pelanggan.</Subtext>
           </div>
           <div className="flex items-center gap-3">
-            <Button
-              onClick={() => router.push('/dashboard/sales/invoices/create')}
-              leftIcon={<Plus size={14} strokeWidth={3} />}
-              className="!px-6 py-2.5 text-[10px] uppercase  shadow-lg shadow-blue-100"
-              variant="primary"
-              size="sm"
+            <Link
+              href="/dashboard/sales/invoices/create"
+              onMouseEnter={() => router.prefetch('/dashboard/sales/invoices/create')}
+              className="inline-flex items-center gap-2 px-6 py-2.5 text-[10px] font-bold uppercase tracking-wider text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all shadow-lg shadow-blue-100"
             >
+              <Plus size={14} strokeWidth={3} />
               Buat Invoice
-            </Button>
+            </Link>
           </div>
         </div>
 
@@ -530,13 +536,14 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
                     <Label className="text-[11px] text-gray-500">{formatDateString(inv.date)}</Label>
                   </TableCell>
                   <TableCell className="py-5 px-6">
-                    <Button
-                      onClick={() => router.push(`/dashboard/sales/invoices/${inv.id}`)}
-                      className=" text-indigo-600 text-xs  hover:underline flex items-center gap-1.5"
+                    <Link
+                      href={`/dashboard/sales/invoices/${inv.id}`}
+                      onMouseEnter={() => router.prefetch(`/dashboard/sales/invoices/${inv.id}`)}
+                      className="text-indigo-600 text-xs font-medium hover:underline flex items-center gap-1.5"
                     >
                       <FileBadge size={12} className="text-indigo-400" />
                       {inv.number}
-                    </Button>
+                    </Link>
                   </TableCell>
                   <TableCell className="py-5 px-6">
                     <div className="flex items-center gap-3">
@@ -584,7 +591,7 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
                       <ActionButton
                         icon={Edit2}
                         variant="blue"
-                        onClick={() => router.push(`/dashboard/sales/invoices/${inv.id}`)}
+                        href={`/dashboard/sales/invoices/${inv.id}`}
                         title="Edit"
                       />
                       <ActionButton
@@ -597,7 +604,13 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
                   </TableCell>
                 </TableRow>
               ))}
-              {filteredInvoices.length === 0 && (
+              <InfiniteScrollSentinel 
+                onIntersect={loadMore}
+                enabled={hasMore}
+                isLoading={isLoadingMore}
+                colSpan={6}
+              />
+              {filteredInvoices.length === 0 && !invoicesLoading && (
                 <TableEmpty colSpan={6} message="Belum ada invoice tercatat" icon={<FileBadge size={48} />} />
               )}
             </TableBody>

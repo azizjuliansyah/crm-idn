@@ -1,10 +1,14 @@
 import React from 'react';
-import { Button } from '@/components/ui/Button';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { LucideIcon } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 interface ActionButtonProps {
     icon: LucideIcon;
-    onClick: (e: React.MouseEvent) => void;
+    onClick?: (e: React.MouseEvent) => void;
+    href?: string;
+    prefetch?: boolean;
     variant: 'emerald' | 'blue' | 'rose' | 'indigo' | 'amber' | 'gray';
     title?: string;
     className?: string;
@@ -15,12 +19,16 @@ interface ActionButtonProps {
 export const ActionButton: React.FC<ActionButtonProps> = ({
     icon: Icon,
     onClick,
+    href,
+    prefetch = true,
     variant,
     title,
     className = '',
     iconSize = 14,
     disabled = false
 }) => {
+    const router = useRouter();
+
     const getVariantStyles = () => {
         if (disabled) return '!text-gray-300 border-gray-100 cursor-not-allowed opacity-50';
 
@@ -42,16 +50,33 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
         }
     };
 
-    return (
+    const handlePrefetch = () => {
+        if (href && prefetch) {
+            router.prefetch(href);
+        }
+    };
+
+    const content = (
         <Button
             variant="ghost"
             size="sm"
-            onClick={disabled ? (e) => e.preventDefault() : onClick}
+            onClick={disabled ? (e: React.MouseEvent) => e.preventDefault() : onClick}
             title={title}
             disabled={disabled}
             className={`!p-2 border rounded-lg transition-all ${getVariantStyles()} ${className}`}
+            onMouseEnter={handlePrefetch}
         >
             <Icon size={iconSize} strokeWidth={variant === 'emerald' ? 2.5 : 2} />
         </Button>
     );
+
+    if (href && !disabled) {
+        return (
+            <Link href={href} prefetch={prefetch} onClick={(e) => e.stopPropagation()}>
+                {content}
+            </Link>
+        );
+    }
+
+    return content;
 };

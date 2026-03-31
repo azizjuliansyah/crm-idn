@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Input, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Label, Modal, Card, EmptyState, SearchInput, ComboBox, H2, Toast, ToastType, Badge } from '@/components/ui';
+import { Input, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Label, Modal, Card, EmptyState, SearchInput, ComboBox, H2, Toast, ToastType, Badge, InfiniteScrollSentinel } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -14,6 +14,7 @@ import {
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { useSearchParams } from 'next/navigation';
+import { useInfiniteScroll } from '@/lib/hooks/useInfiniteScroll';
 
 interface Props {
   company: Company | null;
@@ -21,10 +22,9 @@ interface Props {
 
 export const ProductsView: React.FC<Props> = ({ company }) => {
   const searchParams = useSearchParams();
-  const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [units, setUnits] = useState<ProductUnit[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingMetadata, setLoadingMetadata] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -45,30 +45,56 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
     name: '', category_id: null, unit_id: null, price: 0, description: ''
   });
 
-  const fetchData = useCallback(async () => {
-    if (!company?.id) {
-      setLoading(false);
-      return;
+  const fetchProducts = useCallback(async ({ from, to }: { from: number, to: number }) => {
+    if (!company?.id) return { data: [], error: null, count: 0 };
+    
+    let query = supabase
+      .from('products')
+      .select('*, product_categories(*), product_units(*)', { count: 'exact' })
+      .eq('company_id', company.id);
+
+    if (searchTerm) {
+      query = query.ilike('name', `%${searchTerm}%`);
     }
-    setLoading(true);
+
+    const { data, error, count } = await query
+      .order('name')
+      .range(from, to);
+
+    return { data: data || [], error, count };
+  }, [company?.id, searchTerm]);
+
+  const {
+    data: products,
+    isLoading: productsLoading,
+    isLoadingMore,
+    hasMore,
+    loadMore,
+    refresh
+  } = useInfiniteScroll<Product>(fetchProducts, {
+    pageSize: 20,
+    dependencies: [company?.id, searchTerm]
+  });
+
+  const fetchMetadata = useCallback(async () => {
+    if (!company?.id) return;
+    setLoadingMetadata(true);
     try {
-      const [prodRes, catRes, unitRes] = await Promise.all([
-        supabase.from('products').select('*, product_categories(*), product_units(*)').eq('company_id', company.id).order('name'),
+      const [catRes, unitRes] = await Promise.all([
         supabase.from('product_categories').select('*').eq('company_id', company.id).order('name'),
         supabase.from('product_units').select('*').eq('company_id', company.id).order('name')
       ]);
 
-      if (prodRes.data) setProducts(prodRes.data);
       if (catRes.data) setCategories(catRes.data);
       if (unitRes.data) setUnits(unitRes.data);
     } finally {
-      setLoading(false);
+      setLoadingMetadata(false);
     }
   }, [company?.id]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchMetadata();
+  }, [fetchMetadata]);
 
   useEffect(() => {
     const success = searchParams.get('success');
@@ -82,11 +108,8 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
   }, [searchParams]);
 
   const filteredProducts = useMemo(() => {
-    return products.filter(p =>
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.product_categories?.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [products, searchTerm]);
+    return [...products];
+  }, [products]);
 
   const handleQuickAddCategory = async () => {
     if (!company) return;
@@ -141,7 +164,7 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
 
       setIsModalOpen(false);
       setToast({ isOpen: true, message: `Produk berhasil ${form.id ? 'diperbarui' : 'ditambahkan'}`, type: 'success' });
-      fetchData();
+      refresh();
     } catch (err: any) {
       setToast({ isOpen: true, message: err.message, type: 'error' });
     } finally {
@@ -158,7 +181,7 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
     try {
       await supabase.from('products').delete().eq('id', confirmDelete.id);
       setToast({ isOpen: true, message: 'Produk berhasil dihapus', type: 'success' });
-      fetchData();
+      refresh();
     } catch (err: any) {
       setToast({ isOpen: true, message: err.message, type: 'error' });
     } finally {
@@ -170,7 +193,7 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num).replace('Rp', 'Rp ');
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-emerald-600 mb-4" /><Subtext className="text-[10px]  uppercase  text-gray-400">Sinkronisasi Katalog Produk...</Subtext></div>;
+  if (loadingMetadata || (productsLoading && products.length === 0)) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-emerald-600 mb-4" /><Subtext className="text-[10px]  uppercase  text-gray-400">Sinkronisasi Katalog Produk...</Subtext></div>;
   if (!company) return <div className="text-center p-8 text-gray-500">Pilih workspace terlebih dahulu</div>;
 
   return (
@@ -260,7 +283,13 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
                   </TableCell>
                 </TableRow>
               ))}
-              {filteredProducts.length === 0 && (
+              <InfiniteScrollSentinel 
+                onIntersect={loadMore}
+                enabled={hasMore}
+                isLoading={isLoadingMore}
+                colSpan={6}
+              />
+              {filteredProducts.length === 0 && !productsLoading && (
                 <TableRow>
                   <TableCell colSpan={6}>
                     <EmptyState

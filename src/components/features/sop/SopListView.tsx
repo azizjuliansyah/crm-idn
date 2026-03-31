@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-
+import Link from 'next/link';
 import { Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Label, SearchInput, H2, Toast, ToastType } from '@/components/ui';
 
 
@@ -96,15 +96,14 @@ export const SopListView: React.FC<Props> = ({ company, categoryId, isArchive })
           </div>
           <div className="flex items-center gap-3">
             {!isArchive && (
-              <Button
-                onClick={() => router.push('/dashboard/sops/create')}
-                leftIcon={<Plus size={14} strokeWidth={3} />}
-                className="!px-6 py-2.5 text-[10px] uppercase  shadow-lg shadow-blue-100"
-                variant="primary"
-                size="sm"
+              <Link
+                href="/dashboard/sops/create"
+                onMouseEnter={() => router.prefetch('/dashboard/sops/create')}
+                className="inline-flex items-center gap-2 px-6 py-2.5 text-[10px] font-bold uppercase tracking-wider text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all shadow-lg shadow-blue-100"
               >
+                <Plus size={14} strokeWidth={3} />
                 Buat SOP Baru
-              </Button>
+              </Link>
             )}
           </div>
         </div>
@@ -151,9 +150,13 @@ export const SopListView: React.FC<Props> = ({ company, categoryId, isArchive })
                         <FileText size={18} />
                       </div>
                       <div>
-                        <Subtext className="text-sm  text-gray-900  leading-tight group-hover:text-blue-600 transition-colors uppercase">
+                        <Link
+                          href={`/dashboard/sops/${sop.id}`}
+                          onMouseEnter={() => router.prefetch(`/dashboard/sops/${sop.id}`)}
+                          className="text-sm font-semibold text-gray-900 leading-tight hover:text-blue-600 transition-colors uppercase block"
+                        >
                           {sop.title}
-                        </Subtext>
+                        </Link>
                         <Subtext className="text-[10px] text-gray-400 font-medium mt-1">
                           Terbit: {new Date(sop.revision_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </Subtext>
@@ -184,7 +187,7 @@ export const SopListView: React.FC<Props> = ({ company, categoryId, isArchive })
                       <ActionButton
                         icon={Eye}
                         variant="blue"
-                        onClick={(e: any) => { e.stopPropagation(); handleView(sop.id); }}
+                        href={`/dashboard/sops/${sop.id}`}
                         title="Lihat Detail"
                       />
                       <ChevronRight size={16} className="text-gray-300" />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Input, Button, H2, Subtext, Label, SearchInput, DateFilterDropdown, ComboBox, Toast, ToastType } from '@/components/ui';
 
 import { supabase } from '@/lib/supabase';
@@ -10,6 +10,7 @@ import { ConvertLeadModal } from './ConvertLeadModal';
 import { LeadsTableView } from './LeadsTableView';
 import { LeadsKanbanView } from './LeadsKanbanView';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
+import { useInfiniteScroll } from '@/lib/hooks/useInfiniteScroll';
 
 
 interface Props {
@@ -19,10 +20,9 @@ interface Props {
 }
 
 export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) => {
-  const [leads, setLeads] = useState<Lead[]>([]);
   const [stages, setStages] = useState<LeadStage[]>([]);
   const [members, setMembers] = useState<CompanyMember[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingMetadata, setLoadingMetadata] = useState(true);
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>('table');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
@@ -59,9 +59,70 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
     }).format(value || 0);
   };
 
-  const fetchData = async () => {
+  const fetchLeads = useCallback(async ({ from, to }: { from: number, to: number }) => {
+    if (!activeCompany) return { data: [], error: null, count: 0 };
+    
+    let query = supabase.from('leads').select(`
+      *,
+      client_company:client_companies(name),
+      sales_profile:profiles!leads_sales_id_fkey(full_name, avatar_url, email)
+    `, { count: 'exact' });
+
+    query = query.eq('company_id', activeCompany.id);
+
+    if (searchTerm) {
+      query = query.ilike('name', `%${searchTerm}%`);
+    }
+
+    if (statusFilter !== 'all') {
+      query = query.eq('status', statusFilter);
+    }
+
+    if (assigneeFilter !== 'all') {
+      query = query.eq('sales_id', assigneeFilter);
+    }
+
+    if (dateFilterType === 'custom') {
+      if (startDateFilter) query = query.gte('input_date', startDateFilter);
+      if (endDateFilter) query = query.lte('input_date', endDateFilter);
+    } else if (dateFilterType !== 'all') {
+      const daysAgo = parseInt(dateFilterType);
+      const filterDate = new Date();
+      filterDate.setDate(filterDate.getDate() - daysAgo);
+      query = query.gte('input_date', filterDate.toISOString().split('T')[0]);
+    }
+
+    // Sort priority
+    if (sortConfig) {
+      query = query.order(sortConfig.key, { ascending: sortConfig.direction === 'asc' });
+    } else {
+      // Default sort: urgent first, then kanban_order, then newest first
+      query = query
+        .order('is_urgent', { ascending: false })
+        .order('kanban_order', { ascending: true })
+        .order('created_at', { ascending: false });
+    }
+
+    const { data, error, count } = await query.range(from, to);
+    return { data: data || [], error, count };
+  }, [activeCompany, searchTerm, statusFilter, assigneeFilter, dateFilterType, startDateFilter, endDateFilter, sortConfig]);
+
+  const {
+    data: leads,
+    isLoading: leadsLoading,
+    isLoadingMore,
+    hasMore,
+    loadMore,
+    refresh,
+    setData: setLeads
+  } = useInfiniteScroll(fetchLeads, {
+    pageSize: 20,
+    dependencies: [activeCompany, searchTerm, statusFilter, assigneeFilter, dateFilterType, startDateFilter, endDateFilter, sortConfig]
+  });
+
+  const fetchMetadata = async () => {
     if (!activeCompany) return;
-    setLoading(true);
+    setLoadingMetadata(true);
     try {
       const [
         stagesRes,
@@ -69,7 +130,6 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
         cosRes,
         catsRes,
         membersRes,
-        leadsRes
       ] = await Promise.all([
         supabase.from('lead_stages').select('*').eq('company_id', activeCompany.id).order('sort_order'),
         supabase.from('lead_sources').select('*').eq('company_id', activeCompany.id).order('name'),
@@ -80,11 +140,6 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
           profile:profiles!inner(id, full_name, avatar_url, email),
           role:company_roles(name)
         `).eq('company_id', activeCompany.id),
-        supabase.from('leads').select(`
-          *,
-          client_company:client_companies(name),
-          sales_profile:profiles!leads_sales_id_fkey(full_name, avatar_url, email)
-        `).eq('company_id', activeCompany.id).order('kanban_order', { ascending: true }).order('created_at', { ascending: false })
       ]);
 
       if (stagesRes.data) setStages(stagesRes.data);
@@ -92,21 +147,20 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
       if (cosRes.data) setClientCompanies(cosRes.data);
       if (catsRes.data) setCategories(catsRes.data);
       if (membersRes.data) setMembers(membersRes.data);
-      if (leadsRes.data) setLeads(leadsRes.data);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching metadata:', error);
     } finally {
-      setLoading(false);
+      setLoadingMetadata(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    fetchMetadata();
   }, [activeCompany]);
 
   const handleCreateSuccess = () => {
     setIsAddModalOpen(false);
-    fetchData();
+    refresh();
     setToast({
       isOpen: true,
       message: 'Lead baru berhasil didaftarkan!',
@@ -115,7 +169,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
   };
 
   const handleUpdate = () => {
-    fetchData();
+    refresh();
     setToast({
       isOpen: true,
       message: 'Perubahan berhasil disimpan!',
@@ -130,7 +184,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
   const executeDelete = async () => {
     try {
       await supabase.from('leads').delete().eq('id', confirmDelete.id);
-      fetchData();
+      refresh();
       setToast({
         isOpen: true,
         message: 'Lead berhasil dihapus!',
@@ -179,63 +233,21 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
   };
 
   const handleToggleSelectAll = () => {
-    if (selectedIds.length === filteredLeads.length) {
+    if (selectedIds.length === leads.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(filteredLeads.map(l => l.id));
+      setSelectedIds(leads.map(l => l.id));
     }
   };
 
-  // Filter Logic
-  const filteredLeads = leads.filter(lead => {
-    const matchesSearch =
-      lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (lead.client_company?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
-    const matchesAssignee = assigneeFilter === 'all' || lead.sales_id === assigneeFilter;
-
-    const leadDate = lead.input_date || lead.created_at.split('T')[0];
-    let matchesDate = true;
-    if (dateFilterType === 'custom') {
-      matchesDate = (!startDateFilter || leadDate >= startDateFilter) && (!endDateFilter || leadDate <= endDateFilter);
-    } else if (dateFilterType !== 'all') {
-      const daysAgo = parseInt(dateFilterType);
-      const filterDate = new Date();
-      filterDate.setDate(filterDate.getDate() - daysAgo);
-      matchesDate = leadDate >= filterDate.toISOString().split('T')[0];
-    }
-
-    return matchesSearch && matchesStatus && matchesAssignee && matchesDate;
-  }).sort((a, b) => {
-    // Priority 1: Urgency
-    if (a.is_urgent && !b.is_urgent) return -1;
-    if (!a.is_urgent && b.is_urgent) return 1;
-
-    // Priority 2: Custom Sort
-    if (!sortConfig) {
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    }
-    const valA = (a as any)[sortConfig.key];
-    const valB = (b as any)[sortConfig.key];
-
-    if (valA === valB) return 0;
-    if (valA === null || valA === undefined) return 1;
-    if (valB === null || valB === undefined) return -1;
-
-    if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-    if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-    return 0;
-  });
-
-  // Group by status for Kanban
+  // Group by status for Kanban (distributed from the global fetched list)
   const leadsByStatus = stages.reduce((acc, stage) => {
-    acc[stage.name.toLowerCase()] = filteredLeads
+    acc[stage.name.toLowerCase()] = leads
       .filter(l => l.status === stage.name.toLowerCase())
       .sort((a, b) => {
         const orderA = a.kanban_order || 0;
         const orderB = b.kanban_order || 0;
         if (orderA !== orderB) return orderA - orderB;
-        // Fallback to newest first if orders are same (e.g. 0)
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
     return acc;
@@ -244,45 +256,35 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
   // Network update based on the generic KanbanBoard's onReorder payload
   const handleDrop = async (leadId: number, newStatus: string, index?: number) => {
     try {
-      // Find the cards currently in that status to calculate the new kanban_order
       const targetColumnCards = leadsByStatus[newStatus.toLowerCase()] || [];
       const draggedCard = leads.find(l => l.id === leadId);
       if (!draggedCard) return;
 
-      // Filter out the dragged card itself from the target column if it's already there
       const cardsWithoutDragged = targetColumnCards.filter(l => l.id !== leadId);
-
       let newOrder = 0;
 
       if (cardsWithoutDragged.length === 0) {
-        // If it's the first and only card in the column
         newOrder = 1000;
       } else if (index === undefined || index >= cardsWithoutDragged.length) {
-        // Dropped at the very bottom
         const lastCard = cardsWithoutDragged[cardsWithoutDragged.length - 1];
         newOrder = (lastCard.kanban_order || 0) + 1000;
       } else if (index <= 0) {
-        // Dropped at the very top
         const firstCard = cardsWithoutDragged[0];
         newOrder = (firstCard.kanban_order || 0) - 1000;
       } else {
-        // Dropped exactly between two existing cards
         const cardBefore = cardsWithoutDragged[index - 1];
         const cardAfter = cardsWithoutDragged[index];
         newOrder = ((cardBefore.kanban_order || 0) + (cardAfter.kanban_order || 0)) / 2;
       }
 
-      // Optimistic UI update
       setLeads(prev => prev.map(l =>
         l.id === leadId ? { ...l, status: newStatus.toLowerCase(), kanban_order: newOrder } : l
       ));
 
-      // Network update
       const oldStatus = draggedCard.status;
       const { error } = await supabase.from('leads').update({ status: newStatus.toLowerCase(), kanban_order: newOrder }).eq('id', leadId);
       if (error) throw error;
 
-      // Log activity
       if (oldStatus !== newStatus.toLowerCase()) {
         await supabase.from('log_activities').insert({
           lead_id: leadId,
@@ -303,7 +305,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
         message: 'Gagal mengubah status: ' + err.message,
         type: 'error'
       });
-      fetchData(); // Rollback on error
+      refresh();
     }
   };
 
@@ -394,7 +396,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
       </div>
 
       <div className="h-[80vh] overflow-hidden">
-        {loading ? (
+        {loadingMetadata || (leadsLoading && leads.length === 0) ? (
           <div className="w-full h-full flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
@@ -407,10 +409,13 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
             onReorder={handleDrop}
             formatIDR={formatIDR}
             hasUrgency={activeCompany?.has_lead_urgency}
+            hasMore={hasMore}
+            isLoadingMore={isLoadingMore}
+            onLoadMore={loadMore}
           />
         ) : (
           <LeadsTableView
-            leads={filteredLeads}
+            leads={leads}
             sortConfig={sortConfig}
             onSort={handleSort}
             selectedIds={selectedIds}
@@ -420,6 +425,9 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
             onDelete={handleDelete}
             onToggleUrgency={handleToggleUrgency}
             formatIDR={formatIDR}
+            hasMore={hasMore}
+            isLoadingMore={isLoadingMore}
+            onLoadMore={loadMore}
           />
         )}
       </div>
@@ -472,7 +480,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
           onSuccess={() => {
             setIsConvertModalOpen(false);
             setSelectedLead(null);
-            fetchData();
+            refresh();
           }}
           setToast={setToast}
         />

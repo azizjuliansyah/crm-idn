@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Label } from '@/components/ui';
 
 export interface KanbanStage {
@@ -18,13 +18,19 @@ interface KanbanBoardProps<T extends KanbanItem> {
     itemsByStatus: Record<string, T[]>;
     renderCard: (item: T, isDragged: boolean) => React.ReactNode;
     onReorder: (itemId: number, newStatus: string, newIndex?: number) => void;
+    onLoadMore?: (stageId: string) => void;
+    hasMoreByStatus?: Record<string, boolean>;
+    isLoadingMoreByStatus?: Record<string, boolean>;
 }
 
 export function KanbanBoard<T extends KanbanItem>({
     stages,
     itemsByStatus,
     renderCard,
-    onReorder
+    onReorder,
+    onLoadMore,
+    hasMoreByStatus,
+    isLoadingMoreByStatus
 }: KanbanBoardProps<T>) {
     const [draggedId, setDraggedId] = useState<number | null>(null);
     const [dropTarget, setDropTarget] = useState<{ stage: string, index?: number } | null>(null);
@@ -141,6 +147,14 @@ export function KanbanBoard<T extends KanbanItem>({
                                             )}
                                         </div>
                                     ))}
+
+                                    {hasMoreByStatus?.[sKey] && (
+                                        <KanbanColumnSentinel 
+                                            onIntersect={() => onLoadMore?.(sKey)}
+                                            enabled={true}
+                                            isLoading={isLoadingMoreByStatus?.[sKey]}
+                                        />
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -150,3 +164,37 @@ export function KanbanBoard<T extends KanbanItem>({
         </>
     );
 }
+
+const KanbanColumnSentinel: React.FC<{
+    onIntersect: () => void;
+    enabled: boolean;
+    isLoading?: boolean;
+}> = ({ onIntersect, enabled, isLoading }) => {
+    const sentinelRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!enabled || !sentinelRef.current) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && !isLoading) {
+                    onIntersect();
+                }
+            },
+            { threshold: 0.1, rootMargin: '100px' }
+        );
+
+        observer.observe(sentinelRef.current);
+        return () => observer.disconnect();
+    }, [enabled, onIntersect, isLoading]);
+
+    if (!enabled) return null;
+
+    return (
+        <div ref={sentinelRef} className="py-4 text-center">
+            {isLoading && (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mx-auto"></div>
+            )}
+        </div>
+    );
+};

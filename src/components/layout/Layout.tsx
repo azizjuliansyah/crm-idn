@@ -2,6 +2,9 @@
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Input, Button, H1, H2, Subtext, Label } from '@/components/ui';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { getPathFromViewId } from '@/lib/navigation';
 
 import {
   LayoutDashboard, Building2, Users, Settings, LogOut, ShieldCheck, ChevronDown,
@@ -31,6 +34,7 @@ export const Layout: React.FC<LayoutProps> = ({
   children, user, companies, activeCompany, onCompanyChange,
   platformSettings, onLogout, activeView, onNavigate
 }) => {
+  const router = useRouter();
   const isAdmin = user.platform_role === 'ADMIN';
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [currentRoleName, setCurrentRoleName] = useState<string>('');
@@ -258,25 +262,27 @@ export const Layout: React.FC<LayoutProps> = ({
       {activeView === id && (
         <div className="absolute left-[-12px] top-2 bottom-2 w-1 bg-blue-600 rounded-r-full shadow-[0_0_10px_rgba(37,99,235,0.3)] z-10" />
       )}
-      <Button
-        onClick={() => { onNavigate(id); setIsSidebarOpen(false); }}
-        align="left" size='sm'
-        className={`w-full flex items-center gap-4 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer !normal-case ! ${activeView === id ? 'text-blue-600 font-bold' : 'text-gray-700 hover:bg-gray-50 font-medium'}`}
+      <Link
+        href={getPathFromViewId(id)}
+        onClick={() => setIsSidebarOpen(false)}
+        className={`w-full flex items-center gap-4 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer ${activeView === id ? 'text-blue-600 font-bold' : 'text-gray-700 hover:bg-gray-50 font-medium'}`}
+        onMouseEnter={() => router.prefetch(getPathFromViewId(id))}
       >
         <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-sm ${activeView === id ? 'bg-blue-600 text-white' : `${bgColorClass} ${iconColorClass}`}`}>
           {React.cloneElement(icon as React.ReactElement<any>, { size: 14 })}
         </div>
-        <Label className={`text-[13px] !capitalize ! ${activeView === id ? 'text-blue-600' : 'text-inherit'}`}>{label}</Label>
-      </Button>
+        <Label className={`text-[13px] !capitalize ! cursor-pointer ${activeView === id ? 'text-blue-600' : 'text-inherit'}`}>{label}</Label>
+      </Link>
     </div>
   );
 
   const renderSubMenuLevel1 = (id: string, label: string, icon: React.ReactNode, active: boolean) => (
     <div className="relative group">
-      <Button
-        onClick={() => { onNavigate(id); setIsSidebarOpen(false); }}
-        align="left" size='sm'
-        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer !normal-case ! ${active ? 'text-blue-600 font-bold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50 font-medium'}`}
+      <Link
+        href={getPathFromViewId(id)}
+        onClick={() => setIsSidebarOpen(false)}
+        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer ${active ? 'text-blue-600 font-bold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50 font-medium'}`}
+        onMouseEnter={() => router.prefetch(getPathFromViewId(id))}
       >
         <div className="flex items-center gap-3">
           <div className="w-1 h-1 flex items-center justify-center">
@@ -287,18 +293,19 @@ export const Layout: React.FC<LayoutProps> = ({
           <div className={`transition-colors ${active ? 'text-blue-600' : 'text-gray-400'}`}>
             {React.cloneElement(icon as React.ReactElement<any>, { size: 14 })}
           </div>
-          <Label className={`text-[12px] !capitalize ! ${active ? 'text-blue-600' : 'text-inherit'}`}>{label}</Label>
+          <Label className={`text-[12px] !capitalize ! cursor-pointer ${active ? 'text-blue-600' : 'text-inherit'}`}>{label}</Label>
         </div>
-      </Button>
+      </Link>
     </div>
   );
 
   const renderSubMenuLevel2 = (id: string, label: string, active: boolean) => (
-    <Button
+    <Link
       key={id}
-      onClick={() => { onNavigate(id); setIsSidebarOpen(false); }}
-      align="left" size='sm'
-      className={`w-full px-3 py-2 rounded-lg text-[11px] font-medium !capitalize ! transition-all cursor-pointer ${active ? 'text-blue-600 font-bold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}
+      href={getPathFromViewId(id)}
+      onClick={() => setIsSidebarOpen(false)}
+      className={`w-full flex items-center px-3 py-2 rounded-lg text-[11px] font-medium !capitalize ! transition-all cursor-pointer ${active ? 'text-blue-600 font-bold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}
+      onMouseEnter={() => router.prefetch(getPathFromViewId(id))}
     >
       <div className="flex items-center gap-3">
         <div className="w-1 h-1 flex items-center justify-center">
@@ -308,7 +315,7 @@ export const Layout: React.FC<LayoutProps> = ({
         </div>
         {label}
       </div>
-    </Button>
+    </Link>
   );
 
   return (
@@ -376,10 +383,10 @@ export const Layout: React.FC<LayoutProps> = ({
                     ))}
                   </div>
                   <div className="mt-2 pt-2 border-t border-gray-50 px-2 space-y-1">
-                    <Button onClick={() => { onNavigate('profil_saya'); setIsDropdownOpen(false); }} align="left" size='sm' className="w-full px-3 py-2 flex items-center gap-3 rounded-xl text-gray-600 hover:bg-gray-50 transition-all cursor-pointer !normal-case !">
-                      <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400"><User size={14} /></div>
-                      <Label className="text-[10px] !capitalize !">Profil Saya</Label>
-                    </Button>
+                    <Link href={getPathFromViewId('profil_saya')} onClick={() => setIsDropdownOpen(false)} className="w-full px-3 py-2 flex items-center gap-3 rounded-xl text-gray-600 hover:bg-gray-50 transition-all cursor-pointer group">
+                      <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-white transition-colors"><User size={14} /></div>
+                      <Label className="text-[10px] !capitalize ! cursor-pointer">Profil Saya</Label>
+                    </Link>
                     <Button onClick={() => { onLogout(); setIsDropdownOpen(false); }} align="left" size='sm' className="w-full px-3 py-2 flex items-center gap-3 rounded-xl text-rose-500 hover:bg-rose-50 transition-all cursor-pointer !normal-case !">
                       <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center text-rose-500"><LogOut size={14} /></div>
                       <Label className="text-[10px] !capitalize !">Logout Sesi</Label>
@@ -704,7 +711,7 @@ export const Layout: React.FC<LayoutProps> = ({
 
         {/* Footer User Info */}
         <div className="p-4 border-t border-gray-50 flex items-center justify-between gap-2 bg-gray-50/30">
-          <div className="flex-1 flex items-center gap-3 overflow-hidden p-2 rounded-xl text-left cursor-pointer hover:bg-white hover:shadow-sm transition-all border border-transparent hover:border-gray-100 group" onClick={() => onNavigate('profil_saya')}>
+          <Link href={getPathFromViewId('profil_saya')} className="flex-1 flex items-center gap-3 overflow-hidden p-2 rounded-xl text-left cursor-pointer hover:bg-white hover:shadow-sm transition-all border border-transparent hover:border-gray-100 group" onClick={() => setIsSidebarOpen(false)}>
             <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-300 overflow-hidden shrink-0 shadow-sm group-hover:border-blue-100 transition-colors">
               {user.avatar_url ? <img src={user.avatar_url} className="w-full h-full object-cover" alt="Avatar" /> : <User size={20} />}
             </div>
@@ -712,7 +719,7 @@ export const Layout: React.FC<LayoutProps> = ({
               <Subtext className="text-[11px] font-semibold text-gray-900 truncate ">{user.full_name}</Subtext>
               <Subtext className="text-[9px] text-gray-400 font-medium !capitalize ! truncate">{currentRoleName}</Subtext>
             </div>
-          </div>
+          </Link>
           <Button onClick={onLogout} className="p-2.5 text-gray-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all cursor-pointer" title="Keluar Sesi"><LogOut size={16} /></Button>
         </div>
       </aside>

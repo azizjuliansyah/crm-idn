@@ -1,9 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-
-import { Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Label, SearchInput, Checkbox, H2, Toast, ToastType } from '@/components/ui';
-
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Label, SearchInput, Checkbox, H2, Toast, ToastType, InfiniteScrollSentinel } from '@/components/ui';
 
 import { supabase } from '@/lib/supabase';
 import { Company, Client, ClientCompany, ClientCompanyCategory } from '@/lib/types';
@@ -17,22 +15,21 @@ import { useSearchParams } from 'next/navigation';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { ConfirmBulkDeleteModal } from '@/components/shared/modals/ConfirmBulkDeleteModal';
-// Removed legacy NotificationModal import
 import { ClientFormModal } from './components/ClientFormModal';
+import { useInfiniteScroll } from '@/lib/hooks/useInfiniteScroll';
 
 interface Props {
   company: Company;
 }
 
-type SortKey = 'name' | 'company' | 'email' | 'whatsapp' | 'id';
+type SortKey = 'name' | 'company' | 'email' | 'whatsapp' | 'id' | 'client_company_id';
 type SortConfig = { key: SortKey; direction: 'asc' | 'desc' } | null;
 
 export const ClientsView: React.FC<Props> = ({ company }) => {
   const searchParams = useSearchParams();
-  const [items, setItems] = useState<Client[]>([]);
   const [rawCompanies, setRawCompanies] = useState<ClientCompany[]>([]);
   const [categories, setCategories] = useState<ClientCompanyCategory[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingMetadata, setLoadingMetadata] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -52,40 +49,65 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
     salutation: '', name: '', client_company_id: null, email: '', whatsapp: ''
   });
 
-  const fetchData = useCallback(async (isInitial = false) => {
-    if (!company?.id) {
-      setLoading(false);
-      return;
+  const fetchClients = useCallback(async ({ from, to }: { from: number, to: number }) => {
+    if (!company?.id) return { data: [], error: null, count: 0 };
+    
+    let query = supabase.from('clients').select('*', { count: 'exact' }).eq('company_id', company.id);
+
+    if (searchTerm) {
+      query = query.ilike('name', `%${searchTerm}%`);
     }
-    if (isInitial) setLoading(true);
+
+    if (sortConfig) {
+      query = query.order(sortConfig.key, { ascending: sortConfig.direction === 'asc' });
+    } else {
+      query = query.order('id', { ascending: false });
+    }
+
+    const { data, error, count } = await query.range(from, to);
+    return { data: data || [], error, count };
+  }, [company?.id, searchTerm, sortConfig]);
+
+  const {
+    data: items,
+    isLoading: loading,
+    isLoadingMore,
+    hasMore,
+    loadMore,
+    refresh,
+    setData: setItems
+  } = useInfiniteScroll<Client>(fetchClients, {
+    pageSize: 20,
+    dependencies: [company?.id, searchTerm, sortConfig]
+  });
+
+  const fetchMetadata = async () => {
+    if (!company?.id) return;
+    setLoadingMetadata(true);
     try {
-      const [clientsRes, cosRes, catsRes] = await Promise.all([
-        supabase.from('clients').select('*').eq('company_id', company.id).order('id', { ascending: false }),
+      const [cosRes, catsRes] = await Promise.all([
         supabase.from('client_companies').select('*').eq('company_id', company.id).order('name'),
         supabase.from('client_company_categories').select('*').eq('company_id', company.id).order('name')
       ]);
 
-      if (clientsRes.data) setItems(clientsRes.data);
       if (cosRes.data) setRawCompanies(cosRes.data);
       if (catsRes.data) setCategories(catsRes.data);
       setSelectedIds([]);
     } catch (error) {
-      console.error("Fetch Data Error:", error);
+      console.error("Fetch Metadata Error:", error);
     } finally {
-      if (isInitial) setLoading(false);
+      setLoadingMetadata(false);
     }
-  }, [company?.id]);
+  };
 
   useEffect(() => {
-    fetchData(true);
-  }, [fetchData]);
+    fetchMetadata();
+  }, [company?.id]);
 
   useEffect(() => {
     const success = searchParams.get('success');
     if (success) {
       setToast({ isOpen: true, message: 'Data Berhasil Disimpan', type: 'success' });
-
-      // Clean up the URL
       const newUrl = window.location.pathname;
       window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
     }
@@ -99,38 +121,11 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
   }, [rawCompanies, categories]);
 
   const clientsWithData = useMemo(() => {
-    let result = items.map(item => ({
+    return items.map(item => ({
       ...item,
       client_company: clientCompanies.find(co => co.id === item.client_company_id)
     }));
-
-    if (searchTerm) {
-      result = result.filter(i =>
-        i.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (i.client_company?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (sortConfig) {
-      result.sort((a, b) => {
-        let valA: any, valB: any;
-
-        switch (sortConfig.key) {
-          case 'name': valA = a.name; valB = b.name; break;
-          case 'company': valA = a.client_company?.name || ''; valB = b.client_company?.name || ''; break;
-          case 'email': valA = a.email || ''; valB = b.email || ''; break;
-          case 'whatsapp': valA = a.whatsapp || ''; valB = b.whatsapp || ''; break;
-          default: valA = a.id; valB = b.id;
-        }
-
-        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-
-    return result;
-  }, [items, clientCompanies, searchTerm, sortConfig]);
+  }, [items, clientCompanies]);
 
   const handleSort = (key: SortKey) => {
     setSortConfig(prev => {
@@ -160,7 +155,7 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
     try {
       const { error } = await supabase.from('clients').delete().in('id', selectedIds);
       if (error) throw error;
-      await fetchData();
+      refresh();
       setIsConfirmBulkOpen(false);
       showNotification(`Berhasil menghapus ${selectedIds.length} data client.`);
     } catch (err: any) {
@@ -226,7 +221,7 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
         await supabase.from('clients').insert(payload);
       }
       setIsModalOpen(false);
-      await fetchData();
+      refresh();
       showNotification(`Profil ${formData.name} telah diperbarui.`, 'success');
     } catch (err: any) {
       showNotification(err.message, 'error');
@@ -241,7 +236,7 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
     try {
       const { error } = await supabase.from('clients').delete().eq('id', confirmDelete.id);
       if (error) throw error;
-      await fetchData();
+      refresh();
       setConfirmDelete({ isOpen: false, id: null, name: '' });
       showNotification(`Data client ${confirmDelete.name} telah dihapus.`);
     } catch (err: any) {
@@ -256,7 +251,7 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
     return sortConfig.direction === 'asc' ? <ChevronUp size={12} className="ml-1 text-blue-600" /> : <ChevronDown size={12} className="ml-1 text-blue-600" />;
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-emerald-600 mb-4" /><Subtext className="text-[10px]  uppercase  text-gray-400">Mensinkronisasi Data Client...</Subtext></div>;
+  if ((loading && items.length === 0) || loadingMetadata) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-emerald-600 mb-4" /><Subtext className="text-[10px]  uppercase  text-gray-400">Mensinkronisasi Data Client...</Subtext></div>;
 
   return (
     <div className="flex flex-col gap-6 text-gray-900">
@@ -318,8 +313,8 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
                 <TableCell isHeader onClick={() => handleSort('name')} className="cursor-pointer group">
                   <div className="flex items-center">Client / Kontak <SortIcon col="name" /></div>
                 </TableCell>
-                <TableCell isHeader onClick={() => handleSort('company')} className="cursor-pointer group">
-                  <div className="flex items-center">Perusahaan <SortIcon col="company" /></div>
+                <TableCell isHeader onClick={() => handleSort('client_company_id')} className="cursor-pointer group">
+                  <div className="flex items-center">Perusahaan <SortIcon col="client_company_id" /></div>
                 </TableCell>
                 <TableCell isHeader>Kontak Detail</TableCell>
                 <TableCell isHeader className="text-center">Aksi</TableCell>
@@ -373,7 +368,7 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
                   </TableCell>
                 </TableRow>
               ))}
-              {clientsWithData.length === 0 && (
+              {clientsWithData.length === 0 && !isLoadingMore && (
                 <TableRow>
                   <TableCell colSpan={5} className="py-24 text-center">
                     <Contact size={48} className="mx-auto mb-4 opacity-10 text-gray-400" />
@@ -381,6 +376,12 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
                   </TableCell>
                 </TableRow>
               )}
+              <InfiniteScrollSentinel 
+                onIntersect={loadMore}
+                enabled={hasMore}
+                colSpan={5}
+                isLoading={isLoadingMore}
+              />
             </TableBody>
           </Table>
         </div>

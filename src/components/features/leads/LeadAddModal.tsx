@@ -1,11 +1,10 @@
 import { Plus, Save, X, Mail, Building, Contact2, Wallet, FileText, Check as CheckIcon, CheckCircle as CheckCircle2, User } from 'lucide-react';
 import { Company, Client, ClientCompany, ClientCompanyCategory, Lead, LeadStage, LeadSource, CompanyMember } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Input, Textarea, Button, Subtext, Label, Modal, H4, ComboBox, Toast, ToastType } from '@/components/ui';
 import { ClientFormModal } from '@/components/features/clients/components/ClientFormModal';
-
-
+import { useInfiniteScroll } from '@/lib/hooks/useInfiniteScroll';
 
 interface LeadAddModalProps {
   isOpen: boolean;
@@ -26,29 +25,38 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
   isOpen, onClose, company, members, stages, sources, clientCompanies, categories, onSuccess, setClientCompanies, setCategories, setToast
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
-
-  const [clients, setClients] = useState<Client[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [clientSearchTerm, setClientSearchTerm] = useState('');
 
   // ClientFormModal State
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [clientForm, setClientForm] = useState<Partial<Client>>({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
   const [isProcessingQuick, setIsProcessingQuick] = useState(false);
 
-  useEffect(() => {
-    if (isOpen) {
-      loadClients();
-    }
-  }, [isOpen]);
+  const fetchClients = useCallback(async ({ from, to }: { from: number, to: number }) => {
+    let query = supabase.from('clients')
+      .select('*, client_company:client_companies(*)', { count: 'exact' })
+      .eq('company_id', company.id)
+      .order('name');
 
-  const loadClients = async () => {
-    try {
-      const { data } = await supabase.from('clients').select('*, client_company:client_companies(*)').eq('company_id', company.id).order('name');
-      if (data) setClients(data);
-    } catch (e) {
-      console.error(e);
+    if (clientSearchTerm) {
+      query = query.ilike('name', `%${clientSearchTerm}%`);
     }
-  };
+
+    const { data, error, count } = await query.range(from, to);
+    return { data: data || [], error, count };
+  }, [company.id, clientSearchTerm]);
+
+  const {
+    data: clients,
+    isLoadingMore: clientsLoadingMore,
+    hasMore: clientsHasMore,
+    loadMore: loadMoreClients,
+    refresh: refreshClients
+  } = useInfiniteScroll<Client>(fetchClients, {
+    pageSize: 20,
+    dependencies: [company.id, clientSearchTerm]
+  });
 
   const handleClientSelect = (clientId: string) => {
     setSelectedClientId(clientId);
@@ -127,9 +135,7 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
       }).select().single();
       if (error) throw error;
 
-      const freshRes = await supabase.from('clients').select('*, client_company:client_companies(*)').eq('company_id', company.id).order('name');
-      if (freshRes.data) setClients(freshRes.data);
-
+      refreshClients();
       handleClientSelect(String(data.id));
       setIsClientModalOpen(false);
       setClientForm({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
@@ -207,6 +213,10 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
                 onAddNew={() => setIsClientModalOpen(true)}
                 addNewLabel="Tambah Pelanggan Baru"
                 leftIcon={<User size={16} />}
+                onLoadMore={loadMoreClients}
+                hasMore={clientsHasMore}
+                isLoadingMore={clientsLoadingMore}
+                onSearchChange={setClientSearchTerm}
               />
             </div>
 
