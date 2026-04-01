@@ -1,17 +1,22 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Input, Button, H2, Subtext, Label, SearchInput, DateFilterDropdown, ComboBox, Toast, ToastType } from '@/components/ui';
-
-import { supabase } from '@/lib/supabase';
-import { Company, CompanyMember, LeadStage, Lead, ClientCompany, ClientCompanyCategory, LeadSource, Profile } from '@/lib/types';
-import { Plus, Search, LayoutGrid, List } from 'lucide-react';
+'use client';
+import React, { useState } from 'react';
+import { List, LayoutGrid, Plus } from 'lucide-react';
+import { 
+  Company, Lead, Profile 
+} from '@/lib/types';
 import { LeadAddModal } from './LeadAddModal';
 import { LeadDetailModal } from './LeadDetailModal';
 import { ConvertLeadModal } from './ConvertLeadModal';
 import { LeadsTableView } from './LeadsTableView';
 import { LeadsKanbanView } from './LeadsKanbanView';
+import { LeadFilterBar } from './LeadFilterBar';
+import { StandardFilterBar } from '@/components/shared/filters/StandardFilterBar';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
-import { useInfiniteScroll } from '@/lib/hooks/useInfiniteScroll';
-
+import { useLeadFilters } from '@/lib/hooks/useLeadFilters';
+import { useKanbanReorder } from '@/lib/hooks/useKanbanReorder';
+import { useAppStore } from '@/lib/store/useAppStore';
+import { useLeadMetadata, useLeadsQuery, useLeadMutations } from '@/lib/hooks/useLeadsQuery';
+import { supabase } from '@/lib/supabase';
 
 interface Props {
   activeCompany: Company | null;
@@ -20,184 +25,103 @@ interface Props {
 }
 
 export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) => {
-  const [stages, setStages] = useState<LeadStage[]>([]);
-  const [members, setMembers] = useState<CompanyMember[]>([]);
-  const [loadingMetadata, setLoadingMetadata] = useState(true);
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>('table');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean, id: number | null }>({ isOpen: false, id: null });
-
-  // Auxiliary Data
-  const [sources, setSources] = useState<LeadSource[]>([]);
-  const [clientCompanies, setClientCompanies] = useState<ClientCompany[]>([]);
-  const [categories, setCategories] = useState<ClientCompanyCategory[]>([]);
-
-  // Filter & Search States
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
-  const [startDateFilter, setStartDateFilter] = useState<string>('');
-  const [endDateFilter, setEndDateFilter] = useState<string>('');
-  const [dateFilterType, setDateFilterType] = useState<string>('all');
-
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
-    isOpen: false,
-    message: '',
-    type: 'success',
-  });
+  const { showToast } = useAppStore();
 
-  // Format IDR
-  const formatIDR = (value?: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(value || 0);
-  };
-
-  const fetchLeads = useCallback(async ({ from, to }: { from: number, to: number }) => {
-    if (!activeCompany) return { data: [], error: null, count: 0 };
-    
-    let query = supabase.from('leads').select(`
-      *,
-      client_company:client_companies(name),
-      sales_profile:profiles!leads_sales_id_fkey(full_name, avatar_url, email)
-    `, { count: 'exact' });
-
-    query = query.eq('company_id', activeCompany.id);
-
-    if (searchTerm) {
-      query = query.ilike('name', `%${searchTerm}%`);
-    }
-
-    if (statusFilter !== 'all') {
-      query = query.eq('status', statusFilter);
-    }
-
-    if (assigneeFilter !== 'all') {
-      query = query.eq('sales_id', assigneeFilter);
-    }
-
-    if (dateFilterType === 'custom') {
-      if (startDateFilter) query = query.gte('input_date', startDateFilter);
-      if (endDateFilter) query = query.lte('input_date', endDateFilter);
-    } else if (dateFilterType !== 'all') {
-      const daysAgo = parseInt(dateFilterType);
-      const filterDate = new Date();
-      filterDate.setDate(filterDate.getDate() - daysAgo);
-      query = query.gte('input_date', filterDate.toISOString().split('T')[0]);
-    }
-
-    // Sort priority
-    if (sortConfig) {
-      query = query.order(sortConfig.key, { ascending: sortConfig.direction === 'asc' });
-    } else {
-      // Default sort: urgent first, then kanban_order, then newest first
-      query = query
-        .order('is_urgent', { ascending: false })
-        .order('kanban_order', { ascending: true })
-        .order('created_at', { ascending: false });
-    }
-
-    const { data, error, count } = await query.range(from, to);
-    return { data: data || [], error, count };
-  }, [activeCompany, searchTerm, statusFilter, assigneeFilter, dateFilterType, startDateFilter, endDateFilter, sortConfig]);
-
+  // 1. Initialize Filters Hook
   const {
-    data: leads,
+    searchTerm, setSearchTerm,
+    statusFilter, setStatusFilter,
+    assigneeFilter, setAssigneeFilter,
+    dateFilterType, setDateFilterType,
+    startDateFilter, setStartDateFilter,
+    endDateFilter, setEndDateFilter,
+    sortConfig, handleSort
+  } = useLeadFilters([]);
+
+  const companyId = activeCompany?.id || 0;
+
+  // 2. Fetch Metadata using TanStack Query
+  const { 
+    stages: stagesQuery, 
+    members: membersQuery, 
+    sources: sourcesQuery, 
+    clientCompanies: clientCompaniesQuery, 
+    categories: categoriesQuery 
+  } = useLeadMetadata(companyId);
+
+  const stages = stagesQuery.data || [];
+  const members = membersQuery.data || [];
+  const sources = sourcesQuery.data || [];
+  const clientCompanies = clientCompaniesQuery.data || [];
+  const categories = categoriesQuery.data || [];
+  
+  const loadingMetadata = stagesQuery.isLoading || 
+                         membersQuery.isLoading || 
+                         sourcesQuery.isLoading || 
+                         clientCompaniesQuery.isLoading || 
+                         categoriesQuery.isLoading;
+
+  // 3. Fetch Leads using TanStack Query
+  const {
+    data: leadsData,
     isLoading: leadsLoading,
-    isLoadingMore,
-    hasMore,
-    loadMore,
-    refresh,
-    setData: setLeads
-  } = useInfiniteScroll(fetchLeads, {
-    pageSize: 20,
-    dependencies: [activeCompany, searchTerm, statusFilter, assigneeFilter, dateFilterType, startDateFilter, endDateFilter, sortConfig]
+    isFetchingNextPage: isLoadingMore,
+    hasNextPage: hasMore,
+    fetchNextPage: loadMore,
+    refetch: refresh,
+  } = useLeadsQuery({
+    companyId,
+    searchTerm,
+    statusFilter,
+    assigneeFilter,
+    dateFilterType,
+    startDate: startDateFilter,
+    endDate: endDateFilter,
+    sortConfig,
   });
 
-  const fetchMetadata = async () => {
-    if (!activeCompany) return;
-    setLoadingMetadata(true);
-    try {
-      const [
-        stagesRes,
-        sourcesRes,
-        cosRes,
-        catsRes,
-        membersRes,
-      ] = await Promise.all([
-        supabase.from('lead_stages').select('*').eq('company_id', activeCompany.id).order('sort_order'),
-        supabase.from('lead_sources').select('*').eq('company_id', activeCompany.id).order('name'),
-        supabase.from('client_companies').select('*').eq('company_id', activeCompany.id).order('name'),
-        supabase.from('client_company_categories').select('*').eq('company_id', activeCompany.id).order('name'),
-        supabase.from('company_members').select(`
-          *,
-          profile:profiles!inner(id, full_name, avatar_url, email),
-          role:company_roles(name)
-        `).eq('company_id', activeCompany.id),
-      ]);
+  const leads = leadsData?.pages.flatMap(page => page.data) || [];
 
-      if (stagesRes.data) setStages(stagesRes.data);
-      if (sourcesRes.data) setSources(sourcesRes.data);
-      if (cosRes.data) setClientCompanies(cosRes.data);
-      if (catsRes.data) setCategories(catsRes.data);
-      if (membersRes.data) setMembers(membersRes.data);
-    } catch (error) {
-      console.error('Error fetching metadata:', error);
-    } finally {
-      setLoadingMetadata(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchMetadata();
-  }, [activeCompany]);
+  // 4. Initialize mutations
+  const { deleteLead, updateLeadStatus } = useLeadMutations();
 
   const handleCreateSuccess = () => {
     setIsAddModalOpen(false);
     refresh();
-    setToast({
-      isOpen: true,
-      message: 'Lead baru berhasil didaftarkan!',
-      type: 'success'
-    });
+    showToast('Lead baru berhasil didaftarkan!', 'success');
   };
 
   const handleUpdate = () => {
     refresh();
-    setToast({
-      isOpen: true,
-      message: 'Perubahan berhasil disimpan!',
-      type: 'success'
-    });
+    showToast('Perubahan berhasil disimpan!', 'success');
   };
 
-  const handleDelete = (id: number) => {
-    setConfirmDelete({ isOpen: true, id });
-  };
+  const handleDelete = (id: number) => { setConfirmDelete({ isOpen: true, id }); };
 
   const executeDelete = async () => {
+    if (!confirmDelete.id) return;
     try {
-      await supabase.from('leads').delete().eq('id', confirmDelete.id);
-      refresh();
-      setToast({
-        isOpen: true,
-        message: 'Lead berhasil dihapus!',
-        type: 'success'
-      });
+      await deleteLead.mutateAsync(confirmDelete.id);
+      showToast('Lead berhasil dihapus!', 'success');
       if (selectedLead?.id === confirmDelete.id) setSelectedLead(null);
       setConfirmDelete({ isOpen: false, id: null });
     } catch (error: any) {
-      setToast({
-        isOpen: true,
-        message: 'Gagal menghapus lead: ' + error.message,
-        type: 'error'
-      });
+      showToast('Gagal menghapus lead: ' + error.message, 'error');
+    }
+  };
+
+  const handleUpdateStatus = async (leadId: number, newStatus: string) => {
+    try {
+      await updateLeadStatus.mutateAsync({ leadId, status: newStatus });
+      showToast('Status lead berhasil diperbarui!', 'success');
+    } catch (error: any) {
+      showToast('Gagal mengubah status: ' + error.message, 'error');
     }
   };
 
@@ -205,31 +129,17 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
     try {
       const { error } = await supabase.from('leads').update({ is_urgent: !current }).eq('id', id);
       if (error) throw error;
-      setLeads(prev => prev.map(l => l.id === id ? { ...l, is_urgent: !current } : l));
-      setToast({
-        isOpen: true,
-        message: !current ? 'Lead ditandai sebagai urgent!' : 'Status urgent dihapus.',
-        type: 'success'
-      });
+      refresh();
+      showToast(!current ? 'Lead ditandai sebagai urgent!' : 'Status urgent dihapus.', 'success');
     } catch (error: any) {
-      setToast({
-        isOpen: true,
-        message: 'Gagal mengubah status urgensi: ' + error.message,
-        type: 'error'
-      });
+      showToast('Gagal mengubah status urgensi: ' + error.message, 'error');
     }
   };
 
-  const handleSort = (key: any) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
-  };
-
-  const handleToggleSelect = (id: number) => {
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  const handleToggleSelect = (id: string | number) => {
+    const numId = typeof id === 'string' ? parseInt(id) : id;
+    if (isNaN(numId)) return;
+    setSelectedIds(prev => prev.includes(numId) ? prev.filter(i => i !== numId) : [...prev, numId]);
   };
 
   const handleToggleSelectAll = () => {
@@ -240,10 +150,32 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
     }
   };
 
-  // Group by status for Kanban (distributed from the global fetched list)
+  // 5. Initialize Kanban Hook
+  const { handleReorder } = useKanbanReorder<Lead>({
+    table: 'leads',
+    statusField: 'status',
+    user_id: user.id,
+    logActivity: true,
+    onSuccess: (msg) => showToast(msg, 'success'),
+    onError: (msg) => showToast(msg, 'error')
+  });
+
+  const onDrop = async (leadId: number, newStatus: string, index?: number) => {
+    const draggedCard = leads.find(l => l.id === leadId);
+    if (!draggedCard) return;
+    
+    try {
+      await handleReorder(leads, () => {}, leadId, newStatus, index, draggedCard.status);
+      refresh();
+    } catch (err) {
+      refresh();
+    }
+  };
+
   const leadsByStatus = stages.reduce((acc, stage) => {
-    acc[stage.name.toLowerCase()] = leads
-      .filter(l => l.status === stage.name.toLowerCase())
+    const statusKey = stage.name.toLowerCase();
+    acc[statusKey] = leads
+      .filter(l => l.status === statusKey)
       .sort((a, b) => {
         const orderA = a.kanban_order || 0;
         const orderB = b.kanban_order || 0;
@@ -253,147 +185,40 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
     return acc;
   }, {} as Record<string, Lead[]>);
 
-  // Network update based on the generic KanbanBoard's onReorder payload
-  const handleDrop = async (leadId: number, newStatus: string, index?: number) => {
-    try {
-      const targetColumnCards = leadsByStatus[newStatus.toLowerCase()] || [];
-      const draggedCard = leads.find(l => l.id === leadId);
-      if (!draggedCard) return;
-
-      const cardsWithoutDragged = targetColumnCards.filter(l => l.id !== leadId);
-      let newOrder = 0;
-
-      if (cardsWithoutDragged.length === 0) {
-        newOrder = 1000;
-      } else if (index === undefined || index >= cardsWithoutDragged.length) {
-        const lastCard = cardsWithoutDragged[cardsWithoutDragged.length - 1];
-        newOrder = (lastCard.kanban_order || 0) + 1000;
-      } else if (index <= 0) {
-        const firstCard = cardsWithoutDragged[0];
-        newOrder = (firstCard.kanban_order || 0) - 1000;
-      } else {
-        const cardBefore = cardsWithoutDragged[index - 1];
-        const cardAfter = cardsWithoutDragged[index];
-        newOrder = ((cardBefore.kanban_order || 0) + (cardAfter.kanban_order || 0)) / 2;
-      }
-
-      setLeads(prev => prev.map(l =>
-        l.id === leadId ? { ...l, status: newStatus.toLowerCase(), kanban_order: newOrder } : l
-      ));
-
-      const oldStatus = draggedCard.status;
-      const { error } = await supabase.from('leads').update({ status: newStatus.toLowerCase(), kanban_order: newOrder }).eq('id', leadId);
-      if (error) throw error;
-
-      if (oldStatus !== newStatus.toLowerCase()) {
-        await supabase.from('log_activities').insert({
-          lead_id: leadId,
-          user_id: user.id,
-          content: `Status changed from ${oldStatus.toLowerCase()} to ${newStatus.toLowerCase()}`,
-          activity_type: 'status_change',
-        });
-      }
-
-      setToast({
-        isOpen: true,
-        message: `Status lead berhasil diubah ke ${newStatus.toUpperCase()}`,
-        type: 'success'
-      });
-    } catch (err: any) {
-      setToast({
-        isOpen: true,
-        message: 'Gagal mengubah status: ' + err.message,
-        type: 'error'
-      });
-      refresh();
-    }
-  };
-
   if (!activeCompany) return <div className="p-8 text-center text-gray-400">Pilih workspace terlebih dahulu.</div>;
 
   return (
     <div className="flex flex-col space-y-6">
-      <div className="flex flex-col gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
-        <div className="flex items-center justify-between">
-          <div>
-            <H2 className="text-xl ">Leads Pipeline</H2>
-            <Subtext className="text-[10px]  uppercase">Kelola prospek dan konversi penjualan Anda.</Subtext>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex bg-gray-50 border border-gray-100 p-1 rounded-xl">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setViewMode('table')}
-                className={`!p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-white shadow-sm ring-1 ring-gray-100 text-blue-600' : 'text-gray-400'}`}
-              >
-                <List size={14} strokeWidth={2.5} />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setViewMode('kanban')}
-                className={`!p-2 rounded-lg transition-all ${viewMode === 'kanban' ? 'bg-white shadow-sm ring-1 ring-gray-100 text-blue-600' : 'text-gray-400'}`}
-              >
-                <LayoutGrid size={14} strokeWidth={2.5} />
-              </Button>
-            </div>
-            <Button
-              onClick={() => setIsAddModalOpen(true)}
-              leftIcon={<Plus size={14} strokeWidth={3} />}
-              className="!px-6 py-2.5  text-[10px] uppercase  shadow-lg shadow-blue-100"
-              variant='primary'
-              size='sm'
-            >
-              Tambah Lead
-            </Button>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-gray-50">
-          <div className="w-[400px] shrink-0">
-            <SearchInput
-              placeholder="Cari lead, klien..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="flex items-center gap-3 shrink-0 ml-auto">
-            <DateFilterDropdown
-              value={dateFilterType}
-              onChange={setDateFilterType}
-              startDate={startDateFilter}
-              endDate={endDateFilter}
-              onStartDateChange={setStartDateFilter}
-              onEndDateChange={setEndDateFilter}
-            />
-            <ComboBox
-              value={statusFilter}
-              onChange={(val: string | number) => setStatusFilter(val.toString())}
-              options={[
-                { value: 'all', label: 'SEMUA STATUS' },
-                ...stages.map(s => ({ value: s.name.toLowerCase(), label: s.name.toUpperCase() }))
-              ]}
-              className="w-40"
-              hideSearch
-              placeholderSize="text-[10px] font-bold text-gray-900 uppercase "
-            />
-            <ComboBox
-              value={assigneeFilter}
-              onChange={(val: string | number) => setAssigneeFilter(val.toString())}
-              options={[
-                { value: 'all', label: 'SEMUA STAFF' },
-                ...members.map(m => ({
-                  value: m.user_id,
-                  label: (m.profile?.full_name || m.user_id).toUpperCase()
-                }))
-              ]}
-              className="w-40"
-              placeholderSize="text-[10px] font-bold text-gray-900 uppercase "
-            />
-          </div>
-        </div>
-      </div>
+      <StandardFilterBar
+        title="Leads Pipeline"
+        subtitle="Kelola prospek dan konversi penjualan Anda."
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Cari lead, klien..."
+        viewModes={{
+          current: viewMode,
+          onChange: (mode) => setViewMode(mode as 'kanban' | 'table'),
+          options: [
+            { mode: 'table', icon: <List size={14} strokeWidth={2.5} />, label: 'Table' },
+            { mode: 'kanban', icon: <LayoutGrid size={14} strokeWidth={2.5} />, label: 'Kanban' },
+          ]
+        }}
+        primaryAction={{
+          label: "Tambah Lead",
+          onClick: () => setIsAddModalOpen(true),
+          icon: <Plus size={14} strokeWidth={3} />
+        }}
+      >
+        <LeadFilterBar
+          dateFilterType={dateFilterType} setDateFilterType={setDateFilterType}
+          startDateFilter={startDateFilter} setStartDateFilter={setStartDateFilter}
+          endDateFilter={endDateFilter} setEndDateFilter={setEndDateFilter}
+          statusFilter={statusFilter} setStatusFilter={setStatusFilter}
+          assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter}
+          stages={stages}
+          members={members}
+        />
+      </StandardFilterBar>
 
       <div className="h-[80vh] overflow-hidden">
         {loadingMetadata || (leadsLoading && leads.length === 0) ? (
@@ -406,8 +231,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
             leadsByStatus={leadsByStatus}
             onEdit={setSelectedLead}
             onDelete={handleDelete}
-            onReorder={handleDrop}
-            formatIDR={formatIDR}
+            onReorder={onDrop}
             hasUrgency={activeCompany?.has_lead_urgency}
             hasMore={hasMore}
             isLoadingMore={isLoadingMore}
@@ -424,7 +248,8 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
             onEdit={setSelectedLead}
             onDelete={handleDelete}
             onToggleUrgency={handleToggleUrgency}
-            formatIDR={formatIDR}
+            onUpdateStatus={handleUpdateStatus}
+            stages={stages}
             hasMore={hasMore}
             isLoadingMore={isLoadingMore}
             onLoadMore={loadMore}
@@ -434,55 +259,28 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
 
       {isAddModalOpen && (
         <LeadAddModal
-          isOpen={isAddModalOpen}
-          onClose={() => setIsAddModalOpen(false)}
-          onSuccess={handleCreateSuccess}
-          company={activeCompany}
-          members={members}
-          stages={stages}
-          sources={sources}
-          clientCompanies={clientCompanies}
-          categories={categories}
-          setClientCompanies={setClientCompanies}
-          setCategories={setCategories}
-          setToast={setToast}
+          isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)}
+          onSuccess={handleCreateSuccess} company={activeCompany} members={members}
+          stages={stages} sources={sources} clientCompanies={clientCompanies} categories={categories}
         />
       )}
 
       {selectedLead && (
         <LeadDetailModal
-          isOpen={!!selectedLead}
-          lead={selectedLead}
-          company={activeCompany}
-          members={members}
-          stages={stages}
-          onClose={() => setSelectedLead(null)}
-          onUpdate={handleUpdate}
-          onDelete={() => handleDelete(selectedLead.id)}
+          isOpen={!!selectedLead} lead={selectedLead} company={activeCompany}
+          members={members} stages={stages} onClose={() => setSelectedLead(null)}
+          onUpdate={handleUpdate} onDelete={() => handleDelete(selectedLead.id)}
           onConvertToDeal={() => setIsConvertModalOpen(true)}
           user={members.find(m => m.user_id === selectedLead.sales_id)?.profile as any}
-          sources={sources}
-          clientCompanies={clientCompanies}
-          categories={categories}
-          setClientCompanies={setClientCompanies}
-          setCategories={setCategories}
-          setToast={setToast}
+          sources={sources} clientCompanies={clientCompanies} categories={categories}
         />
       )}
 
       {isConvertModalOpen && selectedLead && activeCompany && (
         <ConvertLeadModal
-          isOpen={isConvertModalOpen}
-          onClose={() => setIsConvertModalOpen(false)}
-          lead={selectedLead}
-          companyId={activeCompany.id}
-          userId={user.id}
-          onSuccess={() => {
-            setIsConvertModalOpen(false);
-            setSelectedLead(null);
-            refresh();
-          }}
-          setToast={setToast}
+          isOpen={isConvertModalOpen} onClose={() => setIsConvertModalOpen(false)}
+          lead={selectedLead} companyId={activeCompany.id} userId={user.id}
+          onSuccess={() => { setIsConvertModalOpen(false); setSelectedLead(null); refresh(); }}
         />
       )}
 
@@ -494,13 +292,6 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
         itemName="Lead ini"
         description="Apakah Anda yakin ingin menghapus data lead ini dari sistem?"
         variant="horizontal"
-      />
-
-      <Toast
-        isOpen={toast.isOpen}
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

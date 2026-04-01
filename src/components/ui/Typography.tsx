@@ -4,40 +4,41 @@ interface TextProps {
   children?: React.ReactNode;
   className?: string;
   title?: string;
+  onClick?: (e: React.MouseEvent) => void;
 }
 
-export const H1: React.FC<TextProps> = ({ children, className = '', title }) => (
-  <h1 title={title} className={`text-4xl font-medium  text-gray-900 ${className}`}>
+export const H1: React.FC<TextProps> = ({ children, className = '', title, onClick }) => (
+  <h1 title={title} onClick={onClick} className={`text-4xl font-medium  text-gray-900 ${className}`}>
     {children}
   </h1>
 );
 
-export const H2: React.FC<TextProps> = ({ children, className = '', title }) => (
-  <h2 title={title} className={`text-2xl font-medium  text-gray-900 ${className}`}>
+export const H2: React.FC<TextProps> = ({ children, className = '', title, onClick }) => (
+  <h2 title={title} onClick={onClick} className={`text-2xl font-medium  text-gray-900 ${className}`}>
     {children}
   </h2>
 );
 
-export const H3: React.FC<TextProps> = ({ children, className = '', title }) => (
-  <h3 title={title} className={`text-lg font-medium text-gray-900 uppercase  ${className}`}>
+export const H3: React.FC<TextProps> = ({ children, className = '', title, onClick }) => (
+  <h3 title={title} onClick={onClick} className={`text-lg font-medium text-gray-900 uppercase  ${className}`}>
     {children}
   </h3>
 );
 
-export const H4: React.FC<TextProps> = ({ children, className = '', title }) => (
-  <h4 title={title} className={`text-[11px] font-medium uppercase  text-gray-900 ${className}`}>
+export const H4: React.FC<TextProps> = ({ children, className = '', title, onClick }) => (
+  <h4 title={title} onClick={onClick} className={`text-[11px] font-medium uppercase  text-gray-900 ${className}`}>
     {children}
   </h4>
 );
 
-export const Subtext: React.FC<TextProps> = ({ children, className = '', title }) => (
-  <p title={title} className={`text-sm font-medium text-gray-500 ${className}`}>
+export const Subtext: React.FC<TextProps> = ({ children, className = '', title, onClick }) => (
+  <p title={title} onClick={onClick} className={`text-sm font-medium text-gray-500 ${className}`}>
     {children}
   </p>
 );
 
-export const Label: React.FC<TextProps> = ({ children, className = '', title }) => (
-  <span title={title} className={`text-[10px] font-medium text-gray-400 uppercase  ${className}`}>
+export const Label: React.FC<TextProps> = ({ children, className = '', title, onClick }) => (
+  <span title={title} onClick={onClick} className={`text-[10px] font-medium text-gray-400 uppercase  ${className}`}>
     {children}
   </span>
 );

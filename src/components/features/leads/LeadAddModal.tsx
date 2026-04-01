@@ -1,10 +1,13 @@
+'use client';
 import { Plus, Save, X, Mail, Building, Contact2, Wallet, FileText, Check as CheckIcon, CheckCircle as CheckCircle2, User } from 'lucide-react';
 import { Company, Client, ClientCompany, ClientCompanyCategory, Lead, LeadStage, LeadSource, CompanyMember } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
-import React, { useState, useEffect, useCallback } from 'react';
-import { Input, Textarea, Button, Subtext, Label, Modal, H4, ComboBox, Toast, ToastType } from '@/components/ui';
+import React, { useState, useCallback } from 'react';
+import { Input, Textarea, Button, Modal, H4, ComboBox, Label } from '@/components/ui';
 import { ClientFormModal } from '@/components/features/clients/components/ClientFormModal';
 import { useInfiniteScroll } from '@/lib/hooks/useInfiniteScroll';
+import { useQueryClient } from '@tanstack/react-query';
+import { useAppStore } from '@/lib/store/useAppStore';
 
 interface LeadAddModalProps {
   isOpen: boolean;
@@ -16,14 +19,13 @@ interface LeadAddModalProps {
   clientCompanies: ClientCompany[];
   categories: ClientCompanyCategory[];
   onSuccess: () => void;
-  setClientCompanies: React.Dispatch<React.SetStateAction<ClientCompany[]>>;
-  setCategories: React.Dispatch<React.SetStateAction<ClientCompanyCategory[]>>;
-  setToast: React.Dispatch<React.SetStateAction<{ isOpen: boolean; message: string; type: ToastType }>>;
 }
 
 export const LeadAddModal: React.FC<LeadAddModalProps> = ({
-  isOpen, onClose, company, members, stages, sources, clientCompanies, categories, onSuccess, setClientCompanies, setCategories, setToast
+  isOpen, onClose, company, members, stages, sources, clientCompanies, categories, onSuccess
 }) => {
+  const queryClient = useQueryClient();
+  const { showToast } = useAppStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [clientSearchTerm, setClientSearchTerm] = useState('');
@@ -104,23 +106,6 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
     setWaNumber(cleaned);
   };
 
-  const handleQuickAddCompany = async (coData: any) => {
-    const { data, error } = await supabase.from('client_companies').insert({
-      company_id: company.id,
-      ...coData
-    }).select().single();
-    if (error) throw error;
-    setClientCompanies(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
-    return data;
-  };
-
-  const handleQuickAddCategory = async (name: string) => {
-    const { data, error } = await supabase.from('client_company_categories').insert({ company_id: company.id, name: name.trim() }).select().single();
-    if (error) throw error;
-    setCategories(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
-    return data;
-  };
-
   const handleSaveClient = async (formData: Partial<Client>) => {
     if (!formData.name?.trim()) return;
     setIsProcessingQuick(true);
@@ -139,7 +124,7 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
       handleClientSelect(String(data.id));
       setIsClientModalOpen(false);
       setClientForm({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
-    } catch (err: any) { setToast({ isOpen: true, message: err.message, type: 'error' }); } finally { setIsProcessingQuick(false); }
+    } catch (err: any) { showToast(err.message, 'error'); } finally { setIsProcessingQuick(false); }
   };
 
   const handleSave = async (e?: React.FormEvent) => {
@@ -160,7 +145,7 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
       onSuccess();
       onClose();
     } catch (error: any) {
-      setToast({ isOpen: true, message: 'Gagal Menyimpan: ' + error.message, type: 'error' });
+      showToast('Gagal Menyimpan: ' + error.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -267,14 +252,14 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
             </div>
 
             <div className="space-y-2">
-              <Label className="text-[10px]  text-gray-400 uppercase  ml-1">WhatsApp</Label>
+              <Label className="text-[10px]  text-gray-400 font-bold uppercase  ml-1">WhatsApp</Label>
               <div className="flex border border-gray-100 rounded-md overflow-hidden focus-within:border-blue-500 focus-within:bg-white transition-all">
-                <div className="px-4 py-2.5 bg-gray-100/50 text-[11px]  text-gray-400 border-r border-gray-100 flex items-center">+62</div>
-                <Input
+                <div className="px-4 py-2.5 bg-gray-100/50 text-[11px]  text-gray-400 border-r border-gray-100 flex items-center font-bold">+62</div>
+                <input
                   type="tel"
                   value={waNumber}
                   onChange={e => handleWaNumberChange(e.target.value)}
-                  className="flex-1 !border-none !bg-transparent !shadow-none !rounded-none"
+                  className="flex-1 text-xs px-3 py-2 border-none bg-transparent outline-none shadow-none rounded-none font-bold"
                   placeholder="812345678..."
                 />
               </div>
@@ -317,7 +302,7 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
               type="number"
               value={form.expected_value}
               onChange={e => setForm({ ...form, expected_value: Number(e.target.value) })}
-              leftIcon={<Label className="text-[11px]  text-blue-600">Rp</Label>}
+              leftIcon={<span className="text-[11px] font-bold text-blue-600">Rp</span>}
               placeholder="0"
             />
 
@@ -371,8 +356,6 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
         clientCompanies={clientCompanies}
         categories={categories}
         companyId={company.id}
-        onQuickAddCompany={handleQuickAddCompany}
-        onQuickAddCategory={handleQuickAddCategory}
       />
     </Modal>
   );

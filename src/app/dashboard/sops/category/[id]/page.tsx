@@ -2,13 +2,13 @@
 
 import React from 'react';
 import { useParams } from 'next/navigation';
-import { useDashboard } from '@/app/dashboard/DashboardContext';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { SopListView } from '@/components/features/sop/SopListView';
 
 export default function SopCategoryPage() {
   const params = useParams();
   const id = params?.id;
-  const { activeCompany: company } = useDashboard();
+  const { activeCompany: company } = useAppStore();
 
   if (!company || !id) return null;
 

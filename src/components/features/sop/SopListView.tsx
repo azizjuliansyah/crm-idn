@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Label, SearchInput, H2, Toast, ToastType } from '@/components/ui';
-
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Label, SearchInput, H2 } from '@/components/ui';
+import { useAppStore } from '@/lib/store/useAppStore';
 
 import { supabase } from '@/lib/supabase';
-import { Company, Sop, SopCategory } from '@/lib/types';
+import { Company, Sop } from '@/lib/types';
 import {
-  Plus, Search, FileText, Loader2, BookOpen,
-  ChevronRight, ArrowUpDown, Clock, Tag, Archive, Edit, Eye, Trash2
+  Plus, FileText, Loader2, BookOpen,
+  ChevronRight, Tag, Eye
 } from 'lucide-react';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -23,14 +23,10 @@ interface Props {
 export const SopListView: React.FC<Props> = ({ company, categoryId, isArchive }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { showToast } = useAppStore();
   const [sops, setSops] = useState<Sop[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
-    isOpen: false,
-    message: '',
-    type: 'success',
-  });
 
   const fetchSops = useCallback(async () => {
     setLoading(true);
@@ -50,11 +46,14 @@ export const SopListView: React.FC<Props> = ({ company, categoryId, isArchive })
       }
 
       const { data, error } = await query.order('document_number').order('revision_number', { ascending: false });
+      if (error) throw error;
       if (data) setSops(data as any);
+    } catch (err: any) {
+      showToast(err.message, 'error');
     } finally {
       setLoading(false);
     }
-  }, [company.id, categoryId, isArchive]);
+  }, [company.id, categoryId, isArchive, showToast]);
 
   useEffect(() => {
     fetchSops();
@@ -63,17 +62,13 @@ export const SopListView: React.FC<Props> = ({ company, categoryId, isArchive })
   useEffect(() => {
     const success = searchParams.get('success');
     if (success) {
-      setToast({
-        isOpen: true,
-        message: success === 'created' ? 'SOP Berhasil Dibuat' : 'SOP Berhasil Diperbarui',
-        type: 'success'
-      });
+      showToast(success === 'created' ? 'SOP Berhasil Dibuat' : 'SOP Berhasil Diperbarui', 'success');
 
       // Clean up the URL
       const newUrl = window.location.pathname;
       window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
     }
-  }, [searchParams]);
+  }, [searchParams, showToast]);
 
   const filteredSops = sops.filter(s =>
     s.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -96,14 +91,15 @@ export const SopListView: React.FC<Props> = ({ company, categoryId, isArchive })
           </div>
           <div className="flex items-center gap-3">
             {!isArchive && (
-              <Link
-                href="/dashboard/sops/create"
-                onMouseEnter={() => router.prefetch('/dashboard/sops/create')}
-                className="inline-flex items-center gap-2 px-6 py-2.5 text-[10px] font-bold uppercase tracking-wider text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all shadow-lg shadow-blue-100"
+              <Button
+                onClick={() => router.push("/dashboard/sops/create")}
+                leftIcon={<Plus size={14} strokeWidth={3} />}
+                className="!px-6 py-2.5 text-[10px] font-bold uppercase tracking-wider shadow-lg shadow-blue-100"
+                variant="primary"
+                size="sm"
               >
-                <Plus size={14} strokeWidth={3} />
                 Buat SOP Baru
-              </Link>
+              </Button>
             )}
           </div>
         </div>
@@ -207,15 +203,7 @@ export const SopListView: React.FC<Props> = ({ company, categoryId, isArchive })
             </div>
           )}
         </div>
-
-
       </div>
-      <Toast
-        isOpen={toast.isOpen}
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
-      />
     </div>
   );
 };

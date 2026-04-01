@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 
-import { Input, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, H1, H2, Subtext, Label, ComboBox, Card, SectionHeader, Breadcrumb, Modal, Toast, ToastType } from '@/components/ui';
-
+import { Input, Textarea, Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Label, ComboBox, Card, SectionHeader, Breadcrumb, Modal } from '@/components/ui';
+import { useAppStore } from '@/lib/store/useAppStore';
 
 import { supabase } from '@/lib/supabase';
 import { Company, Sop, SopCategory, SopStep } from '@/lib/types';
@@ -22,6 +22,7 @@ interface Props {
 
 export const SopFormView: React.FC<Props> = ({ company, sopId }) => {
   const router = useRouter();
+  const { showToast } = useAppStore();
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<SopCategory[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -39,11 +40,6 @@ export const SopFormView: React.FC<Props> = ({ company, sopId }) => {
 
   const [isInstructionModalOpen, setIsInstructionModalOpen] = useState(false);
   const [activeInstructionIdx, setActiveInstructionIdx] = useState<number | null>(null);
-  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
-    isOpen: false,
-    message: '',
-    type: 'success',
-  });
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -58,6 +54,8 @@ export const SopFormView: React.FC<Props> = ({ company, sopId }) => {
           .eq('id', sopId)
           .single();
 
+        if (error) throw error;
+
         if (sop) {
           setForm(sop);
           if (sop.sop_steps && sop.sop_steps.length > 0) {
@@ -71,12 +69,12 @@ export const SopFormView: React.FC<Props> = ({ company, sopId }) => {
           }
         }
       }
-    } catch (err) {
-      console.error("Error loading SOP data:", err);
+    } catch (err: any) {
+      showToast("Error loading SOP data: " + err.message, 'error');
     } finally {
       setLoading(false);
     }
-  }, [company.id, sopId]);
+  }, [company.id, sopId, showToast]);
 
   useEffect(() => {
     fetchData();
@@ -119,7 +117,7 @@ export const SopFormView: React.FC<Props> = ({ company, sopId }) => {
 
   const handleSave = async () => {
     if (!form.title || !form.document_number) {
-      setToast({ isOpen: true, message: "Judul dan Nomor Dokumen wajib diisi.", type: 'error' });
+      showToast("Judul dan Nomor Dokumen wajib diisi.", 'error');
       return;
     }
 
@@ -172,8 +170,7 @@ export const SopFormView: React.FC<Props> = ({ company, sopId }) => {
       const successParam = sopId ? 'updated' : 'created';
       router.push(`/dashboard/sops?success=${successParam}`);
     } catch (err: any) {
-      console.error("Save Error:", err);
-      setToast({ isOpen: true, message: "Gagal menyimpan: " + err.message, type: 'error' });
+      showToast("Gagal menyimpan: " + err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -589,13 +586,6 @@ export const SopFormView: React.FC<Props> = ({ company, sopId }) => {
           />
         </div>
       </Modal>
-
-      <Toast
-        isOpen={toast.isOpen}
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
-      />
     </div>
   );
 };

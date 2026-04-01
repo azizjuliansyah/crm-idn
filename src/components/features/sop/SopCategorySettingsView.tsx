@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Input, Button, H2, Subtext, Label, Modal, ComboBox, Toast, ToastType } from '@/components/ui';
+import { Input, Button, H2, Subtext, Label, Modal, ComboBox } from '@/components/ui';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { supabase } from '@/lib/supabase';
 import { SopCategory, Company } from '@/lib/types';
 import {
@@ -16,16 +17,12 @@ interface Props {
 }
 
 export const SopCategorySettingsView: React.FC<Props> = ({ company }) => {
+  const { showToast } = useAppStore();
   const [categories, setCategories] = useState<SopCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [form, setForm] = useState<Partial<SopCategory>>({ name: '', parent_id: null });
-  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
-    isOpen: false,
-    message: '',
-    type: 'success',
-  });
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean, id: number | null }>({
     isOpen: false,
     id: null
@@ -54,12 +51,12 @@ export const SopCategorySettingsView: React.FC<Props> = ({ company }) => {
       } else if (data) {
         setCategories(data as any);
       }
-    } catch (err) {
-      console.error("Error fetching SOP categories:", err);
+    } catch (err: any) {
+      showToast("Error fetching SOP categories: " + err.message, 'error');
     } finally {
       setLoading(false);
     }
-  }, [company.id]);
+  }, [company.id, showToast]);
 
   useEffect(() => {
     fetchData();
@@ -103,10 +100,10 @@ export const SopCategorySettingsView: React.FC<Props> = ({ company }) => {
 
       setIsModalOpen(false);
       await fetchData();
-      setToast({ isOpen: true, message: 'Kategori berhasil disimpan', type: 'success' });
+      showToast('Kategori berhasil disimpan', 'success');
       window.dispatchEvent(new Event('sopCategoriesUpdated'));
     } catch (err: any) {
-      setToast({ isOpen: true, message: "Terjadi kesalahan: " + err.message, type: 'error' });
+      showToast("Terjadi kesalahan: " + err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -120,10 +117,10 @@ export const SopCategorySettingsView: React.FC<Props> = ({ company }) => {
       if (error) throw error;
       setConfirmDelete({ isOpen: false, id: null });
       await fetchData();
-      setToast({ isOpen: true, message: 'Kategori berhasil dihapus', type: 'success' });
+      showToast('Kategori berhasil dihapus', 'success');
       window.dispatchEvent(new Event('sopCategoriesUpdated'));
     } catch (err: any) {
-      setToast({ isOpen: true, message: "Gagal menghapus: " + err.message, type: 'error' });
+      showToast("Gagal menghapus: " + err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -151,14 +148,13 @@ export const SopCategorySettingsView: React.FC<Props> = ({ company }) => {
       ]);
       window.dispatchEvent(new Event('sopCategoriesUpdated'));
     } catch (err: any) {
-      console.error("Gagal memperbarui urutan:", err);
+      showToast("Gagal memperbarui urutan: " + err.message, 'error');
       fetchData();
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // Helper untuk mendapatkan nama induk
   const getParentName = (parentId: number | null) => {
     if (!parentId) return null;
     return categories.find(c => c.id === parentId)?.name;
@@ -297,13 +293,6 @@ export const SopCategorySettingsView: React.FC<Props> = ({ company }) => {
           </div>
         </div>
       </Modal>
-
-      <Toast
-        isOpen={toast.isOpen}
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
-      />
     </div>
   );
 };

@@ -2,15 +2,11 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { Button, Table, TableHeader, TableBody, TableRow, TableCell, H2, H3, Subtext, Label, Modal, EmptyState, SearchInput, Badge, ComboBox, Toast, ToastType } from '@/components/ui';
-
-
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, H2, Subtext, Label, Modal, EmptyState, SearchInput, Badge, ComboBox } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { Company, ProformaInvoice, SalesRequestCategory } from '@/lib/types';
 import {
-  Plus, Search, Edit2, Trash2, Loader2, FileCheck,
-  ChevronRight, ArrowUpDown, ChevronUp, ChevronDown,
-  AlertTriangle, CheckCircle2, X, Filter,
+  Plus, Edit2, Trash2, Loader2, FileCheck,
   FileDown, FileText, FilePlus,
   Clock
 } from 'lucide-react';
@@ -20,8 +16,9 @@ import { InfiniteScrollSentinel } from '@/components/ui';
 import { useInfiniteScroll } from '@/lib/hooks/useInfiniteScroll';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { generateTemplate1, generateTemplate5, generateTemplate6 } from '@/lib/pdf-templates';
+import { generateTemplate6 } from '@/lib/pdf-templates';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useAppStore } from '@/lib/store/useAppStore';
 
 interface Props {
   company: Company;
@@ -43,20 +40,15 @@ const getImgDimensions = (url: string): Promise<{ width: number, height: number,
 export const ProformasView: React.FC<Props> = ({ company }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { showToast } = useAppStore();
   const [requestCategories, setRequestCategories] = useState<SalesRequestCategory[]>([]);
   const [loadingMetadata, setLoadingMetadata] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClientId, setFilterClientId] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'id' as any, direction: 'desc' });
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; number: string }>({ isOpen: false, id: null, number: '' });
-  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
-    isOpen: false,
-    message: '',
-    type: 'success',
-  });
   const [requestModal, setRequestModal] = useState<{ isOpen: boolean; proformaId: number | null; proformaStatus: string }>({ isOpen: false, proformaId: null, proformaStatus: '' });
 
   const fetchProformas = useCallback(async ({ from, to }: { from: number, to: number }) => {
@@ -120,13 +112,13 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
       const message = success === 'created'
         ? 'Proforma baru berhasil dibuat'
         : 'Proforma berhasil diperbarui';
-      setToast({ isOpen: true, message, type: 'success' });
+      showToast(message, 'success');
 
       // Clean up the URL
       const newUrl = window.location.pathname;
       window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
     }
-  }, [searchParams]);
+  }, [searchParams, showToast]);
 
   const uniqueClients = useMemo(() => {
     const map = new Map();
@@ -168,10 +160,6 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
     });
   };
 
-  const showNotification = (title: string, message: string, type: ToastType = 'success') => {
-    setToast({ isOpen: true, message, type });
-  };
-
   const executeDelete = async () => {
     if (!confirmDelete.id) return;
     setIsProcessing(true);
@@ -179,10 +167,10 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
       const { error } = await supabase.from('proformas').delete().eq('id', confirmDelete.id);
       if (error) throw error;
       setConfirmDelete({ isOpen: false, id: null, number: '' });
-      showNotification('Berhasil', `Proforma Invoice ${confirmDelete.number} telah dihapus.`);
+      showToast(`Proforma Invoice ${confirmDelete.number} telah dihapus.`, 'success');
       refresh();
     } catch (err: any) {
-      showNotification('Gagal', err.message, 'error');
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -210,7 +198,7 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
       .from('document_template_settings')
       .select('*')
       .eq('company_id', company.id)
-      .eq('document_type', 'invoice')
+      .eq('document_type', 'invoice') // Proforma often uses same templates as Invoice
       .maybeSingle();
 
     const templateId = templateSetting?.template_id || 'template1';
@@ -218,7 +206,6 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
 
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
     const padX = 18;
 
     const safeNum = (val: any, fallback: number = 0) => {
@@ -236,10 +223,6 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
 
     if (templateId === 'template5') {
       const tealColor = '#2596BE';
-      const gray2Color = '#9B9B9B';
-      const rowTealColor = '#2596BE';
-      const rowLightColor = '#F2F9FB';
-
       doc.setFontSize(8.5);
       doc.setTextColor(17, 17, 17);
       safeText(config.top_contact || '', pageWidth - padX, 10, { align: 'right' });
@@ -301,8 +284,8 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
         ]) || [],
         theme: 'plain',
         headStyles: { fillColor: tealColor, textColor: '#FFFFFF', fontSize: 11, fontStyle: 'bold', minCellHeight: 12, valign: 'middle', halign: 'left' },
-        bodyStyles: { fillColor: rowLightColor, fontSize: 10, textColor: '#111111', minCellHeight: 14, valign: 'middle', halign: 'left' },
-        alternateRowStyles: { fillColor: rowTealColor, textColor: '#FFFFFF' },
+        bodyStyles: { fillColor: '#F2F9FB', fontSize: 10, textColor: '#111111', minCellHeight: 14, valign: 'middle', halign: 'left' },
+        alternateRowStyles: { fillColor: tealColor, textColor: '#FFFFFF' },
         columnStyles: { 0: { cellWidth: 100, cellPadding: { left: padX, top: 4, right: 4, bottom: 4 } }, 3: { cellPadding: { left: 4, top: 4, right: padX, bottom: 4 } } },
         margin: { left: 0, right: 0 },
         tableWidth: pageWidth
@@ -421,14 +404,14 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
                   </TableCell>
                   <TableCell className="py-5">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center  text-[10px] uppercase shadow-sm border border-indigo-100">{p.client?.name.charAt(0)}</div>
+                      <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-[10px] uppercase shadow-sm border border-indigo-100">{p.client?.name.charAt(0)}</div>
                       <div>
-                        <Subtext className="text-xs text-gray-900 ">{p.client?.name}</Subtext>
-                        <Subtext className="text-[10px] !text-gray-400 mt-1 uppercase  italic">{p.client?.client_company?.name || 'Personal'}</Subtext>
+                        <Subtext className="text-xs text-gray-900 font-bold">{p.client?.name}</Subtext>
+                        <Subtext className="text-[10px] !text-gray-400 mt-1 uppercase font-bold italic">{p.client?.client_company?.name || 'Personal'}</Subtext>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right  text-indigo-600 text-xs py-5 bg-indigo-50/5 group-hover:bg-indigo-50/20">{formatIDR(p.total)}</TableCell>
+                  <TableCell className="text-right font-bold text-indigo-600 text-xs py-5 bg-indigo-50/5 group-hover:bg-indigo-50/20">{formatIDR(p.total)}</TableCell>
                   <TableCell className="text-center">
                     <Badge variant={p.status === 'Paid' ? 'emerald' : p.status === 'Sent' ? 'sky' : 'neutral'}>
                       {p.status}
@@ -494,13 +477,6 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
         itemName={confirmDelete.number}
         description={`Apakah Anda yakin ingin menghapus proforma ${confirmDelete.number}?`}
         variant="horizontal"
-      />
-
-      <Toast
-        isOpen={toast.isOpen}
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
       />
 
       <Modal

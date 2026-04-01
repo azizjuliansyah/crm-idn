@@ -17,24 +17,30 @@ import {
 import { Profile, Company, PlatformSettings, Pipeline, ProjectPipeline, SopCategory, SalesRequestCategory } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 
+import { useAppStore } from '@/lib/store/useAppStore';
+import { usePathname } from 'next/navigation';
+import { getViewIdFromPath } from '@/lib/navigation';
+import { Skeleton } from '@/components/ui';
 
 interface LayoutProps {
   children: React.ReactNode;
-  user: Profile;
-  companies: Company[];
-  activeCompany: Company | null;
-  onCompanyChange: (company: Company | null) => void;
-  platformSettings: PlatformSettings;
-  onLogout: () => void;
-  activeView: string;
-  onNavigate: (viewId: string) => void;
 }
 
-export const Layout: React.FC<LayoutProps> = ({
-  children, user, companies, activeCompany, onCompanyChange,
-  platformSettings, onLogout, activeView, onNavigate
-}) => {
+export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const router = useRouter();
+  const pathname = usePathname();
+  const activeView = getViewIdFromPath(pathname);
+  const { 
+    user, 
+    companies, 
+    activeCompany, 
+    switchCompany: onCompanyChange, 
+    platformSettings, 
+    logout: onLogout 
+  } = useAppStore();
+
+  if (!user) return null;
+
   const isAdmin = user.platform_role === 'ADMIN';
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [currentRoleName, setCurrentRoleName] = useState<string>('');
@@ -51,6 +57,7 @@ export const Layout: React.FC<LayoutProps> = ({
   const [expandedSopCats, setExpandedSopCats] = useState<Record<number, boolean>>({});
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
   // Auto-expand menus based on activeView
   useEffect(() => {
@@ -123,17 +130,23 @@ export const Layout: React.FC<LayoutProps> = ({
 
   const fetchPipelines = useCallback(async () => {
     if (!activeCompany) return;
-    const [dealsRes, projectsRes, sopRes, salesReqRes] = await Promise.all([
-      supabase.from('pipelines').select('*').eq('company_id', activeCompany.id).order('id'),
-      supabase.from('project_pipelines').select('*').eq('company_id', activeCompany.id).order('id'),
-      supabase.from('sop_categories').select('*').eq('company_id', activeCompany.id).order('sort_order', { ascending: true }),
-      supabase.from('sales_request_categories').select('*').eq('company_id', activeCompany.id).order('sort_order', { ascending: true })
-    ]);
-    if (dealsRes.data) setPipelines(dealsRes.data as any);
-    if (projectsRes.data) setProjectPipelines(projectsRes.data as any);
-    if (sopRes.data) setSopCategories(sopRes.data as any);
-    if (salesReqRes.data) setSalesRequestCategories(salesReqRes.data as any);
-  }, [activeCompany]);
+    try {
+      const [dealsRes, projectsRes, sopRes, salesReqRes] = await Promise.all([
+        supabase.from('pipelines').select('*').eq('company_id', activeCompany.id).order('id'),
+        supabase.from('project_pipelines').select('*').eq('company_id', activeCompany.id).order('id'),
+        supabase.from('sop_categories').select('*').eq('company_id', activeCompany.id).order('sort_order', { ascending: true }),
+        supabase.from('sales_request_categories').select('*').eq('company_id', activeCompany.id).order('sort_order', { ascending: true })
+      ]);
+      if (dealsRes.data) setPipelines(dealsRes.data as any);
+      if (projectsRes.data) setProjectPipelines(projectsRes.data as any);
+      if (sopRes.data) setSopCategories(sopRes.data as any);
+      if (salesReqRes.data) setSalesRequestCategories(salesReqRes.data as any);
+    } catch (error) {
+      console.error('Error fetching layout data:', error);
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, [activeCompany?.id]); // Only change if company ID actually changes
 
   const activeStates = useMemo(() => ({
     isCrmActive: ['leads', 'pengaturan_leads', 'pengaturan_sumber_leads', 'deals', 'pengaturan_deals_pipeline', 'log_activity'].includes(activeView) || activeView.startsWith('deals_'),
@@ -202,7 +215,7 @@ export const Layout: React.FC<LayoutProps> = ({
 
     fetchPermissions();
     fetchPipelines();
-  }, [isAdmin, activeCompany, user.id, fetchPipelines]);
+  }, [isAdmin, activeCompany?.id, user.id, fetchPipelines]); // Changed to activeCompany?.id to prevent unnecessary re-runs
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -257,66 +270,79 @@ export const Layout: React.FC<LayoutProps> = ({
     return activeView.replace(/_/g, ' ');
   };
 
-  const renderMenuItem = (id: string, label: string, icon: React.ReactNode, bgColorClass: string, iconColorClass: string = 'text-white') => (
-    <div className="relative group">
-      {activeView === id && (
-        <div className="absolute left-[-12px] top-2 bottom-2 w-1 bg-blue-600 rounded-r-full shadow-[0_0_10px_rgba(37,99,235,0.3)] z-10" />
-      )}
-      <Link
-        href={getPathFromViewId(id)}
-        onClick={() => setIsSidebarOpen(false)}
-        className={`w-full flex items-center gap-4 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer ${activeView === id ? 'text-blue-600 font-bold' : 'text-gray-700 hover:bg-gray-50 font-medium'}`}
-        onMouseEnter={() => router.prefetch(getPathFromViewId(id))}
-      >
-        <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-sm ${activeView === id ? 'bg-blue-600 text-white' : `${bgColorClass} ${iconColorClass}`}`}>
-          {React.cloneElement(icon as React.ReactElement<any>, { size: 14 })}
-        </div>
-        <Label className={`text-[13px] !capitalize ! cursor-pointer ${activeView === id ? 'text-blue-600' : 'text-inherit'}`}>{label}</Label>
-      </Link>
-    </div>
-  );
+  const renderMenuItem = (id: string, label: string, icon: React.ReactNode, bgColorClass: string, iconColorClass: string = 'text-white') => {
+    const path = getPathFromViewId(id);
+    const isActive = activeView === id;
+    
+    return (
+      <div className="relative group">
+        {isActive && (
+          <div className="absolute left-[-12px] top-2 bottom-2 w-1 bg-blue-600 rounded-r-full shadow-[0_0_10px_rgba(37,99,235,0.3)] z-10" />
+        )}
+        <Link
+          href={path}
+          prefetch={true}
+          onClick={() => setIsSidebarOpen(false)}
+          className={`w-full flex items-center gap-4 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer ${isActive ? 'text-blue-600 font-bold' : 'text-gray-700 hover:bg-gray-50 font-medium'}`}
+        >
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-sm ${isActive ? 'bg-blue-600 text-white' : `${bgColorClass} ${iconColorClass}`}`}>
+            {React.cloneElement(icon as React.ReactElement<any>, { size: 14 })}
+          </div>
+          <Label className={`text-[13px] !capitalize ! cursor-pointer ${isActive ? 'text-blue-600' : 'text-inherit'}`}>{label}</Label>
+        </Link>
+      </div>
+    );
+  };
 
-  const renderSubMenuLevel1 = (id: string, label: string, icon: React.ReactNode, active: boolean) => (
-    <div className="relative group">
+  const renderSubMenuLevel1 = (id: string, label: string, icon: React.ReactNode, active: boolean) => {
+    const path = getPathFromViewId(id);
+    
+    return (
+      <div className="relative group">
+        <Link
+          href={path}
+          prefetch={true}
+          onClick={() => setIsSidebarOpen(false)}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer ${active ? 'text-blue-600 font-bold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50 font-medium'}`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-1 flex items-center justify-center">
+              {active && (
+                <div className="w-1 h-1 bg-blue-600 rounded-full" />
+              )}
+            </div>
+            <div className={`transition-colors ${active ? 'text-blue-600' : 'text-gray-400'}`}>
+              {React.cloneElement(icon as React.ReactElement<any>, { size: 14 })}
+            </div>
+            <Label className={`text-[12px] !capitalize ! cursor-pointer ${active ? 'text-blue-600' : 'text-inherit'}`}>{label}</Label>
+          </div>
+        </Link>
+      </div>
+    );
+  };
+
+  const renderSubMenuLevel2 = (id: string, label: string, active: boolean) => {
+    const path = getPathFromViewId(id);
+    
+    return (
       <Link
-        href={getPathFromViewId(id)}
+        key={id}
+        href={path}
+        prefetch={true}
         onClick={() => setIsSidebarOpen(false)}
-        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer ${active ? 'text-blue-600 font-bold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50 font-medium'}`}
-        onMouseEnter={() => router.prefetch(getPathFromViewId(id))}
+        className={`w-full flex items-center px-3 py-2 rounded-lg text-[11px] font-medium !capitalize ! transition-all cursor-pointer ${active ? 'text-blue-600 font-bold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}
       >
         <div className="flex items-center gap-3">
           <div className="w-1 h-1 flex items-center justify-center">
             {active && (
-              <div className="w-1 h-1 bg-blue-600 rounded-full" />
+              <div className="w-1 h-1 bg-blue-500 rounded-full" />
             )}
           </div>
-          <div className={`transition-colors ${active ? 'text-blue-600' : 'text-gray-400'}`}>
-            {React.cloneElement(icon as React.ReactElement<any>, { size: 14 })}
-          </div>
-          <Label className={`text-[12px] !capitalize ! cursor-pointer ${active ? 'text-blue-600' : 'text-inherit'}`}>{label}</Label>
+          {label}
         </div>
       </Link>
-    </div>
-  );
-
-  const renderSubMenuLevel2 = (id: string, label: string, active: boolean) => (
-    <Link
-      key={id}
-      href={getPathFromViewId(id)}
-      onClick={() => setIsSidebarOpen(false)}
-      className={`w-full flex items-center px-3 py-2 rounded-lg text-[11px] font-medium !capitalize ! transition-all cursor-pointer ${active ? 'text-blue-600 font-bold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}
-      onMouseEnter={() => router.prefetch(getPathFromViewId(id))}
-    >
-      <div className="flex items-center gap-3">
-        <div className="w-1 h-1 flex items-center justify-center">
-          {active && (
-            <div className="w-1 h-1 bg-blue-500 rounded-full" />
-          )}
-        </div>
-        {label}
-      </div>
-    </Link>
-  );
+    );
+  };
 
   return (
     <div className="flex h-screen bg-white overflow-hidden text-gray-900 font-sans relative">
@@ -418,7 +444,7 @@ export const Layout: React.FC<LayoutProps> = ({
                   </Button>
                   {isCrmOpen && (
                     <div className="pl-4 space-y-0.5 mt-0.5 ml-6">
-                      {canShow('Leads') && renderSubMenuLevel1('leads', 'Leads', <Target />, activeView === 'leads')}
+                       {canShow('Leads') && renderSubMenuLevel1('leads', 'Leads', <Target />, activeView === 'leads')}
                       {canShow('Deals') && (
                         <div className="space-y-0.5">
                           <Button
@@ -439,7 +465,14 @@ export const Layout: React.FC<LayoutProps> = ({
                           </Button>
                           {isDealsExpanded && (
                             <div className="ml-[12px] !border-l !border-blue-100 pl-[14px] mt-1 space-y-0.5">
-                              {pipelines.map(p => renderSubMenuLevel2(`deals_${p.id}`, p.name, activeView === `deals_${p.id}`))}
+                              {isLoadingData ? (
+                                <div className="space-y-2 py-2">
+                                  <Skeleton className="h-4 w-20" />
+                                  <Skeleton className="h-4 w-24" />
+                                </div>
+                              ) : (
+                                pipelines.map(p => renderSubMenuLevel2(`deals_${p.id}`, p.name, activeView === `deals_${p.id}`))
+                              )}
                             </div>
                           )}
                         </div>
@@ -465,7 +498,14 @@ export const Layout: React.FC<LayoutProps> = ({
                   </Button>
                   {isProjectOpen && (
                     <div className="ml-[34px] border-l border-blue-100 pl-[14px] mt-1 space-y-0.5">
-                      {projectPipelines.map(p => renderSubMenuLevel2(`projects_${p.id}`, p.name, activeView === `projects_${p.id}`))}
+                      {isLoadingData ? (
+                        <div className="space-y-2 py-2">
+                          <Skeleton className="h-4 w-20" />
+                          <Skeleton className="h-4 w-24" />
+                        </div>
+                      ) : (
+                        projectPipelines.map(p => renderSubMenuLevel2(`projects_${p.id}`, p.name, activeView === `projects_${p.id}`))
+                      )}
                     </div>
                   )}
                 </div>
@@ -534,7 +574,14 @@ export const Layout: React.FC<LayoutProps> = ({
                             <div className="ml-[12px] !border-l !border-blue-100 pl-[14px] mt-1 space-y-0.5">
                               {canShow('Request Invoice') && renderSubMenuLevel2('request_invoice', 'Request Invoice', activeView === 'request_invoice' || activeView === 'buat_request_invoice' || activeView === 'edit_request_invoice')}
                               {canShow('Request Kwitansi') && renderSubMenuLevel2('request_kwitansi', 'Request Kwitansi', activeView === 'request_kwitansi' || activeView === 'buat_request_kwitansi' || activeView === 'edit_request_kwitansi')}
-                              {canShow('Akses Sales Request') && salesRequestCategories.map(cat => renderSubMenuLevel2(`request_cat_${cat.id}`, cat.name, activeView === `request_cat_${cat.id}` || activeView === `buat_request_cat_${cat.id}` || activeView === `edit_request_cat_${cat.id}`))}
+                              {isLoadingData ? (
+                                <div className="space-y-2 py-2">
+                                  <Skeleton className="h-4 w-20" />
+                                  <Skeleton className="h-4 w-24" />
+                                </div>
+                              ) : (
+                                canShow('Akses Sales Request') && salesRequestCategories.map(cat => renderSubMenuLevel2(`request_cat_${cat.id}`, cat.name, activeView === `request_cat_${cat.id}` || activeView === `buat_request_cat_${cat.id}` || activeView === `edit_request_cat_${cat.id}`))
+                              )}
                             </div>
                           )}
                         </div>
@@ -604,21 +651,28 @@ export const Layout: React.FC<LayoutProps> = ({
                         </Button>
                         {isSopCategoriesExpanded && (
                           <div className="ml-[12px] !border-l !border-emerald-100 pl-[14px] mt-1 space-y-0.5">
-                            {sopCategories
-                              .filter(cat => !cat.parent_id)
-                              .map(cat => {
-                                const subCategories = sopCategories.filter(sub => sub.parent_id === cat.id);
-                                return (
-                                  <React.Fragment key={cat.id}>
-                                    {renderSubMenuLevel2(`sop_cat_${cat.id}`, cat.name, activeView === `sop_cat_${cat.id}`)}
-                                    {subCategories.length > 0 && (
-                                      <div className="pl-3 border-l border-emerald-50 ml-1.5 space-y-0.5 py-0.5">
-                                        {subCategories.map(sub => renderSubMenuLevel2(`sop_cat_${sub.id}`, sub.name, activeView === `sop_cat_${sub.id}`))}
-                                      </div>
-                                    )}
-                                  </React.Fragment>
-                                );
-                              })}
+                            {isLoadingData ? (
+                                <div className="space-y-2 py-2">
+                                  <Skeleton className="h-4 w-20" />
+                                  <Skeleton className="h-4 w-24" />
+                                </div>
+                            ) : (
+                              sopCategories
+                                .filter(cat => !cat.parent_id)
+                                .map(cat => {
+                                  const subCategories = sopCategories.filter(sub => sub.parent_id === cat.id);
+                                  return (
+                                    <React.Fragment key={cat.id}>
+                                      {renderSubMenuLevel2(`sop_cat_${cat.id}`, cat.name, activeView === `sop_cat_${cat.id}`)}
+                                      {subCategories.length > 0 && (
+                                        <div className="pl-3 border-l border-emerald-50 ml-1.5 space-y-0.5 py-0.5">
+                                          {subCategories.map(sub => renderSubMenuLevel2(`sop_cat_${sub.id}`, sub.name, activeView === `sop_cat_${sub.id}`))}
+                                        </div>
+                                      )}
+                                    </React.Fragment>
+                                  );
+                                })
+                            )}
                           </div>
                         )}
                       </div>

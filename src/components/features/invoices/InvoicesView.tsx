@@ -2,16 +2,12 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, SearchInput, ComboBox, Toast, ToastType } from '@/components/ui';
-
-
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, SearchInput, ComboBox } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { Company, Invoice } from '@/lib/types';
 import {
-  Plus, Search, Edit2, Trash2, Loader2, FileBadge,
-  ChevronRight, ArrowUpDown, ChevronUp, ChevronDown,
-  AlertTriangle, CheckCircle2, X, Filter,
-  FileDown, Download, FileText, FilePlus
+  Plus, Edit2, Trash2, Loader2, FileBadge,
+  FileDown, Download, FilePlus
 } from 'lucide-react';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
@@ -21,7 +17,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { generateTemplate1, generateTemplate5, generateTemplate6 } from '@/lib/pdf-templates';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useDashboard } from '@/app/dashboard/DashboardContext';
+import { useAppStore } from '@/lib/store/useAppStore';
 
 interface Props {
   company: Company;
@@ -42,7 +38,7 @@ const getImgDimensions = (url: string): Promise<{ width: number, height: number,
 
 export const InvoicesView: React.FC<Props> = ({ company }) => {
   const router = useRouter();
-  const { activeCompanyMembers, user } = useDashboard();
+  const { activeCompanyMembers, user, showToast } = useAppStore();
   const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClientId, setFilterClientId] = useState('all');
@@ -51,11 +47,6 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; number: string }>({ isOpen: false, id: null, number: '' });
-  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
-    isOpen: false,
-    message: '',
-    type: 'success',
-  });
 
   const fetchInvoices = useCallback(async ({ from, to }: { from: number, to: number }) => {
     if (!company?.id) return { data: [], error: null, count: 0 };
@@ -102,13 +93,13 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
       const message = success === 'created'
         ? 'Invoice baru berhasil dibuat'
         : 'Invoice berhasil diperbarui';
-      setToast({ isOpen: true, message, type: 'success' });
+      showToast(message, 'success');
 
       // Clean up the URL
       const newUrl = window.location.pathname;
       window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
     }
-  }, [searchParams]);
+  }, [searchParams, showToast]);
 
   const uniqueClients = useMemo(() => {
     const map = new Map();
@@ -150,10 +141,6 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
     });
   };
 
-  const showNotification = (title: string, message: string, type: ToastType = 'success') => {
-    setToast({ isOpen: true, message, type });
-  };
-
   const executeDelete = async () => {
     if (!confirmDelete.id) return;
     setIsProcessing(true);
@@ -161,10 +148,10 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
       const { error } = await supabase.from('invoices').delete().eq('id', confirmDelete.id);
       if (error) throw error;
       setConfirmDelete({ isOpen: false, id: null, number: '' });
-      showNotification('Berhasil', `Invoice ${confirmDelete.number} telah dihapus.`);
+      showToast(`Invoice ${confirmDelete.number} telah dihapus.`, 'success');
       refresh();
     } catch (err: any) {
-      showNotification('Gagal', err.message, 'error');
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -200,7 +187,6 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
 
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
     const padX = 18;
 
     const safeNum = (val: any, fallback: number = 0) => {
@@ -218,9 +204,6 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
 
     if (templateId === 'template5') {
       const mainColor = '#4F46E5';
-      const grayColor = '#9B9B9B';
-      const rowLightColor = '#F5F5FF';
-
       doc.setFontSize(8.5);
       doc.setTextColor(17, 17, 17);
       safeText(config.top_contact || '', pageWidth - padX, 10, { align: 'right' });
@@ -286,7 +269,7 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
         theme: 'plain',
         headStyles: { fillColor: mainColor, textColor: '#FFFFFF', fontSize: 11, fontStyle: 'bold', minCellHeight: 12, valign: 'middle', halign: 'left' },
         bodyStyles: { fillColor: '#FFFFFF', fontSize: 10, textColor: '#111111', minCellHeight: 14, valign: 'middle', halign: 'left' },
-        alternateRowStyles: { fillColor: rowLightColor },
+        alternateRowStyles: { fillColor: '#F5F5FF' },
         columnStyles: { 0: { cellWidth: 100, cellPadding: { left: padX, top: 4, right: 4, bottom: 4 } }, 3: { cellPadding: { left: 4, top: 4, right: padX, bottom: 4 } } },
         margin: { left: 0, right: 0 },
         tableWidth: pageWidth
@@ -336,7 +319,6 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
   const handleCreateKwitansi = async (inv: Invoice) => {
     setIsProcessing(true);
     try {
-      // Create Kwitansi
       const kwtNumber = `KWT-${Date.now().toString().slice(-6)}`;
       const { data: kwt, error: kwtErr } = await supabase
         .from('kwitansis')
@@ -359,7 +341,6 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
 
       if (kwtErr) throw kwtErr;
 
-      // Create Kwitansi Items
       if (inv.invoice_items && inv.invoice_items.length > 0) {
         const { error: itemsErr } = await supabase
           .from('kwitansi_items')
@@ -375,10 +356,10 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
         if (itemsErr) throw itemsErr;
       }
 
-      setToast({ isOpen: true, message: `Kwitansi berhasil dibuat.`, type: 'success' });
+      showToast(`Kwitansi berhasil dibuat.`, 'success');
       refresh();
     } catch (err: any) {
-      setToast({ isOpen: true, message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -398,7 +379,7 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
       if (kwtErr) throw kwtErr;
 
       if (!kwt) {
-        setToast({ isOpen: true, message: 'Kwitansi untuk invoice ini belum dibuat.', type: 'error' });
+        showToast('Kwitansi untuk invoice ini belum dibuat.', 'error');
         setIsProcessing(false);
         return;
       }
@@ -421,7 +402,6 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
       if (templateId === 'template1') {
         await generateTemplate1(doc, kwt, config, company, pageWidth, padX);
       } else if (templateId === 'template5') {
-        // Fallback for template 5 if needed, but usually we use template 1 or 6
         await generateTemplate5(doc, kwt, config, company, pageWidth, padX);
       } else if (templateId === 'template6') {
         await generateTemplate6(doc, kwt, config, company, pageWidth, padX);
@@ -450,7 +430,7 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
 
       doc.save(`${kwt.number}.pdf`);
     } catch (err: any) {
-      setToast({ isOpen: true, message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -547,20 +527,20 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
                   </TableCell>
                   <TableCell className="py-5 px-6">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center  text-[10px] uppercase shadow-sm border border-indigo-100">{inv.client?.name.charAt(0)}</div>
+                      <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-[10px] uppercase shadow-sm border border-indigo-100">{inv.client?.name.charAt(0)}</div>
                       <div>
-                        <Subtext className="text-xs text-gray-900 ">{inv.client?.name}</Subtext>
-                        <Subtext className="text-[10px] !text-gray-400 mt-1 uppercase  italic">{inv.client?.client_company?.name || 'Personal'}</Subtext>
+                        <Subtext className="text-xs text-gray-900 font-bold">{inv.client?.name}</Subtext>
+                        <Subtext className="text-[10px] !text-gray-400 mt-1 uppercase font-bold italic">{inv.client?.client_company?.name || 'Personal'}</Subtext>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right  text-indigo-600 text-xs py-5 px-6 bg-indigo-50/5 group-hover:bg-indigo-50/20">{formatIDR(inv.total)}</TableCell>
+                  <TableCell className="text-right font-bold text-indigo-600 text-xs py-5 px-6 bg-indigo-50/5 group-hover:bg-indigo-50/20">{formatIDR(inv.total)}</TableCell>
                   <TableCell className="text-center py-5 px-6">
-                    <Label className={`px-3 py-1 rounded-full text-[9px]  uppercase  border transition-all duration-300 ${inv.status === 'Paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                    <Label className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase  border transition-all duration-300 ${inv.status === 'Paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                       inv.status === 'Partial' ? 'bg-amber-50 text-amber-600 border-amber-100' :
                         inv.status === 'Unpaid' ? 'bg-rose-50 text-rose-600 border-rose-100' :
                           'bg-gray-50 text-gray-400 border-gray-200'
-                      }`}>
+                       }`}>
                       {inv.status}
                     </Label>
                   </TableCell>
@@ -627,13 +607,6 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
         itemName={confirmDelete.number}
         isProcessing={isProcessing}
         variant="horizontal"
-      />
-
-      <Toast
-        isOpen={toast.isOpen}
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

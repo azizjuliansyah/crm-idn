@@ -1,13 +1,16 @@
-import React, { useState, useMemo } from 'react';
-import { Input, Textarea, Button, Subtext, Label, SectionHeader, Modal, ComboBox, H4, ToastType } from '@/components/ui';
+'use client';
+import React, { useState } from 'react';
+import { Input, Textarea, Button, SectionHeader, Modal, ComboBox } from '@/components/ui';
 
 import { supabase } from '@/lib/supabase';
 import { Deal, Company, CompanyMember, Pipeline, Client, ClientCompany, ClientCompanyCategory } from '@/lib/types';
 import {
-  Plus, Building, Target, User, FileText, Save, X,
-  Contact2, CheckCircle2, Mail, Check as CheckIcon, Wallet
+  Target, User, FileText, Save, Wallet
 } from 'lucide-react';
 import { ClientFormModal } from '@/components/features/clients/components/ClientFormModal';
+import { useAppStore } from '@/lib/store/useAppStore';
+
+import { useQueryClient } from '@tanstack/react-query';
 
 interface Props {
   isOpen: boolean;
@@ -20,20 +23,18 @@ interface Props {
   clientCompanies: ClientCompany[];
   categories: ClientCompanyCategory[];
   onSuccess: () => void;
-  setClients: React.Dispatch<React.SetStateAction<Client[]>>;
-  setClientCompanies: React.Dispatch<React.SetStateAction<ClientCompany[]>>;
-  setCategories: React.Dispatch<React.SetStateAction<ClientCompanyCategory[]>>;
-  setToast: React.Dispatch<React.SetStateAction<{ isOpen: boolean; message: string; type: ToastType }>>;
 }
 
 export const DealAddModal: React.FC<Props> = ({
   isOpen, onClose, company, user, members, pipeline, clients, clientCompanies,
-  categories, onSuccess, setClients, setClientCompanies, setCategories, setToast
+  categories, onSuccess
 }) => {
+  const queryClient = useQueryClient();
   const [isProcessing, setIsProcessing] = useState(false);
   const [isProcessingQuick, setIsProcessingQuick] = useState(false);
   const [isAddingClient, setIsAddingClient] = useState(false);
   const [newClient, setNewClient] = useState<Partial<Client>>({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
+  const { showToast } = useAppStore();
 
   // Error states for validation
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -45,39 +46,14 @@ export const DealAddModal: React.FC<Props> = ({
     input_date: new Date().toISOString().split('T')[0]
   });
 
-  const handleQuickAddCategory = async (name: string) => {
-    const { data, error } = await supabase
-      .from('client_company_categories')
-      .insert({ name: name.trim(), company_id: company.id })
-      .select()
-      .single();
-    if (error) throw error;
-    setCategories(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
-    return data;
-  };
-
-  const handleQuickAddCompany = async (coData: any) => {
-    const { data, error } = await supabase
-      .from('client_companies')
-      .insert({
-        company_id: company.id,
-        ...coData
-      })
-      .select()
-      .single();
-    if (error) throw error;
-    setClientCompanies(prev => [...prev, data as any].sort((a: any, b: any) => a.name.localeCompare(b.name)));
-    return data;
-  };
-
   const handleQuickAddClient = async (savedForm: Partial<Client>) => {
     if (!savedForm.name?.trim()) {
-      setToast({ isOpen: true, message: "Nama Client wajib diisi.", type: 'error' });
+      showToast("Nama Client wajib diisi.", 'error');
       return;
     }
     setIsProcessingQuick(true);
     try {
-      const fullWa = savedForm.whatsapp ? `+62${savedForm.whatsapp.replace(/\\D/g, '')}` : null;
+      const fullWa = savedForm.whatsapp ? `+62${savedForm.whatsapp.replace(/\D/g, '')}` : null;
       const { data, error } = await supabase
         .from('clients')
         .insert({
@@ -93,8 +69,7 @@ export const DealAddModal: React.FC<Props> = ({
 
       if (error) throw error;
 
-      const freshClientsRes = await supabase.from('clients').select('*').eq('company_id', company.id).order('name');
-      if (freshClientsRes.data) setClients(freshClientsRes.data);
+      queryClient.invalidateQueries({ queryKey: ['clients', company.id] });
 
       const co = clientCompanies.find(cc => cc.id === data.client_company_id);
       setForm(prev => ({
@@ -113,8 +88,9 @@ export const DealAddModal: React.FC<Props> = ({
       });
       setIsAddingClient(false);
       setNewClient({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
+      showToast('Client berhasil ditambahkan!', 'success');
     } catch (err: any) {
-      setToast({ isOpen: true, message: "Gagal menambah client: " + err.message, type: 'error' });
+      showToast("Gagal menambah client: " + err.message, 'error');
     } finally {
       setIsProcessingQuick(false);
     }
@@ -153,11 +129,13 @@ export const DealAddModal: React.FC<Props> = ({
         source: form.source,
         input_date: form.input_date
       };
-      await supabase.from('deals').insert(dealData);
+      const { error } = await supabase.from('deals').insert(dealData);
+      if (error) throw error;
+      showToast('Deal baru berhasil dibuat!', 'success');
       onSuccess();
       onClose();
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      showToast('Gagal membuat deal: ' + err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -266,7 +244,6 @@ export const DealAddModal: React.FC<Props> = ({
               type="number"
               value={form.expected_value}
               onChange={e => setForm({ ...form, expected_value: Number(e.target.value) })}
-              leftIcon={<Label className="text-[11px] text-indigo-500">Rp</Label>}
               placeholder="0"
               className="rounded-md"
             />
@@ -316,8 +293,6 @@ export const DealAddModal: React.FC<Props> = ({
         clientCompanies={clientCompanies}
         categories={categories}
         companyId={company.id}
-        onQuickAddCompany={handleQuickAddCompany}
-        onQuickAddCategory={handleQuickAddCategory}
       />
     </Modal>
   );

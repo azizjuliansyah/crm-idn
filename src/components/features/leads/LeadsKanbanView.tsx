@@ -4,6 +4,7 @@ import { Lead, LeadStage } from '@/lib/types';
 import { User as UserIcon, ChevronRight, Trash2, Zap } from 'lucide-react';
 
 import { KanbanBoard, KanbanItem, KanbanStage } from '@/components/shared/KanbanBoard/KanbanBoard';
+import { formatIDR } from '@/lib/utils/formatters';
 
 // Extend KanbanItem
 interface KanbanLead extends Lead, KanbanItem { }
@@ -13,7 +14,6 @@ interface Props {
   leadsByStatus: Record<string, Lead[]>;
   onEdit: (lead: Lead) => void;
   onDelete: (id: number, e: React.MouseEvent) => void;
-  formatIDR: (num?: number) => string;
   onReorder: (itemId: number, newStatus: string, newIndex?: number) => void;
   hasUrgency?: boolean;
   // Infinite scroll props
@@ -33,7 +33,7 @@ const getStageColor = (status: string) => {
 };
 
 export const LeadsKanbanView: React.FC<Props> = ({
-  stages, leadsByStatus, onEdit, onDelete, formatIDR, onReorder, hasUrgency,
+  stages, leadsByStatus, onEdit, onDelete, onReorder, hasUrgency,
   hasMore, isLoadingMore, onLoadMore
 }) => {
 

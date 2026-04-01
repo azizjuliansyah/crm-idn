@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Input, Textarea, Button, Modal, ComboBox, Label, H4, ToastType } from '@/components/ui';
+import { Input, Textarea, Button, Modal, ComboBox, Label, H4 } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { Company, CompanyMember, SupportStage, Client, SupportTicket, TicketTopic, ClientCompany, ClientCompanyCategory } from '@/lib/types';
-import { Loader2, Save, ChevronDown, Layers, Check, X } from 'lucide-react';
+import { Loader2, Save, Check, X } from 'lucide-react';
 import { ClientFormModal } from '@/components/features/clients/components/ClientFormModal';
+import { useAppStore } from '@/lib/store/useAppStore';
 
 interface Props {
   isOpen: boolean;
@@ -14,12 +15,12 @@ interface Props {
   clients: Client[];
   topics: TicketTopic[];
   onSuccess: () => void;
-  setToast: (toast: { isOpen: boolean; message: string; type: ToastType }) => void;
 }
 
 export const SupportTicketAddModal: React.FC<Props> = ({
-  isOpen, onClose, company, members, stages, clients, topics, onSuccess, setToast
+  isOpen, onClose, company, members, stages, clients, topics, onSuccess
 }) => {
+  const { showToast } = useAppStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [form, setForm] = useState<Partial<SupportTicket>>({
     title: '',
@@ -67,7 +68,7 @@ export const SupportTicketAddModal: React.FC<Props> = ({
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title || !form.client_id) {
-      setToast({ isOpen: true, message: "Judul ticket dan Client wajib diisi.", type: 'error' });
+      showToast("Judul ticket dan Client wajib diisi.", 'error');
       return;
     }
 
@@ -77,27 +78,28 @@ export const SupportTicketAddModal: React.FC<Props> = ({
         ...form,
         company_id: company.id
       });
+      if (error) throw error;
       onSuccess();
       onClose();
-      setToast({ isOpen: true, message: 'Ticket baru telah dibuat.', type: 'success' });
+      showToast('Ticket baru telah dibuat.', 'success');
       setForm({ title: '', description: '', client_id: null, topic_id: null, assigned_id: members[0]?.user_id || '', status: stages[0]?.name.toLowerCase() || 'open', priority: 'normal', type: 'ticket' });
     } catch (err: any) {
-      setToast({ isOpen: true, message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const handleQuickAddClient = async (form: Partial<Client>) => {
-    if (!form.name?.trim()) return;
+  const handleQuickAddClient = async (f: Partial<Client>) => {
+    if (!f.name?.trim()) return;
     setIsProcessingQuick(true);
     try {
       const { data, error } = await supabase
         .from('clients')
         .insert({
-          ...form,
+          ...f,
           company_id: company.id,
-          whatsapp: form.whatsapp ? `+62${form.whatsapp.replace(/\\D/g, '')}` : null
+          whatsapp: f.whatsapp ? `+62${f.whatsapp.replace(/\D/g, '')}` : null
         })
         .select()
         .single();
@@ -105,10 +107,10 @@ export const SupportTicketAddModal: React.FC<Props> = ({
       setForm((prev: any) => ({ ...prev, client_id: data.id }));
       setIsAddingClient(false);
       setNewClientForm({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
-      setToast({ isOpen: true, message: 'Client baru berhasil ditambahkan!', type: 'success' });
+      showToast('Client baru berhasil ditambahkan!', 'success');
       onSuccess(); // Refresh clients in parent
     } catch (err: any) {
-      setToast({ isOpen: true, message: "Gagal menambah client: " + err.message, type: 'error' });
+      showToast("Gagal menambah client: " + err.message, 'error');
     } finally {
       setIsProcessingQuick(false);
     }
@@ -142,9 +144,9 @@ export const SupportTicketAddModal: React.FC<Props> = ({
       setForm({ ...form, topic_id: data.id });
       setNewTopicName('');
       setIsAddingTopic(false);
-      setToast({ isOpen: true, message: 'Topik baru berhasil ditambahkan!', type: 'success' });
+      showToast('Topik baru berhasil ditambahkan!', 'success');
     } catch (err: any) {
-      setToast({ isOpen: true, message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     }
   };
 
@@ -173,6 +175,7 @@ export const SupportTicketAddModal: React.FC<Props> = ({
           <Button
             variant="primary"
             onClick={handleSave}
+            disabled={isProcessing}
             isLoading={isProcessing}
             leftIcon={<Save size={14} />}
             className="rounded-md"
@@ -186,7 +189,7 @@ export const SupportTicketAddModal: React.FC<Props> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <ComboBox
             label="Kategori Tipe*"
-            value={form.type}
+            value={form.type || 'ticket'}
             onChange={val => setForm({ ...form, type: val as any })}
             options={[
               { value: 'ticket', label: 'Standard Ticket (Support)' },
@@ -211,7 +214,7 @@ export const SupportTicketAddModal: React.FC<Props> = ({
             value={form.client_id || ''}
             onChange={val => setForm({ ...form, client_id: Number(val) })}
             options={clients.map(c => ({
-              value: c.id,
+              value: c.id.toString(),
               label: c.name,
               sublabel: `${c.salutation || ''} ${c.whatsapp || c.email || ''}`.trim()
             }))}
@@ -273,7 +276,7 @@ export const SupportTicketAddModal: React.FC<Props> = ({
                 label={form.type === 'complaint' ? "Topik Keluhan (Opsional)" : "Topik Tiket (Opsional)"}
                 value={form.topic_id || ''}
                 onChange={val => setForm({ ...form, topic_id: val ? Number(val) : null })}
-                options={topics.map(t => ({ value: t.id, label: t.name }))}
+                options={topics.map(t => ({ value: t.id.toString(), label: t.name }))}
                 onAddNew={() => setIsAddingTopic(true)}
                 addNewLabel="Tambah Topik Baru"
                 className="rounded-md"
@@ -283,7 +286,7 @@ export const SupportTicketAddModal: React.FC<Props> = ({
 
           <ComboBox
             label="Prioritas"
-            value={form.priority}
+            value={form.priority || 'normal'}
             onChange={val => setForm({ ...form, priority: val as any })}
             options={[
               { value: 'low', label: 'Low' },
@@ -297,7 +300,7 @@ export const SupportTicketAddModal: React.FC<Props> = ({
 
           <ComboBox
             label="Status Awal"
-            value={form.status}
+            value={form.status || ''}
             onChange={val => setForm({ ...form, status: val.toString() })}
             options={stages.map(s => ({ value: s.name.toLowerCase(), label: s.name }))}
             hideSearch
@@ -323,8 +326,6 @@ export const SupportTicketAddModal: React.FC<Props> = ({
         clientCompanies={clientCompanies}
         categories={categories}
         companyId={company.id}
-        onQuickAddCompany={handleQuickAddCompany}
-        onQuickAddCategory={handleQuickAddCategory}
       />
     </Modal>
   );

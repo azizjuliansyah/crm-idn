@@ -1,3 +1,4 @@
+'use client';
 import React from 'react';
 import { ChevronRight } from 'lucide-react';
 import Link from 'next/link';

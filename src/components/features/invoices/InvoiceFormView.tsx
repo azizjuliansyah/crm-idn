@@ -1,22 +1,23 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Company, Client, Product, Invoice, InvoiceItem, Kwitansi, TaxSetting, ProductCategory, ProductUnit, ClientCompany, ClientCompanyCategory, Quotation, ProformaInvoice, AutonumberSetting } from '@/lib/types';
+import { Company, Client, Product, Kwitansi, TaxSetting, ProductCategory, ProductUnit, ClientCompany, ClientCompanyCategory, Quotation, ProformaInvoice, AutonumberSetting } from '@/lib/types';
 import {
-  ArrowLeft, Save, Plus, Trash2, Calendar, FileBadge,
-  User, ChevronDown, Package, Loader2, CheckCircle2, X, AlertCircle, Tags, Weight,
-  Building, Mail, Phone, Search, FileText, Check as CheckIcon, FileDown, DollarSign, FilePlus
+  ArrowLeft, Save, Plus, Trash2, FileBadge,
+  User, CheckCircle2, X, FileText, FileDown, DollarSign, FilePlus, Loader2
 } from 'lucide-react';
-import { Modal, Button, Input, Textarea, SectionHeader, Label, Subtext, Table, TableHeader, TableBody, TableRow, TableCell, ComboBox, H2, Card, Toast, ToastType } from '@/components/ui';
+import { Button, Input, Textarea, SectionHeader, Label, Subtext, ComboBox, Card } from '@/components/ui';
 import { ClientFormModal } from '@/components/features/clients/components/ClientFormModal';
-import { ProductFormModal } from '@/components/features/products/components/ProductFormModal';
+import { DocumentItemsTable, DocumentItemRow } from '@/components/shared/forms/DocumentItemsTable';
+import { DocumentSummary, CalculatedTax } from '@/components/shared/forms/DocumentSummary';
+import { DocumentActionHeader } from '@/components/shared/forms/DocumentActionHeader';
 import { useInfiniteScroll } from '@/lib/hooks/useInfiniteScroll';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { generateTemplate1, generateTemplate5, generateTemplate6 } from '@/lib/pdf-templates';
 import { useRouter } from 'next/navigation';
-import { useDashboard } from '@/app/dashboard/DashboardContext';
+import { useAppStore } from '@/lib/store/useAppStore';
 
 interface Props {
   company: Company;
@@ -26,16 +27,6 @@ interface Props {
   initialQuotationId?: number;
   initialRequestId?: number;
   onSaveSuccess?: (id: number) => void;
-}
-
-interface ItemRow {
-  id?: number;
-  productId: string;
-  description: string;
-  qty: number;
-  unit: string;
-  price: number;
-  total: number;
 }
 
 
@@ -82,19 +73,13 @@ const generateFormattedNumber = (pattern: string, nextNum: number, digitCount: n
 
 export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialClientId, initialProformaId, initialQuotationId, initialRequestId, onSaveSuccess }) => {
   const router = useRouter();
-  const { activeCompanyMembers, user } = useDashboard();
+  const { activeCompanyMembers, user, showToast } = useAppStore();
   const [loading, setLoading] = useState(false);
   const [existingKwitansi, setExistingKwitansi] = useState<Kwitansi | null>(null);
-  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
-    isOpen: false,
-    message: '',
-    type: 'success',
-  });
-  const [clientSearch, setClientSearch] = useState('');
-  const [productSearch, setProductSearch] = useState('');
   
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
+  const [clientSearch, setClientSearch] = useState('');
+  const [selectedClient, setSelectedClient] = useState<any | null>(null);
+  const [initialProducts, setInitialProducts] = useState<Product[]>([]);
   
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [proformas, setProformas] = useState<ProformaInvoice[]>([]);
@@ -103,8 +88,6 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
   const [units, setUnits] = useState<ProductUnit[]>([]);
   const [clientCompanies, setClientCompanies] = useState<ClientCompany[]>([]);
   const [clientCategories, setClientCategories] = useState<ClientCompanyCategory[]>([]);
-
-  const productDropdownRef = useRef<HTMLTableDataCellElement>(null);
 
   const [clientId, setClientId] = useState('');
   const [proformaId, setProformaId] = useState<number | null>(null);
@@ -119,7 +102,7 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
   const [discountType, setDiscountType] = useState<'Rp' | '%'>('Rp');
   const [discountValue, setDiscountValue] = useState(0);
   const [selectedTaxIds, setSelectedTaxIds] = useState<number[]>([]);
-  const [items, setItems] = useState<ItemRow[]>([{ productId: '', description: '', qty: 1, unit: 'pcs', price: 0, total: 0 }]);
+  const [items, setItems] = useState<DocumentItemRow[]>([{ productId: '', description: '', qty: 1, unit: 'pcs', price: 0, total: 0 }]);
 
   // Infinite scroll for clients
   const fetchClientsPaginated = useCallback(async ({ from, to }: { from: number, to: number }) => {
@@ -137,31 +120,12 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
     hasMore: hasMoreClients,
     loadMore: loadMoreClients,
     refresh: refreshClients
-  } = useInfiniteScroll<Client>(fetchClientsPaginated, {
+  } = useInfiniteScroll<any>(fetchClientsPaginated, {
     pageSize: 20,
     dependencies: [company?.id, clientSearch]
   });
 
-  // Infinite scroll for products
-  const fetchProductsPaginated = useCallback(async ({ from, to }: { from: number, to: number }) => {
-    if (!company?.id) return { data: [], error: null, count: 0 };
-    let query = supabase.from('products').select('*, product_units(*)', { count: 'exact' }).eq('company_id', company.id);
-    if (productSearch) query = query.ilike('name', `%${productSearch}%`);
-    query = query.order('name', { ascending: true });
-    const { data, error, count } = await query.range(from, to);
-    return { data: data || [], error, count };
-  }, [company?.id, productSearch]);
 
-  const {
-    data: scrolledProducts,
-    isLoadingMore: isLoadingMoreProducts,
-    hasMore: hasMoreProducts,
-    loadMore: loadMoreProducts,
-    refresh: refreshProducts
-  } = useInfiniteScroll<Product>(fetchProductsPaginated, {
-    pageSize: 20,
-    dependencies: [company?.id, productSearch]
-  });
 
   const clients = useMemo(() => {
     const list = [...scrolledClients];
@@ -171,21 +135,12 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
     return list;
   }, [scrolledClients, selectedClient]);
 
-  const products = useMemo(() => {
-    const list = [...scrolledProducts];
-    selectedProducts.forEach(sp => {
-      if (!list.find(p => p.id === sp.id)) {
-        list.unshift(sp);
-      }
-    });
-    return list;
-  }, [scrolledProducts, selectedProducts]);
+
 
   // Quick Add State (Modals)
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
-  const [clientForm, setClientForm] = useState<Partial<Client>>({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
-  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
-  const [productForm, setProductForm] = useState<Partial<Product>>({ name: '', category_id: null, unit_id: null, price: 0, description: '' });
+  const [clientForm, setClientForm] = useState<any>({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
+
   const [isProcessingQuick, setIsProcessingQuick] = useState(false);
 
   const handleCheckReset = async (setting: AutonumberSetting) => {
@@ -253,11 +208,10 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
           total: it.total
         })));
 
-        // Fetch selected products
         const productIds = invData.invoice_items.map((it: any) => it.product_id);
         if (productIds.length > 0) {
           const { data: pData } = await supabase.from('products').select('*, product_units(*)').in('id', productIds);
-          if (pData) setSelectedProducts(pData);
+          if (pData) setInitialProducts(pData);
         }
       }
     }
@@ -306,11 +260,10 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
             total: it.total
           })));
 
-          // Fetch items products
           const productIds = pfData.proforma_items.map((it: any) => it.product_id);
           if (productIds.length > 0) {
             const { data: pData } = await supabase.from('products').select('*, product_units(*)').in('id', productIds);
-            if (pData) setSelectedProducts(pData);
+            if (pData) setInitialProducts(pData);
           }
         }
       } else if (initialQuotationId) {
@@ -330,11 +283,10 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
             total: it.total
           })));
 
-          // Fetch items products
           const productIds = qData.quotation_items.map((it: any) => it.product_id);
           if (productIds.length > 0) {
             const { data: pData } = await supabase.from('products').select('*, product_units(*)').in('id', productIds);
-            if (pData) setSelectedProducts(pData);
+            if (pData) setInitialProducts(pData);
           }
         }
       }
@@ -354,7 +306,6 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
       }
     }
     
-    // Check for existing Kwitansi if editing
     if (editingId) {
       const { data: kwt } = await supabase
         .from('kwitansis')
@@ -384,44 +335,9 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
 
   const taxTypeString = useMemo(() => selectedTaxesList.map(t => `${t.name} ${t.rate}%`).join(', '), [selectedTaxesList]);
 
-  const handleAddItem = () => setItems([...items, { productId: '', description: '', qty: 1, unit: 'pcs', price: 0, total: 0 }]);
-  const handleRemoveItem = (idx: number) => {
-    if (items.length === 1) { setItems([{ productId: '', description: '', qty: 1, unit: 'pcs', price: 0, total: 0 }]); return; }
-    setItems(items.filter((_, i) => i !== idx));
-  };
 
-  const handleSelectProduct = (rowIdx: number, prod: Product | null) => {
-    const newItems = [...items];
-    const item = { ...newItems[rowIdx] };
-    if (prod) {
-      item.productId = prod.id.toString();
-      item.description = prod.description || '';
-      item.price = prod.price;
-      item.unit = prod.product_units?.name || 'pcs';
-      
-      // Ensure selected product is in the list
-      setSelectedProducts(prev => {
-        if (!prev.find(p => p.id === prod.id)) return [...prev, prod];
-        return prev;
-      });
-    } else {
-      item.productId = ''; item.description = ''; item.price = 0; item.unit = 'pcs';
-    }
-    item.total = item.qty * item.price;
-    newItems[rowIdx] = item;
-    setItems(newItems);
-  };
 
   const formatIDRVal = (num: number = 0) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
-
-  const formatDateString = (dateStr: string | null) => {
-    if (!dateStr) return '-';
-    const parts = dateStr.split('-');
-    if (parts.length === 3) {
-      return `${parts[2]}-${parts[1]}-${parts[0]}`;
-    }
-    return dateStr;
-  };
 
   const handleSave = async () => {
     if (!clientId || !invoiceNumber) return;
@@ -471,8 +387,12 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
         }
         onSaveSuccess?.(invId);
       }
+      showToast(editingId ? 'Invoice berhasil diperbarui' : 'Invoice baru berhasil disimpan', 'success');
       setLoading(false);
-    } catch (err: any) { setToast({ isOpen: true, message: err.message, type: 'error' }); setLoading(false); }
+    } catch (err: any) { 
+      showToast(err.message, 'error'); 
+      setLoading(false); 
+    }
   };
 
   const handleDownloadPDF = async () => {
@@ -508,7 +428,6 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
     } else if (templateId === 'template6') {
       await generateTemplate6(doc, inv, config, company, pageWidth, padX);
     } else {
-      // Fallback for other templates
       doc.setFillColor('#4F46E5');
       doc.rect(0, 0, pageWidth, 40, 'F');
       doc.setTextColor(255, 255, 255);
@@ -543,7 +462,6 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
   const handleCreateKwitansi = async () => {
     setLoading(true);
     try {
-      // Create Kwitansi
       const kwtNumber = `KWT-${Date.now().toString().slice(-6)}`;
       const { data: kwt, error: kwtErr } = await supabase
         .from('kwitansis')
@@ -566,7 +484,6 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
 
       if (kwtErr) throw kwtErr;
 
-      // Create Kwitansi Items
       if (items.length > 0) {
         const { error: itemsErr } = await supabase
           .from('kwitansi_items')
@@ -582,10 +499,10 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
         if (itemsErr) throw itemsErr;
       }
 
-      setToast({ isOpen: true, message: `Kwitansi berhasil dibuat.`, type: 'success' });
+      showToast(`Kwitansi berhasil dibuat.`, 'success');
       setExistingKwitansi(kwt);
     } catch (err: any) {
-      setToast({ isOpen: true, message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setLoading(false);
     }
@@ -607,7 +524,7 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
       if (kwtErr) throw kwtErr;
 
       if (!kwt) {
-        setToast({ isOpen: true, message: 'Kwitansi untuk invoice ini belum dibuat.', type: 'error' });
+        showToast('Kwitansi untuk invoice ini belum dibuat.', 'error');
         setLoading(false);
         return;
       }
@@ -658,7 +575,7 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
 
       doc.save(`${kwt.number}.pdf`);
     } catch (err: any) {
-      setToast({ isOpen: true, message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setLoading(false);
     }
@@ -667,7 +584,7 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
 
   // --- Quick Add Handlers ---
 
-  const handleSaveClient = async (formData: Partial<Client>) => {
+  const handleSaveClient = async (formData: any) => {
     if (!formData.name?.trim()) return;
     setIsProcessingQuick(true);
     try {
@@ -687,48 +604,14 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
       setClientId(String(data.id));
       setIsClientModalOpen(false);
       setClientForm({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
-    } catch (err: any) { setToast({ isOpen: true, message: err.message, type: 'error' }); } finally { setIsProcessingQuick(false); }
+    } catch (err: any) { 
+      showToast(err.message, 'error'); 
+    } finally { 
+      setIsProcessingQuick(false); 
+    }
   };
 
-  const handleSaveProduct = async (formData: Partial<Product>) => {
-    if (!formData.name?.trim() || !formData.price) return;
-    setIsProcessingQuick(true);
-    try {
-      const { data, error } = await supabase.from('products').insert({
-        company_id: company.id,
-        name: formData.name.trim(),
-        category_id: formData.category_id,
-        unit_id: formData.unit_id,
-        price: formData.price,
-        description: formData.description
-      }).select().single();
-      if (error) throw error;
-      await refreshProducts();
-      const freshSelect = await supabase.from('products').select('*, product_units(*)').eq('id', data.id).single();
-      if (freshSelect.data) setSelectedProducts(prev => [...prev, freshSelect.data]);
-      
-      setIsProductModalOpen(false);
-      setProductForm({ name: '', category_id: null, unit_id: null, price: 0, description: '' });
-    } catch (err: any) { setToast({ isOpen: true, message: err.message, type: 'error' }); } finally { setIsProcessingQuick(false); }
-  };
 
-  const handleQuickAddCo = async (coData: any) => {
-    const { data, error } = await supabase.from('client_companies').insert({
-      company_id: company.id,
-      ...coData
-    }).select().single();
-    if (error) throw error;
-    const freshRes = await supabase.from('client_companies').select('*').eq('company_id', company.id).order('name');
-    if (freshRes.data) setClientCompanies(freshRes.data);
-    return data;
-  };
-
-  const handleQuickAddCoCat = async (name: string) => {
-    const { data, error } = await supabase.from('client_company_categories').insert({ company_id: company.id, name: name.trim() }).select().single();
-    if (error) throw error;
-    setClientCategories(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
-    return data;
-  };
 
   const handleQuickAddProdCat = async (name: string) => {
     const { data, error } = await supabase.from('product_categories').insert({ company_id: company.id, name: name.trim() }).select().single();
@@ -749,58 +632,51 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
 
   return (
     <div className="bg-[#F9FAFB] min-h-screen pb-24 font-sans relative">
-      <div className="sticky top-0 z-30 bg-white border-b border-gray-100 px-10 py-5">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-5">
-            <Button variant="ghost" onClick={() => router.push('/dashboard/sales/invoices')} className="!p-2 text-gray-400 border border-gray-100 h-10 w-10">
-              <ArrowLeft size={20} />
-            </Button>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900 ">{editingId ? 'Ubah Invoice' : 'Invoice Penjualan Baru'}</h1>
-              <Subtext className="text-indigo-600 font-bold uppercase  mt-0.5">{invoiceNumber}</Subtext>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" onClick={() => router.push('/dashboard/sales/invoices')}>Batal</Button>
-            {editingId && (
-              <div className="flex gap-2">
-                {status === 'Paid' && !existingKwitansi && hasApprovalPermission && (
-                  <Button
-                    variant="secondary"
-                    onClick={handleCreateKwitansi}
-                    leftIcon={<FilePlus size={16} />}
-                    className="border-indigo-200 text-indigo-600 hover:bg-indigo-50"
-                    disabled={loading}
-                  >
-                    Buat Kwitansi
-                  </Button>
-                )}
-                {status === 'Paid' && existingKwitansi && (
-                  <Button
-                    variant="secondary"
-                    onClick={handleDownloadKwitansi}
-                    leftIcon={<FileDown size={16} />}
-                    className="border-emerald-200 text-emerald-600 hover:bg-emerald-50"
-                  >
-                    Unduh Kwitansi
-                  </Button>
-                )}
+      <DocumentActionHeader
+        title={editingId ? 'Ubah Invoice' : 'Invoice Penjualan Baru'}
+        subtitle={invoiceNumber}
+        onBack={() => router.push('/dashboard/sales/invoices')}
+        onSave={handleSave}
+        isSaving={loading}
+        isSaveDisabled={!clientId}
+        saveLabel={editingId ? 'Update Invoice' : 'Simpan Invoice'}
+        saveIcon={editingId ? <Save size={16} /> : <CheckCircle2 size={16} />}
+        extraActions={
+          editingId ? (
+            <>
+              {status === 'Paid' && !existingKwitansi && hasApprovalPermission && (
                 <Button
                   variant="secondary"
-                  onClick={handleDownloadPDF}
-                  leftIcon={<FileDown size={16} />}
+                  onClick={handleCreateKwitansi}
+                  leftIcon={<FilePlus size={16} />}
                   className="border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+                  disabled={loading}
                 >
-                  PDF
+                  Buat Kwitansi
                 </Button>
-              </div>
-            )}
-            <Button onClick={handleSave} isLoading={loading} disabled={!clientId} leftIcon={editingId ? <Save size={16} /> : <CheckCircle2 size={16} />} variant="primary">
-              {editingId ? 'Update Invoice' : 'Simpan Invoice'}
-            </Button>
-          </div>
-        </div>
-      </div>
+              )}
+              {status === 'Paid' && existingKwitansi && (
+                <Button
+                  variant="secondary"
+                  onClick={handleDownloadKwitansi}
+                  leftIcon={<FileDown size={16} />}
+                  className="border-emerald-200 text-emerald-600 hover:bg-emerald-50"
+                >
+                  Unduh Kwitansi
+                </Button>
+              )}
+              <Button
+                variant="secondary"
+                onClick={handleDownloadPDF}
+                leftIcon={<FileDown size={16} />}
+                className="border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+              >
+                PDF
+              </Button>
+            </>
+          ) : undefined
+        }
+      />
 
       <div className="max-w-7xl mx-auto px-10 py-8 space-y-6">
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-8">
@@ -887,85 +763,16 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
             title="Daftar Item Tagihan"
             className="mb-8"
           />
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableCell isHeader className="px-8 w-1/4">Produk</TableCell>
-                <TableCell isHeader className="px-4">Deskripsi</TableCell>
-                <TableCell isHeader className="px-4 text-center w-24">Qty</TableCell>
-                <TableCell isHeader className="px-4 text-center w-24">Satuan</TableCell>
-                <TableCell isHeader className="px-4 text-right w-40">Harga</TableCell>
-                <TableCell isHeader className="px-4 text-right w-40">Jumlah</TableCell>
-                <TableCell isHeader className="w-12">{null}</TableCell>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item, idx) => (
-                <TableRow key={idx}>
-                  <TableCell className="px-8 py-5">
-                    <ComboBox
-                      placeholder="Pilih Produk"
-                      value={item.productId}
-                      onChange={(val: string | number) => handleSelectProduct(idx, products.find(p => p.id.toString() === val.toString()) || null)}
-                        options={products.map(p => ({
-                          value: p.id.toString(),
-                          label: p.name,
-                          sublabel: formatIDRVal(p.price)
-                        }))}
-                        onAddNew={() => setIsProductModalOpen(true)}
-                        addNewLabel="Daftar Produk Baru"
-                        onLoadMore={loadMoreProducts}
-                        hasMore={hasMoreProducts}
-                        isLoadingMore={isLoadingMoreProducts}
-                        onSearchChange={setProductSearch}
-                      />
-                  </TableCell>
-                  <TableCell className="px-4">
-                    <Input
-                      value={item.description}
-                      onChange={e => { const n = [...items]; n[idx].description = e.target.value; setItems(n); }}
-                      className="!py-2.5 text-xs"
-                      placeholder="Detail spesifikasi..."
-                    />
-                  </TableCell>
-                  <TableCell className="px-4">
-                    <Input
-                      type="number"
-                      value={item.qty}
-                      onChange={e => { const n = [...items]; n[idx].qty = Number(e.target.value); n[idx].total = n[idx].qty * n[idx].price; setItems(n); }}
-                      className="!py-2.5 text-xs text-center rounded-md"
-                    />
-                  </TableCell>
-                  <TableCell className="px-4 text-center">
-                    <div className="w-full px-2 py-2 bg-gray-50 border border-gray-100 rounded-[4px] text-[10px] text-center text-gray-400 font-bold uppercase ">
-                      {item.unit}
-                    </div>
-                  </TableCell>
-                  <TableCell className="px-4">
-                    <Input
-                      type="number"
-                      value={item.price}
-                      onChange={e => { const n = [...items]; n[idx].price = Number(e.target.value); n[idx].total = n[idx].qty * n[idx].price; setItems(n); }}
-                      className="!py-2.5 text-right rounded-md"
-                    />
-                  </TableCell>
-                  <TableCell className="px-4 text-right font-bold text-indigo-700 text-sm">
-                    {formatIDRVal(item.total)}
-                  </TableCell>
-                  <TableCell className="text-center px-2">
-                    <Button variant="ghost" size="sm" onClick={() => handleRemoveItem(idx)} className="!p-2 text-gray-300 hover:text-rose-500">
-                      <Trash2 size={16} />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <div className="flex items-center gap-3 mt-4">
-            <Button onClick={handleAddItem} variant="ghost" size="sm" leftIcon={<Plus size={14} />} className="!text-[#4F46E5] hover:bg-indigo-50 font-bold  uppercase text-[10px]">
-              Tambah Baris
-            </Button>
-          </div>
+          <DocumentItemsTable
+            company={company}
+            items={items}
+            onChange={setItems}
+            initialSelectedProducts={initialProducts}
+            categories={categories}
+            units={units}
+            onQuickAddCategory={handleQuickAddProdCat}
+            onQuickAddUnit={handleQuickAddUnit}
+          />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
@@ -989,77 +796,20 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
               title="Ringkasan Biaya"
               className="mb-4"
             />
-            <div className="flex items-center justify-between border-b border-gray-50 pb-4">
-              <span className="text-xs font-bold text-gray-400 uppercase ">Subtotal</span>
-              <span className="text-sm font-bold text-gray-900">{formatIDRVal(subtotal)}</span>
-            </div>
-            <div className="flex items-center justify-between border-b border-gray-50 pb-4">
-              <div className="flex items-center gap-4">
-                <span className="text-xs font-bold text-gray-400 uppercase ">Diskon</span>
-                <div className="flex bg-white rounded border border-gray-200 overflow-hidden h-11">
-                  <ComboBox
-                    value={discountType}
-                    onChange={(val: string | number) => setDiscountType(val as any)}
-                    options={[
-                      { value: 'Rp', label: 'Rp' },
-                      { value: '%', label: '%' },
-                    ]}
-                    hideSearch={true}
-                    className="!w-24"
-                    size="sm"
-                    triggerClassName="!border-0 !h-full !rounded-none !ring-0 !px-4"
-                  />
-                  <div className="w-px bg-gray-200 h-6 my-auto" />
-                  <Input
-                    type="number"
-                    value={discountValue}
-                    onChange={e => setDiscountValue(Number(e.target.value))}
-                    className="!w-32 font-bold !border-0 !h-full !rounded-none !ring-0 text-base"
-                  />
-                </div>
-              </div>
-              <span className="text-sm font-bold text-rose-600">- {formatIDRVal(discountAmount)}</span>
-            </div>
-
-            <div className="space-y-4 border-b border-gray-50 pb-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-gray-400 uppercase ">Pajak</span>
-                <div className="relative">
-                  <ComboBox
-                    value=""
-                    onChange={(val: string | number) => {
-                      if (val) {
-                        const id = Number(val);
-                        setSelectedTaxIds(prev => prev.includes(id) ? prev : [...prev, id]);
-                      }
-                    }}
-                    options={[
-                      { value: '', label: '+ Tambah Pajak' },
-                      ...availableTaxes.filter(t => !selectedTaxIds.includes(t.id)).map(tax => ({
-                        value: tax.id.toString(),
-                        label: `${tax.name} (${tax.rate}%)`
-                      }))
-                    ]}
-                  />
-                </div>
-              </div>
-              {selectedTaxesList.map(tax => (
-                <div key={tax.id} className="flex items-center justify-between pl-4 text-[11px] font-bold text-gray-700">
-                  <div className="flex items-center gap-2">
-                    <span>{tax.name} ({tax.rate}%)</span>
-                    <Button variant="ghost" size="sm" onClick={() => setSelectedTaxIds(prev => prev.filter(id => id !== tax.id))} className="!p-1 text-rose-400 hover:bg-rose-50">
-                      <X size={12} />
-                    </Button>
-                  </div>
-                  <span className="text-gray-900">{formatIDRVal(tax.calculated_value)}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex items-center justify-between py-4 mt-2 border-t-2 border-gray-100">
-              <span className="text-md font-bold text-gray-900 uppercase ">Total Tagihan</span>
-              <span className="text-2xl font-bold text-blue-600">{formatIDRVal(total)}</span>
-            </div>
+            <DocumentSummary
+              subtotal={subtotal}
+              discountType={discountType}
+              setDiscountType={setDiscountType}
+              discountValue={discountValue}
+              setDiscountValue={setDiscountValue}
+              discountAmount={discountAmount}
+              availableTaxes={availableTaxes}
+              selectedTaxIds={selectedTaxIds}
+              setSelectedTaxIds={setSelectedTaxIds}
+              selectedTaxesList={selectedTaxesList as CalculatedTax[]}
+              total={total}
+              totalLabel="Total Tagihan"
+            />
 
             <Button
               onClick={handleSave}
@@ -1074,13 +824,6 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
           </Card>
         </div>
       </div>
-
-      <Toast
-        isOpen={toast.isOpen}
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
-      />
 
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -1098,22 +841,9 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
         clientCompanies={clientCompanies}
         categories={clientCategories}
         companyId={company.id}
-        onQuickAddCompany={handleQuickAddCo}
-        onQuickAddCategory={handleQuickAddCoCat}
       />
 
-      <ProductFormModal
-        isOpen={isProductModalOpen}
-        onClose={() => setIsProductModalOpen(false)}
-        onSave={handleSaveProduct}
-        form={productForm}
-        setForm={setProductForm}
-        isProcessing={isProcessingQuick}
-        categories={categories}
-        units={units}
-        onQuickAddCategory={handleQuickAddProdCat}
-        onQuickAddUnit={handleQuickAddUnit}
-      />
+
     </div>
   );
 };

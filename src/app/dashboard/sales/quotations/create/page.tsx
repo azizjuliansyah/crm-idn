@@ -1,12 +1,11 @@
 'use client';
-
 import React, { Suspense } from 'react';
-import { useDashboard } from '../../../DashboardContext';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { QuotationFormView } from '@/components/features/quotations/QuotationFormView';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 function QuotationFormWrapper() {
-  const { activeCompany } = useDashboard();
+  const { activeCompany } = useAppStore();
   const router = useRouter();
   const searchParams = useSearchParams();
 

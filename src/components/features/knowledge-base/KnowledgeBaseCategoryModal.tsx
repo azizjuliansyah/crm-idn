@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 
-import { Input, Button, Subtext, Label, Modal, ToastType } from '@/components/ui';
-
+import { Input, Button, Subtext, Label, Modal } from '@/components/ui';
+import { useAppStore } from '@/lib/store/useAppStore';
 
 import { supabase } from '@/lib/supabase';
 import { Company, KbCategory } from '@/lib/types';
@@ -17,12 +17,12 @@ interface Props {
   company: Company;
   categories: KbCategory[];
   onSuccess: () => void;
-  setToast: (toast: { isOpen: boolean; message: string; type: ToastType }) => void;
 }
 
 export const KnowledgeBaseCategoryModal: React.FC<Props> = ({
-  isOpen, onClose, company, categories, onSuccess, setToast
+  isOpen, onClose, company, categories, onSuccess
 }) => {
+  const { showToast } = useAppStore();
   const [name, setName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean, id: number | null }>({ isOpen: false, id: null });
@@ -32,12 +32,13 @@ export const KnowledgeBaseCategoryModal: React.FC<Props> = ({
     if (!name) return;
     setIsProcessing(true);
     try {
-      await supabase.from('kb_categories').insert({ name, company_id: company.id });
+      const { error } = await supabase.from('kb_categories').insert({ name, company_id: company.id });
+      if (error) throw error;
       setName('');
       onSuccess();
-      setToast({ isOpen: true, message: 'Kategori berhasil ditambahkan!', type: 'success' });
+      showToast('Kategori berhasil ditambahkan!', 'success');
     } catch (err: any) {
-      setToast({ isOpen: true, message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -45,12 +46,13 @@ export const KnowledgeBaseCategoryModal: React.FC<Props> = ({
 
   const handleDelete = async (id: number) => {
     try {
-      await supabase.from('kb_categories').delete().eq('id', id);
+      const { error } = await supabase.from('kb_categories').delete().eq('id', id);
+      if (error) throw error;
       setConfirmDelete({ isOpen: false, id: null });
       onSuccess();
-      setToast({ isOpen: true, message: 'Kategori telah dihapus.', type: 'success' });
+      showToast('Kategori telah dihapus.', 'success');
     } catch (err: any) {
-      setToast({ isOpen: true, message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     }
   };
 

@@ -1,8 +1,10 @@
+'use client';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Lead, Pipeline, PipelineStage } from '@/lib/types';
-import { Modal, Button, ComboBox, Label, H4, Subtext, ToastType } from '@/components/ui';
+import { Lead, Pipeline } from '@/lib/types';
+import { Modal, Button, ComboBox, Label, H4, Subtext } from '@/components/ui';
 import { LayoutGrid, Layers, CheckCircle2 } from 'lucide-react';
+import { useAppStore } from '@/lib/store/useAppStore';
 
 interface ConvertLeadModalProps {
     isOpen: boolean;
@@ -11,7 +13,6 @@ interface ConvertLeadModalProps {
     companyId: number;
     userId: string;
     onSuccess: () => void;
-    setToast: (toast: { isOpen: boolean; message: string; type: ToastType }) => void;
 }
 
 export const ConvertLeadModal: React.FC<ConvertLeadModalProps> = ({
@@ -20,9 +21,9 @@ export const ConvertLeadModal: React.FC<ConvertLeadModalProps> = ({
     lead,
     companyId,
     userId,
-    onSuccess,
-    setToast
+    onSuccess
 }) => {
+    const { showToast } = useAppStore();
     const [pipelines, setPipelines] = useState<Pipeline[]>([]);
     const [selectedPipelineId, setSelectedPipelineId] = useState<string>('');
     const [selectedStageId, setSelectedStageId] = useState<string>('');
@@ -52,11 +53,7 @@ export const ConvertLeadModal: React.FC<ConvertLeadModalProps> = ({
                 }
             }
         } catch (error: any) {
-            setToast({
-                isOpen: true,
-                message: 'Gagal memuat data pipeline: ' + error.message,
-                type: 'error'
-            });
+            showToast('Gagal memuat data pipeline: ' + error.message, 'error');
         } finally {
             setIsLoading(false);
         }
@@ -75,11 +72,7 @@ export const ConvertLeadModal: React.FC<ConvertLeadModalProps> = ({
 
     const handleConvert = async () => {
         if (!selectedPipelineId || !selectedStageId) {
-            setToast({
-                isOpen: true,
-                message: 'Silakan pilih pipeline dan tahapan terlebih dahulu.',
-                type: 'error'
-            });
+            showToast('Silakan pilih pipeline dan tahapan terlebih dahulu.', 'error');
             return;
         }
 
@@ -137,22 +130,14 @@ export const ConvertLeadModal: React.FC<ConvertLeadModalProps> = ({
                 activity_type: 'status_change',
             });
 
-            // 4. Delete the lead
-            await supabase.from('leads').delete().eq('id', lead.id);
+            // 4. Update the lead status instead of deleting
+            await supabase.from('leads').update({ status: 'qualified' }).eq('id', lead.id);
 
-            setToast({
-                isOpen: true,
-                message: 'Berhasil mengonversi Lead menjadi Deal!',
-                type: 'success',
-            });
+            showToast('Berhasil mengonversi Lead menjadi Deal!', 'success');
             onSuccess();
             onClose();
         } catch (err: any) {
-            setToast({
-                isOpen: true,
-                message: 'Gagal mengonversi ke Deal: ' + err.message,
-                type: 'error',
-            });
+            showToast('Gagal mengonversi ke Deal: ' + err.message, 'error');
         } finally {
             setIsProcessing(false);
         }
@@ -207,15 +192,15 @@ export const ConvertLeadModal: React.FC<ConvertLeadModalProps> = ({
                     )}
                 </div>
 
-                <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 mt-6">
+                <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 mt-6 font-bold">
                     <div className="flex gap-3">
                         <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
                             <CheckCircle2 size={16} />
                         </div>
                         <div>
                             <Label className="text-blue-900 block mb-1">Konfirmasi Konversi</Label>
-                            <p className="text-[11px] text-blue-700 leading-relaxed font-medium">
-                                Data lead akan dihapus dan dipindahkan menjadi Deal baru. Data client juga akan otomatis dibuat jika belum terdaftar.
+                            <p className="text-[11px] text-blue-700 leading-relaxed font-bold">
+                                Data lead akan tetap tersimpan dan statusnya akan diperbarui menjadi 'Qualified'. Data client juga akan otomatis dibuat jika belum terdaftar.
                             </p>
                         </div>
                     </div>

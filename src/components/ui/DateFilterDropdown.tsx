@@ -28,6 +28,7 @@ export const DateFilterDropdown: React.FC<DateFilterDropdownProps> = ({
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+    const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
 
     const options = useMemo(() => {
         const baseOptions = [
@@ -51,7 +52,9 @@ export const DateFilterDropdown: React.FC<DateFilterDropdownProps> = ({
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
     }, []);
 
     const handleDisplayLabel = () => {
@@ -68,6 +71,14 @@ export const DateFilterDropdown: React.FC<DateFilterDropdownProps> = ({
                 type="button"
                 onClick={(e) => {
                     e.preventDefault();
+                    if (!isOpen && containerRef.current) {
+                        const rect = containerRef.current.getBoundingClientRect();
+                        setDropdownPosition({
+                            top: rect.bottom + 8,
+                            left: rect.left,
+                            width: rect.width
+                        });
+                    }
                     setIsOpen(!isOpen);
                 }}
                 className={`
@@ -83,7 +94,13 @@ export const DateFilterDropdown: React.FC<DateFilterDropdownProps> = ({
             </button>
 
             {isOpen && (
-                <div className="absolute top-[calc(100%+8px)] right-0 w-[280px] bg-white border border-gray-100 rounded-xl shadow-xl z-[100] py-3 animate-in fade-in zoom-in duration-200 origin-top-right">
+                <div 
+                    className="fixed w-[280px] bg-white border border-gray-100 rounded-xl shadow-2xl z-[9999] py-3 animate-in fade-in zoom-in duration-200 origin-top-right"
+                    style={{
+                        top: `${dropdownPosition.top}px`,
+                        left: `${Math.max(10, Math.min(dropdownPosition.left, window.innerWidth - 290))}px`, // Ensure it doesn't go off screen left or right
+                    }}
+                >
                     <div className="px-3 pb-2 border-b border-gray-50 mb-2">
                         <span className="text-[10px] font-medium text-gray-900 uppercase  ml-1">Filter Tanggal</span>
                     </div>

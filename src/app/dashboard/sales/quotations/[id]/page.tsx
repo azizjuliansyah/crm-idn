@@ -1,12 +1,11 @@
 'use client';
-
 import React from 'react';
-import { useDashboard } from '../../../DashboardContext';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { QuotationFormView } from '@/components/features/quotations/QuotationFormView';
 import { useRouter, useParams } from 'next/navigation';
 
 export default function EditQuotationPage() {
-  const { activeCompany } = useDashboard();
+  const { activeCompany } = useAppStore();
   const router = useRouter();
   const params = useParams();
   const id = params.id ? parseInt(Array.isArray(params.id) ? params.id[0] : params.id) : undefined;

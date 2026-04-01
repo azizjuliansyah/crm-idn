@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Avatar, Badge, Card, Toast, ToastType, H2, Label } from '@/components/ui';
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Badge, H2, Label } from '@/components/ui';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { supabase } from '@/lib/supabase';
 import { Company, CompanyMember, CompanyRole, Profile } from '@/lib/types';
-import { UserPlus, Trash2, Loader2, AlertTriangle, CheckCircle2, X, Plus, UserPlus2 } from 'lucide-react';
+import { Trash2, Plus, UserPlus2 } from 'lucide-react';
 
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { AdminInviteMemberModal } from './components/AdminInviteMemberModal';
@@ -17,20 +18,12 @@ interface Props {
 }
 
 export const TeamMembersView: React.FC<Props> = ({ company, members, roles, user, onUpdate }) => {
+  const { showToast } = useAppStore();
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteForm, setInviteForm] = useState({ email: '', role_id: '' });
   const [isProcessing, setIsProcessing] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
-    isOpen: false,
-    message: '',
-    type: 'success',
-  });
-
-  const showToast = (message: string, type: ToastType = 'success') => {
-    setToast({ isOpen: true, message, type });
-  };
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +38,7 @@ export const TeamMembersView: React.FC<Props> = ({ company, members, roles, user
         setIsInviteModalOpen(false);
         setInviteForm({ email: '', role_id: '' });
         onUpdate();
-        showToast('Anggota berhasil diundang ke workspace.');
+        showToast('Anggota berhasil diundang ke workspace.', 'success');
       } else {
         showToast('User dengan email tersebut belum terdaftar di platform.', 'error');
       }
@@ -65,7 +58,7 @@ export const TeamMembersView: React.FC<Props> = ({ company, members, roles, user
       setIsConfirmModalOpen(false);
       setPendingDelete(null);
       onUpdate();
-      showToast('Anggota berhasil dihapus.');
+      showToast('Anggota berhasil dihapus.', 'success');
     } catch (err: any) {
       showToast(err.message, 'error');
     } finally {
@@ -156,13 +149,6 @@ export const TeamMembersView: React.FC<Props> = ({ company, members, roles, user
         description="Hapus anggota tim ini secara permanen?"
         isProcessing={isProcessing}
         variant="horizontal"
-      />
-
-      <Toast
-        isOpen={toast.isOpen}
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

@@ -195,6 +195,8 @@ export interface Client {
   client_company?: ClientCompany;
 }
 
+export type ClientWithCompany = Client;
+
 export interface ClientCompany {
   id: number;
   company_id: number;

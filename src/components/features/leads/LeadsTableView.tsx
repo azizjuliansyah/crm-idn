@@ -1,38 +1,59 @@
-import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, Subtext, Label, Badge, Checkbox, InfiniteScrollSentinel } from '@/components/ui';
+'use client';
+
+import React from 'react';
+import { 
+  Badge, 
+  Subtext, 
+  Label,
+  Avatar, 
+  ComboBox,
+} from '@/components/ui';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { Lead } from '@/lib/types';
-import { Table as TableIcon, Trash2, ChevronUp, ChevronDown, Clock, Zap } from 'lucide-react';
+import { 
+  Table as TableIcon, 
+  Trash2, 
+  Clock, 
+  Zap,
+  Users
+} from 'lucide-react';
+import { formatIDR } from '@/lib/utils/formatters';
+import { BaseDataTable, ColumnConfig } from '@/components/shared/tables/BaseDataTable';
 
 interface Props {
   leads: Lead[];
-  // Change key type to any to support keyof Lead | 'sales_name' from parent state
   sortConfig: { key: any; direction: 'asc' | 'desc' } | null;
   onSort: (key: any) => void;
   selectedIds: number[];
-  onToggleSelect: (id: number) => void;
+  onToggleSelect: (id: string | number) => void;
   onToggleSelectAll: () => void;
   onEdit: (lead: Lead) => void;
   onDelete: (id: number) => void;
   onToggleUrgency: (id: number, current: boolean) => void;
-  formatIDR: (num?: number) => string;
-  hasUrgency?: boolean;
-  // Infinite scroll props
+  onUpdateStatus: (id: number, status: string) => void;
+  stages: any[];
   hasMore?: boolean;
   isLoadingMore?: boolean;
   onLoadMore?: () => void;
 }
 
 export const LeadsTableView: React.FC<Props> = ({
-  leads, sortConfig, onSort, selectedIds, onToggleSelect,
-  onToggleSelectAll, onEdit, onDelete, onToggleUrgency, formatIDR, hasUrgency,
-  hasMore, isLoadingMore, onLoadMore
+  leads,
+  sortConfig,
+  onSort,
+  selectedIds,
+  onToggleSelect,
+  onToggleSelectAll,
+  onEdit,
+  onDelete,
+  onToggleUrgency,
+  onUpdateStatus,
+  stages,
+  hasMore,
+  isLoadingMore,
+  onLoadMore
 }) => {
-  const SortIndicator = ({ column }: { column: string }) => {
-    if (sortConfig?.key !== column) return <ChevronUp size={12} className="text-gray-200 opacity-0 group-hover:opacity-100 transition-opacity ml-1" />;
-    return sortConfig.direction === 'asc' ? <ChevronUp size={12} className="text-blue-500 ml-1" /> : <ChevronDown size={12} className="text-blue-500 ml-1" />;
-  };
-
-  const getStatusVariant = (status: string) => {
+  const getStatusVariant = (status: string): 'info' | 'success' | 'danger' | 'warning' | 'primary' | 'neutral' | 'sky' | 'indigo' | 'amber' | 'emerald' | 'rose' => {
     switch (status.toLowerCase()) {
       case 'pending': return 'info';
       case 'qualified': return 'success';
@@ -42,107 +63,150 @@ export const LeadsTableView: React.FC<Props> = ({
     }
   };
 
+  const columns: ColumnConfig<Lead>[] = [
+    {
+      header: 'ID',
+      key: 'id',
+      sortable: true,
+      className: 'text-gray-500 font-mono w-20',
+      render: (lead) => (
+        <span 
+          className="cursor-pointer hover:text-blue-600 transition-colors hover:underline"
+          onClick={() => onEdit(lead)}
+        >
+          #{String(lead.id).padStart(4, '0')}
+        </span>
+      )
+    },
+    {
+      header: 'Tanggal Input',
+      key: 'input_date',
+      sortable: true,
+      render: (lead) => (
+        <div className="flex items-center gap-2 text-gray-400">
+          <Clock size={12} strokeWidth={2.5} />
+          <Label className="text-[11px]">
+            {lead.input_date ? new Date(lead.input_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+          </Label>
+        </div>
+      )
+    },
+    {
+      header: 'Lead',
+      key: 'name',
+      sortable: true,
+      render: (lead) => (
+        <div>
+          <div className="flex items-center cursor-pointer transition-colors hover:underline gap-1"  onClick={() => onEdit(lead)}>
+            {lead.salutation && <span className="text-blue-500/70 font-medium">{lead.salutation}</span>}
+            <span 
+              className={` ${lead.is_urgent ? 'font-bold text-gray-900' : 'text-gray-700'}`}
+            >
+              {lead.name}
+            </span>
+          </div>
+          <Subtext className="text-[10px] !text-gray-400 mt-0.5 uppercase tracking-wider font-medium">
+            {lead.client_company?.name || 'Perorangan'}
+          </Subtext>
+        </div>
+      )
+    },
+    {
+      header: 'Nilai (Est)',
+      key: 'expected_value',
+      sortable: true,
+      render: (lead) => (
+        <span className="text-gray-600 font-semibold">{formatIDR(lead.expected_value)}</span>
+      )
+    },
+    {
+      header: 'PIC',
+      key: 'sales_name',
+      sortable: true,
+      render: (lead) => (
+        <div className="flex items-center gap-2">
+          <Avatar 
+            name={lead.sales_profile?.full_name} 
+            src={lead.sales_profile?.avatar_url} 
+            size="sm" 
+            className="bg-blue-50 text-blue-600 border border-blue-100" 
+          />
+          <Label className="text-gray-700 font-medium">
+            {lead.sales_profile?.full_name?.split(' ')[0] || '-'}
+          </Label>
+        </div>
+      )
+    },
+    {
+      header: 'Status',
+      key: 'status',
+      sortable: true,
+      headerClassName: 'text-center',
+      className: 'text-center',
+      render: (lead) => (
+        <ComboBox
+          value={lead.status}
+          onChange={(val) => onUpdateStatus(lead.id, val.toString())}
+          options={stages.map(s => ({
+            value: s.name.toLowerCase(),
+            label: s.name.toUpperCase()
+          }))}
+          className="w-32 mx-auto"
+          size="sm"
+          variant="badge"
+          badgeVariant={getStatusVariant(lead.status)}
+          hideSearch
+          triggerClassName="border-none shadow-none ml-auto mr-auto"
+          placeholderSize="text-[9px] font-bold"
+        />
+      )
+    },
+    {
+      header: 'Aksi',
+      key: 'actions',
+      headerClassName: 'text-center',
+      className: 'text-center',
+      render: (lead) => (
+        <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <ActionButton
+            icon={Zap}
+            variant={lead.is_urgent ? 'amber' : 'gray'}
+            onClick={(e) => { e.stopPropagation(); onToggleUrgency(lead.id, !!lead.is_urgent); }}
+            title={lead.is_urgent ? 'Hapus Prioritas' : 'Tandai Prioritas'}
+            className={lead.is_urgent ? 'animate-pulse' : ''}
+          />
+          <ActionButton
+            icon={TableIcon}
+            variant="blue"
+            onClick={() => onEdit(lead)}
+            title="Detail Lead"
+          />
+          <ActionButton
+            icon={Trash2}
+            variant="rose"
+            onClick={(e) => { e.stopPropagation(); onDelete(lead.id); }}
+            title="Hapus Lead"
+          />
+        </div>
+      )
+    }
+  ];
+
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm flex flex-col h-full relative">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableCell isHeader className="w-10 text-center">
-              <Checkbox
-                checked={leads.length > 0 && selectedIds.length === leads.length}
-                onChange={onToggleSelectAll}
-                variant="blue"
-              />
-            </TableCell>
-            <TableCell isHeader className="cursor-pointer" onClick={() => onSort('id')}>
-              <div className="flex items-center gap-1">ID <SortIndicator column="id" /></div>
-            </TableCell>
-            <TableCell isHeader className="cursor-pointer" onClick={() => onSort('input_date')}>
-              <div className="flex items-center gap-1">Tanggal Input <SortIndicator column="input_date" /></div>
-            </TableCell>
-            <TableCell isHeader className="cursor-pointer" onClick={() => onSort('name')}>
-              <div className="flex items-center gap-1">Lead <SortIndicator column="name" /></div>
-            </TableCell>
-            <TableCell isHeader>Nilai (Est)</TableCell>
-            <TableCell isHeader className="cursor-pointer" onClick={() => onSort('sales_name')}>
-              <div className="flex items-center gap-1">PIC <SortIndicator column="sales_name" /></div>
-            </TableCell>
-            <TableCell isHeader className="cursor-pointer text-center" onClick={() => onSort('status')}>
-              <div className="flex items-center justify-center gap-1">Status <SortIndicator column="status" /></div>
-            </TableCell>
-            <TableCell isHeader className="text-center">Aksi</TableCell>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {leads.length === 0 && !isLoadingMore ? (
-            <TableEmpty colSpan={8} message="Tidak ada lead yang ditemukan" />
-          ) : (
-            <>
-              {leads.map(lead => (
-                <TableRow key={lead.id} className={lead.is_urgent ? '!border-l-3 !border-l-amber-400 !bg-amber-50 even:!bg-amber-100/60 hover:!bg-amber-100/60 transition-colors' : ''}>
-                  <TableCell className="text-center">
-                    <Checkbox
-                      checked={selectedIds.includes(lead.id)}
-                      onChange={() => onToggleSelect(lead.id)}
-                      variant="blue"
-                    />
-                  </TableCell>
-                  <TableCell className="text-gray-500 font-mono">#{String(lead.id).padStart(4, '0')}</TableCell>
-                  <TableCell className="py-5">
-                    <div className="flex items-center gap-2 text-gray-400">
-                      <Clock size={12} strokeWidth={2.5} />
-                      <Label className="text-[11px] ">{lead.input_date ? new Date(lead.input_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}</Label>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {lead.salutation && <span className="!text-blue-400 mr-1">{lead.salutation}</span>}
-                    <span className={lead.is_urgent ? 'font-bold' : ''}>{lead.name}</span>
-                    <Subtext className="text-[10px] !text-gray-400 mt-1 uppercase ">{lead.client_company?.name || 'Perorangan'}</Subtext>
-                  </TableCell>
-                  <TableCell className=" text-gray-600 font-medium">{formatIDR(lead.expected_value)}</TableCell>
-                  <TableCell className="py-4 w-[150px]">
-                    <Label className="text-gray-700">
-                      {lead.sales_profile?.full_name?.split(' ')[0] || '-'}
-                    </Label>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant={getStatusVariant(lead.status)}>{lead.status}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-center gap-2">
-                      <ActionButton
-                        icon={Zap}
-                        variant={lead.is_urgent ? 'amber' : 'gray'}
-                        onClick={(e) => { e.stopPropagation(); onToggleUrgency(lead.id, !!lead.is_urgent); }}
-                        title={lead.is_urgent ? 'Hapus Urgensi' : 'Tandai Urgent'}
-                        className={lead.is_urgent ? 'animate-pulse' : ''}
-                      />
-                      <ActionButton
-                        icon={TableIcon}
-                        variant="blue"
-                        onClick={() => onEdit(lead)}
-                        title="Detail Lead"
-                      />
-                      <ActionButton
-                        icon={Trash2}
-                        variant="rose"
-                        onClick={(e) => { e.stopPropagation(); onDelete(lead.id); }}
-                        title="Hapus Lead"
-                      />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-              <InfiniteScrollSentinel
-                onIntersect={() => onLoadMore?.()}
-                enabled={!!hasMore}
-                colSpan={8}
-                isLoading={isLoadingMore}
-              />
-            </>
-          )}
-        </TableBody>
-      </Table>
-    </div>
+    <BaseDataTable
+      data={leads}
+      columns={columns}
+      sortConfig={sortConfig}
+      onSort={onSort}
+      selectedIds={selectedIds}
+      onToggleSelect={onToggleSelect}
+      onToggleSelectAll={onToggleSelectAll}
+      hasMore={hasMore}
+      isLoadingMore={isLoadingMore}
+      onLoadMore={onLoadMore}
+      emptyMessage="Tidak ada lead yang ditemukan"
+      emptyIcon={<Users size={48} className="mx-auto opacity-10 text-gray-400" />}
+      rowClassName={(lead) => lead.is_urgent ? '!border-l-4 !border-l-amber-400 !bg-amber-50/50' : ''}
+    />
   );
 };

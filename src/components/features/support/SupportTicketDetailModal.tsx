@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Input, Textarea, Button, H2, H3, Subtext, Label, Modal, Badge, Timeline, TimelineItem, TimelineIcon, TimelineContent, ComboBox, ToastType, SectionHeader } from '@/components/ui';
+import { Input, Textarea, Button, H2, Subtext, Label, Modal, Badge, Timeline, TimelineItem, TimelineIcon, TimelineContent, ComboBox, SectionHeader } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { SupportTicket, Profile, Company, CompanyMember, SupportStage, Client, LogActivity, TicketTopic, ClientCompany, ClientCompanyCategory } from '@/lib/types';
 import {
   ChevronLeft, Headset, Trash2, Loader2, Save, X,
   ArrowUp, MessageSquare, RefreshCw, Layers,
-  Clock, ShieldAlert, Check
+  Clock, Check
 } from 'lucide-react';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ClientFormModal } from '@/components/features/clients/components/ClientFormModal';
+import { useAppStore } from '@/lib/store/useAppStore';
 
 interface Props {
   isOpen: boolean;
@@ -22,12 +23,12 @@ interface Props {
   topics: TicketTopic[];
   onUpdate: () => void;
   onDelete: (id: number) => void;
-  setToast: (toast: { isOpen: boolean; message: string; type: ToastType }) => void;
 }
 
 export const SupportTicketDetailModal: React.FC<Props> = ({
-  isOpen, onClose, ticket, company, user, members, stages, clients, topics, onUpdate, onDelete, setToast
+  isOpen, onClose, ticket, company, user, members, stages, clients, topics, onUpdate, onDelete
 }) => {
+  const { showToast } = useAppStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [activities, setActivities] = useState<LogActivity[]>([]);
   const [loadingActivities, setLoadingActivities] = useState(false);
@@ -97,11 +98,11 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
       });
 
       setForm(prev => ({ ...prev, status: newStatus.toLowerCase() }));
-      setToast({ isOpen: true, message: `Status diubah ke ${newStatus.toUpperCase()}`, type: 'success' });
+      showToast(`Status diubah ke ${newStatus.toUpperCase()}`, 'success');
       onUpdate();
       await fetchActivities();
     } catch (err: any) {
-      setToast({ isOpen: true, message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -119,10 +120,10 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
       });
       if (error) throw error;
       setNewComment('');
-      setToast({ isOpen: true, message: 'Komentar berhasil ditambahkan!', type: 'success' });
+      showToast('Komentar berhasil ditambahkan!', 'success');
       await fetchActivities();
     } catch (err: any) {
-      setToast({ isOpen: true, message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -141,11 +142,12 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
         status: form.status,
         type: form.type
       }).eq('id', ticket.id);
-      setToast({ isOpen: true, message: 'Ticket berhasil diperbarui!', type: 'success' });
+      if (error) throw error;
+      showToast('Ticket berhasil diperbarui!', 'success');
       onUpdate();
       onClose();
     } catch (err: any) {
-      setToast({ isOpen: true, message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -160,7 +162,7 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
         .insert({
           ...f,
           company_id: company.id,
-          whatsapp: f.whatsapp ? `+62${f.whatsapp.replace(/\\D/g, '')}` : null
+          whatsapp: f.whatsapp ? `+62${f.whatsapp.replace(/\D/g, '')}` : null
         })
         .select()
         .single();
@@ -169,10 +171,9 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
       setIsAddingClient(false);
       setNewClientForm({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
       onUpdate();
-      setToast({ isOpen: true, message: 'Client baru berhasil ditambahkan!', type: 'success' });
-      onUpdate();
+      showToast('Client baru berhasil ditambahkan!', 'success');
     } catch (err: any) {
-      setToast({ isOpen: true, message: "Gagal menambah client: " + err.message, type: 'error' });
+      showToast("Gagal menambah client: " + err.message, 'error');
     } finally {
       setIsProcessingQuick(false);
     }
@@ -206,9 +207,9 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
       setForm({ ...form, topic_id: data.id });
       setNewTopicName('');
       setIsAddingTopic(false);
-      setToast({ isOpen: true, message: 'Topik baru berhasil ditambahkan!', type: 'success' });
+      showToast('Topik baru berhasil ditambahkan!', 'success');
     } catch (err: any) {
-      setToast({ isOpen: true, message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     }
   };
 
@@ -447,8 +448,6 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
         clientCompanies={clientCompanies}
         categories={categories}
         companyId={company.id}
-        onQuickAddCompany={handleQuickAddCompany}
-        onQuickAddCategory={handleQuickAddCategory}
       />
     </Modal>
   );

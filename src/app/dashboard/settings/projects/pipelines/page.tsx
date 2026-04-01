@@ -1,11 +1,11 @@
 'use client';
 
 import React from 'react';
-import { useDashboard } from '@/app/dashboard/DashboardContext';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { ProjectPipelinesSettingsView } from '@/components/features/projects/ProjectPipelinesSettingsView';
 
 export default function ProjectPipelinesPage() {
-  const { activeCompany } = useDashboard();
+  const { activeCompany } = useAppStore();
 
   if (!activeCompany) return null;
 

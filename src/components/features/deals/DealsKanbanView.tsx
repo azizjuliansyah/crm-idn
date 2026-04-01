@@ -5,6 +5,7 @@ import { Deal, Pipeline } from '@/lib/types';
 import { User as UserIcon, ChevronRight, Trash2, Target, FileText, Plus, FilePlus, Zap } from 'lucide-react';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { KanbanBoard, KanbanItem, KanbanStage } from '@/components/shared/KanbanBoard/KanbanBoard';
+import { formatIDR } from '@/lib/utils/formatters';
 
 // Extend KanbanItem
 interface KanbanDeal extends Deal, KanbanItem { }
@@ -16,7 +17,6 @@ interface Props {
   onDelete: (id: number, e: React.MouseEvent) => void;
   onCreateQuotation?: (clientId: number, dealId: number) => void;
   onEditQuotation?: (quotationId: number) => void;
-  formatIDR: (num?: number) => string;
   onReorder: (itemId: number, newStageId: string, newIndex?: number) => void;
   hasUrgency?: boolean;
 
@@ -46,7 +46,7 @@ const getStageColor = (name: string, index: number) => {
 
 export const DealsKanbanView: React.FC<Props> = ({
   pipeline, dealsByStage, onEdit, onDelete,
-  onCreateQuotation, onEditQuotation, formatIDR, onReorder, hasUrgency,
+  onCreateQuotation, onEditQuotation, onReorder, hasUrgency,
   hasMore, isLoadingMore, onLoadMore
 }) => {
   if (!pipeline) return null;

@@ -1,10 +1,10 @@
 'use client';
 
-import { useDashboard } from '@/app/dashboard/DashboardContext';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { TicketTopicSettingsView } from '@/components/features/settings/TicketTopicSettingsView';
 
 export default function TicketTopicSettingsPage() {
-  const { activeCompany } = useDashboard();
+  const { activeCompany } = useAppStore();
 
   if (!activeCompany) return null;
 

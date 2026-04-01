@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Input, Button, H2, Subtext, Label, Modal, Badge, Toast, ToastType } from '@/components/ui';
+import { Input, Button, H2, Subtext, Label, Modal, Badge } from '@/components/ui';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { supabase } from '@/lib/supabase';
 import { TaskStage, Company } from '@/lib/types';
 import {
-  Plus, Edit2, Trash2, Loader2, ArrowUp, ArrowDown, Save,
-  CheckCircle2, AlertTriangle, Target, X
+  Plus, Edit2, Trash2, Loader2, ArrowUp, ArrowDown, Save
 } from 'lucide-react';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
@@ -14,6 +14,7 @@ interface Props {
 }
 
 export const TaskSettingsView: React.FC<Props> = ({ company }) => {
+  const { showToast } = useAppStore();
   const [stages, setStages] = useState<TaskStage[]>([]);
   const [usedStatuses, setUsedStatuses] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,32 +23,28 @@ export const TaskSettingsView: React.FC<Props> = ({ company }) => {
   const [form, setForm] = useState({ id: '', name: '' });
 
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: string | null; name: string }>({ isOpen: false, id: null, name: '' });
-  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
-    isOpen: false,
-    message: '',
-    type: 'success',
-  });
-
-  const showToast = (message: string, type: ToastType = 'success') => {
-    setToast({ isOpen: true, message, type });
-  };
 
   const fetchData = useCallback(async (isInitial = false) => {
     if (!company) return;
     if (isInitial) setLoading(true);
     try {
-      const { data: stagesData } = await supabase.from('task_stages').select('*').eq('company_id', company.id).order('sort_order', { ascending: true });
-      const { data: tasksData } = await supabase.from('tasks').select('stage_id').eq('company_id', company.id);
+      const { data: stagesData, error: stagesError } = await supabase.from('task_stages').select('*').eq('company_id', company.id).order('sort_order', { ascending: true });
+      if (stagesError) throw stagesError;
+
+      const { data: tasksData, error: tasksError } = await supabase.from('tasks').select('stage_id').eq('company_id', company.id);
+      if (tasksError) throw tasksError;
 
       if (stagesData) setStages(stagesData);
       if (tasksData) {
         const distinct = Array.from(new Set(tasksData.map((t: any) => t.stage_id))) as string[];
         setUsedStatuses(distinct);
       }
+    } catch (err: any) {
+      showToast("Error fetching task pipeline: " + err.message, 'error');
     } finally {
       if (isInitial) setLoading(false);
     }
-  }, [company.id]);
+  }, [company.id, showToast]);
 
   useEffect(() => {
     fetchData(true);
@@ -68,7 +65,7 @@ export const TaskSettingsView: React.FC<Props> = ({ company }) => {
       }
       setIsModalOpen(false);
       fetchData();
-      showToast('Tahapan task telah disimpan.');
+      showToast('Tahapan task telah disimpan.', 'success');
     } catch (err: any) {
       showToast(err.message, 'error');
     } finally {
@@ -86,7 +83,13 @@ export const TaskSettingsView: React.FC<Props> = ({ company }) => {
 
     setStages(newStages);
     const updates = newStages.map((s, i) => ({ id: s.id, company_id: company.id, name: s.name, sort_order: i + 1 }));
-    await supabase.from('task_stages').upsert(updates);
+    try {
+      const { error } = await supabase.from('task_stages').upsert(updates);
+      if (error) throw error;
+    } catch (err: any) {
+      showToast("Error updating sort order: " + err.message, 'error');
+      fetchData();
+    }
   };
 
   const handleDeleteClick = (stage: TaskStage) => {
@@ -101,9 +104,13 @@ export const TaskSettingsView: React.FC<Props> = ({ company }) => {
     if (!confirmDelete.id) return;
     setIsProcessing(true);
     try {
-      await supabase.from('task_stages').delete().eq('id', confirmDelete.id);
+      const { error } = await supabase.from('task_stages').delete().eq('id', confirmDelete.id);
+      if (error) throw error;
       setConfirmDelete({ isOpen: false, id: null, name: '' });
       fetchData();
+      showToast('Tahapan task telah dihapus.', 'success');
+    } catch (err: any) {
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -223,13 +230,6 @@ export const TaskSettingsView: React.FC<Props> = ({ company }) => {
         itemName={confirmDelete.name}
         isProcessing={isProcessing}
         variant="horizontal"
-      />
-
-      <Toast
-        isOpen={toast.isOpen}
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

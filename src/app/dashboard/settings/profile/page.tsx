@@ -1,11 +1,11 @@
 'use client';
 
 import React from 'react';
-import { useDashboard } from '../../DashboardContext';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { ProfileEditView } from '@/components/features/auth/ProfileEditView';
 
 export default function ProfileSettingsPage() {
-  const { user } = useDashboard();
+  const { user } = useAppStore();
   
   if (!user) return null;
 

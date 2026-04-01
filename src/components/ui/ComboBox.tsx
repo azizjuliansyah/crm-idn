@@ -1,3 +1,4 @@
+'use client';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, ChevronDown, Plus, X, Check, Loader2 } from 'lucide-react';
 
@@ -29,6 +30,9 @@ interface ComboBoxProps {
   hasMore?: boolean;
   isLoadingMore?: boolean;
   onSearchChange?: (term: string) => void;
+  // Variant props
+  variant?: 'default' | 'badge';
+  badgeVariant?: 'primary' | 'secondary' | 'success' | 'danger' | 'warning' | 'info' | 'neutral' | 'ghost' | 'emerald' | 'rose' | 'amber' | 'sky' | 'indigo' | 'violet';
 }
 
 export const ComboBox: React.FC<ComboBoxProps> = ({
@@ -51,6 +55,8 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
   hasMore = false,
   isLoadingMore = false,
   onSearchChange,
+  variant = 'default',
+  badgeVariant = 'neutral',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -150,19 +156,36 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
           }
         }}
         className={`
-          flex items-center ${size === 'sm' ? 'gap-2 px-3 py-2' : 'gap-3 px-5 py-3.5'} bg-white border rounded-md transition-all cursor-pointer
-          ${isOpen ? 'border-blue-500 ring-4 ring-blue-50/50' : 'border-gray-200 hover:border-gray-300'}
+          flex items-center transition-all cursor-pointer
+          ${variant === 'badge' 
+            ? `px-3 py-1 text-[10px] font-medium uppercase rounded-full border shadow-sm inline-flex h-auto ${
+                badgeVariant === 'primary' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                badgeVariant === 'secondary' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                badgeVariant === 'success' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                badgeVariant === 'danger' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                badgeVariant === 'warning' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                badgeVariant === 'info' ? 'bg-sky-50 text-sky-600 border-sky-100' :
+                badgeVariant === 'emerald' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                badgeVariant === 'rose' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                badgeVariant === 'amber' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                badgeVariant === 'sky' ? 'bg-sky-50 text-sky-600 border-sky-100' :
+                badgeVariant === 'indigo' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                badgeVariant === 'violet' ? 'bg-violet-50 text-violet-600 border-violet-100' :
+                'bg-gray-50 text-gray-400 border-gray-200'
+              }`
+            : `${size === 'sm' ? 'gap-2 px-3 py-2' : 'gap-3 px-5 py-3.5'} bg-white border rounded-md ${isOpen ? 'border-blue-500 ring-4 ring-blue-50/50' : 'border-gray-200 hover:border-gray-300'}`
+          }
           ${disabled ? 'opacity-50 cursor-not-allowed grayscale' : ''}
           ${error ? 'border-rose-300 ring-rose-50/50' : ''}
           ${triggerClassName}
         `}
       >
-        {leftIcon && <div className="text-gray-300">{leftIcon}</div>}
+        {leftIcon && <div className={`${variant === 'badge' ? 'mr-1' : 'text-gray-300'}`}>{leftIcon}</div>}
 
         <div className="flex-1 overflow-hidden">
           {selectedOption ? (
             <div className="flex flex-col min-w-0">
-              <span className={`font-medium text-gray-900 truncate block normal-case ${placeholderSize}`}>{selectedOption.label}</span>
+              <span className={`font-medium truncate block leading-tight ${variant === 'badge' ? '' : 'text-gray-900 normal-case'} ${placeholderSize}`}>{selectedOption.label}</span>
               {selectedOption.sublabel && (
                 <span className="text-[10px] text-gray-400 uppercase  truncate block">{selectedOption.sublabel}</span>
               )}
@@ -173,8 +196,8 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
         </div>
 
         <ChevronDown
-          size={16}
-          className={`text-gray-300 transition-transform duration-200 ${isOpen ? 'rotate-180 text-blue-500' : ''}`}
+          size={variant === 'badge' ? 12 : 16}
+          className={`shrink-0 transition-transform duration-200 ${variant === 'badge' ? 'ml-1 opacity-70' : 'text-gray-300'} ${isOpen ? 'rotate-180 ' + (variant === 'badge' ? '' : 'text-blue-500') : ''}`}
         />
       </div>
 
@@ -220,7 +243,7 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
                   `}
                 >
                   <div className="flex flex-col min-w-0">
-                    <span className="text-sm font-semibold">{opt.label}</span>
+                    <span className="text-[10px] font-semibold">{opt.label}</span>
                     {opt.sublabel && (
                       <span className="text-[9px] uppercase  text-gray-400 truncate">{opt.sublabel}</span>
                     )}

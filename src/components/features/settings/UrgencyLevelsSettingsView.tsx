@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Input, Button, H2, Subtext, Label, Modal, Toast, ToastType } from '@/components/ui';
+import { Input, Button, H2, Subtext, Label, Modal } from '@/components/ui';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { supabase } from '@/lib/supabase';
 import { UrgencyLevel, Company } from '@/lib/types';
 import {
@@ -30,17 +31,13 @@ const COLOR_OPTIONS = [
 ];
 
 export const UrgencyLevelsSettingsView: React.FC<Props> = ({ company }) => {
+    const { showToast } = useAppStore();
     const [urgencies, setUrgencies] = useState<UrgencyLevel[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [form, setForm] = useState<Partial<UrgencyLevel>>({ name: '', color: 'gray' });
     const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; name: string }>({ isOpen: false, id: null, name: '' });
-    const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
-        isOpen: false,
-        message: '',
-        type: 'success',
-    });
     const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
 
     const fetchData = useCallback(async () => {
@@ -62,12 +59,12 @@ export const UrgencyLevelsSettingsView: React.FC<Props> = ({ company }) => {
             } else if (data) {
                 setUrgencies(data as any);
             }
-        } catch (err) {
-            console.error("Error fetching urgency levels:", err);
+        } catch (err: any) {
+            showToast("Error fetching urgency levels: " + err.message, 'error');
         } finally {
             setLoading(false);
         }
-    }, [company.id]);
+    }, [company.id, showToast]);
 
     useEffect(() => {
         fetchData();
@@ -110,14 +107,14 @@ export const UrgencyLevelsSettingsView: React.FC<Props> = ({ company }) => {
             }
 
             setIsModalOpen(false);
-            setToast({ isOpen: true, message: `Tingkat Urgensi ${form.id ? 'diperbarui' : 'dibuat'}`, type: 'success' });
+            showToast(`Tingkat Urgensi ${form.id ? 'diperbarui' : 'dibuat'}`, 'success');
             await fetchData();
             window.dispatchEvent(new Event('urgencyLevelsUpdated'));
         } catch (err: any) {
              if (err.code === '42P01') {
-                 setToast({ isOpen: true, message: 'Tabel urgency_levels belum ada, silakan jalankan migrasi database.', type: 'error' });
+                 showToast('Tabel urgency_levels belum ada, silakan jalankan migrasi database.', 'error');
              } else {
-                 setToast({ isOpen: true, message: err.message, type: 'error' });
+                 showToast(err.message, 'error');
              }
         } finally {
             setIsProcessing(false);
@@ -135,11 +132,11 @@ export const UrgencyLevelsSettingsView: React.FC<Props> = ({ company }) => {
             const { error } = await supabase.from('urgency_levels').delete().eq('id', confirmDelete.id);
             if (error) throw error;
             setConfirmDelete({ isOpen: false, id: null, name: '' });
-            setToast({ isOpen: true, message: `Urgensi ${confirmDelete.name} dihapus`, type: 'success' });
+            showToast(`Urgensi ${confirmDelete.name} dihapus`, 'success');
             await fetchData();
             window.dispatchEvent(new Event('urgencyLevelsUpdated'));
         } catch (err: any) {
-            setToast({ isOpen: true, message: err.message, type: 'error' });
+            showToast(err.message, 'error');
         } finally {
             setIsProcessing(false);
         }
@@ -330,13 +327,6 @@ export const UrgencyLevelsSettingsView: React.FC<Props> = ({ company }) => {
                 description="Hapus tingkat urgensi ini? Request yang menggunakan urgensi ini mungkin akan kehilangan labelnya."
                 isProcessing={isProcessing}
                 variant="horizontal"
-            />
-
-            <Toast
-                isOpen={toast.isOpen}
-                message={toast.message}
-                type={toast.type}
-                onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
             />
         </div>
     );

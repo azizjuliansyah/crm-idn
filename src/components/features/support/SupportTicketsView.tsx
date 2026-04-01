@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Button, H2, H3, Subtext, Modal, SearchInput, Toast, ToastType } from '@/components/ui';
+import { Button, H2, H3, Subtext, Modal, SearchInput } from '@/components/ui';
+import { useAppStore } from '@/lib/store/useAppStore';
 
 
 import { supabase } from '@/lib/supabase';
@@ -41,11 +42,7 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; name: string }>({ isOpen: false, id: null, name: '' });
-  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
-    isOpen: false,
-    message: '',
-    type: 'success',
-  });
+  const { showToast } = useAppStore();
 
   const fetchData = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -86,11 +83,11 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
     try {
       const { error } = await supabase.from('support_tickets').delete().eq('id', confirmDelete.id);
       if (error) throw error;
-      setToast({ isOpen: true, message: 'Ticket bantuan telah dihapus.', type: 'success' });
+      showToast('Ticket bantuan telah dihapus.', 'success');
       await fetchData(false);
       setConfirmDelete({ isOpen: false, id: null, name: '' });
     } catch (err: any) {
-      setToast({ isOpen: true, message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -131,9 +128,9 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
       // Network Update
       const { error } = await supabase.from('support_tickets').update({ status: newStatus.toLowerCase(), kanban_order: newOrder }).eq('id', ticketId);
       if (error) throw error;
-      setToast({ isOpen: true, message: 'Status ticket diperbarui.', type: 'success' });
+      showToast('Status ticket diperbarui.', 'success');
     } catch (err: any) {
-      setToast({ isOpen: true, message: err.message, type: 'error' });
+      showToast(err.message, 'error');
       await fetchData(false); // Rollback optimistic state
     }
   };
@@ -251,7 +248,6 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
           clients={clients}
           topics={topics}
           onSuccess={() => fetchData(false)}
-          setToast={setToast}
         />
       )}
 
@@ -268,7 +264,6 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
           topics={topics}
           onUpdate={() => fetchData(false)}
           onDelete={handleDeleteClick}
-          setToast={setToast}
         />
       )}
 
@@ -281,13 +276,6 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
         description="Apakah Anda yakin ingin menghapus data ticket bantuan ini dari sistem? Tindakan ini permanen."
         isProcessing={isProcessing}
         variant="horizontal"
-      />
-
-      <Toast
-        isOpen={toast.isOpen}
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

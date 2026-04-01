@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Input, Textarea, Button, Modal, ComboBox, Label, H4, ToastType } from '@/components/ui';
+import { Input, Textarea, Button, Modal, ComboBox, Label, H4, Subtext } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { Company, CompanyMember, SupportStage, Client, SupportTicket, TicketTopic, ClientCompany, ClientCompanyCategory } from '@/lib/types';
 import { Loader2, Save, X, Check } from 'lucide-react';
 import { ClientFormModal } from '@/components/features/clients/components/ClientFormModal';
+import { useAppStore } from '@/lib/store/useAppStore';
 
 interface Props {
   isOpen: boolean;
@@ -14,12 +15,12 @@ interface Props {
   clients: Client[];
   topics: TicketTopic[];
   onSuccess: () => void;
-  setToast: (toast: { isOpen: boolean; message: string; type: ToastType }) => void;
 }
 
 export const ComplaintAddModal: React.FC<Props> = ({
-  isOpen, onClose, company, members, stages, clients, topics, onSuccess, setToast
+  isOpen, onClose, company, members, stages, clients, topics, onSuccess
 }) => {
+  const { showToast } = useAppStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [form, setForm] = useState<Partial<SupportTicket>>({
     title: '',
@@ -68,7 +69,7 @@ export const ComplaintAddModal: React.FC<Props> = ({
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title || !form.client_id) {
-      setToast({ isOpen: true, message: "Judul keluhan dan Client wajib diisi.", type: 'error' });
+      showToast("Judul keluhan dan Client wajib diisi.", 'error');
       return;
     }
 
@@ -78,12 +79,13 @@ export const ComplaintAddModal: React.FC<Props> = ({
         ...form,
         company_id: company.id
       });
+      if (error) throw error;
       onSuccess();
       onClose();
-      setToast({ isOpen: true, message: 'Keluhan baru telah didaftarkan.', type: 'success' });
+      showToast('Keluhan baru telah didaftarkan.', 'success');
       setForm({ title: '', description: '', client_id: null, topic_id: null, assigned_id: members[0]?.user_id || '', status: stages[0]?.name.toLowerCase() || 'open', priority: 'high', type: 'complaint' });
     } catch (err: any) {
-      setToast({ isOpen: true, message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -98,7 +100,7 @@ export const ComplaintAddModal: React.FC<Props> = ({
         .insert({
           ...f,
           company_id: company.id,
-          whatsapp: f.whatsapp ? `+62${f.whatsapp.replace(/\\D/g, '')}` : null
+          whatsapp: f.whatsapp ? `+62${f.whatsapp.replace(/\D/g, '')}` : null
         })
         .select()
         .single();
@@ -106,10 +108,10 @@ export const ComplaintAddModal: React.FC<Props> = ({
       setForm((prev: any) => ({ ...prev, client_id: data.id }));
       setIsAddingClient(false);
       setNewClientForm({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
-      setToast({ isOpen: true, message: 'Client baru berhasil ditambahkan!', type: 'success' });
+      showToast('Client baru berhasil ditambahkan!', 'success');
       onSuccess(); // Refresh clients in parent
     } catch (err: any) {
-      setToast({ isOpen: true, message: "Gagal menambah client: " + err.message, type: 'error' });
+      showToast("Gagal menambah client: " + err.message, 'error');
     } finally {
       setIsProcessingQuick(false);
     }
@@ -143,9 +145,9 @@ export const ComplaintAddModal: React.FC<Props> = ({
       setForm({ ...form, topic_id: data.id });
       setNewTopicName('');
       setIsAddingTopic(false);
-      setToast({ isOpen: true, message: 'Topik baru berhasil ditambahkan!', type: 'success' });
+      showToast('Topik baru berhasil ditambahkan!', 'success');
     } catch (err: any) {
-      setToast({ isOpen: true, message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     }
   };
 
@@ -208,8 +210,6 @@ export const ComplaintAddModal: React.FC<Props> = ({
             onAddNew={() => setIsAddingClient(true)}
             addNewLabel="Tambah Client Baru"
           />
-
-
 
           <ComboBox
             label="PIC Penanganan"
@@ -303,8 +303,6 @@ export const ComplaintAddModal: React.FC<Props> = ({
         clientCompanies={clientCompanies}
         categories={categories}
         companyId={company.id}
-        onQuickAddCompany={handleQuickAddCompany}
-        onQuickAddCategory={handleQuickAddCategory}
       />
     </Modal>
   );

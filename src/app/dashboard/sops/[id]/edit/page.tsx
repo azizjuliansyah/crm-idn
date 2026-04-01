@@ -1,14 +1,13 @@
 'use client';
 
 import React from 'react';
-import { useDashboard } from '@/app/dashboard/DashboardContext';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { SopFormView } from '@/components/features/sop/SopFormView';
-
 import { useParams } from 'next/navigation';
 
 export default function EditSopPage() {
   const params = useParams();
-  const { activeCompany: company } = useDashboard();
+  const { activeCompany: company } = useAppStore();
   const id = params?.id ? parseInt(params.id as string) : NaN;
 
   if (!company || isNaN(id)) return null;

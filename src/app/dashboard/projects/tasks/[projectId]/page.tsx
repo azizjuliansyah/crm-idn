@@ -1,12 +1,12 @@
 'use client';
 
 import React from 'react';
-import { useDashboard } from '@/app/dashboard/DashboardContext';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { TasksView } from '@/components/features/tasks/TasksView';
 import { useParams } from 'next/navigation';
 
 export default function ProjectTasksPage() {
-  const { user, activeCompany, activeCompanyMembers } = useDashboard();
+  const { user, activeCompany, activeCompanyMembers } = useAppStore();
   const params = useParams();
   const projectId = params.projectId ? parseInt(params.projectId as string) : 0;
 

@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Button, Table, TableHeader, TableBody, TableRow, TableCell, H1, Subtext, Label, Toast, ToastType } from '@/components/ui';
-
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, H1, Subtext, Label } from '@/components/ui';
+import { useAppStore } from '@/lib/store/useAppStore';
 
 import { supabase } from '@/lib/supabase';
 import { Company, Sop, SopStep } from '@/lib/types';
@@ -87,14 +87,10 @@ const FlowShape: React.FC<{
 
 export const SopDetailView: React.FC<Props> = ({ company, sopId }) => {
   const router = useRouter();
+  const { showToast } = useAppStore();
   const [sop, setSop] = useState<Sop | null>(null);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
-    isOpen: false,
-    message: '',
-    type: 'success',
-  });
 
   const fetchSop = useCallback(async () => {
     setLoading(true);
@@ -105,6 +101,8 @@ export const SopDetailView: React.FC<Props> = ({ company, sopId }) => {
         .eq('id', sopId)
         .single();
 
+      if (error) throw error;
+
       if (data) {
         const sortedSteps = (data.sop_steps || [])
           .sort((a: any, b: any) => a.sort_order - b.sort_order);
@@ -112,10 +110,12 @@ export const SopDetailView: React.FC<Props> = ({ company, sopId }) => {
         data.sop_steps = sortedSteps;
         setSop(data as any);
       }
+    } catch (err: any) {
+      showToast(err.message, 'error');
     } finally {
       setLoading(false);
     }
-  }, [sopId]);
+  }, [sopId, showToast]);
 
   useEffect(() => {
     fetchSop();
@@ -167,7 +167,7 @@ export const SopDetailView: React.FC<Props> = ({ company, sopId }) => {
 
       router.push(`/dashboard/sops/${savedNew.id}/edit`);
     } catch (err: any) {
-      setToast({ isOpen: true, message: "Gagal membuat revisi: " + err.message, type: 'error' });
+      showToast("Gagal membuat revisi: " + err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -668,13 +668,6 @@ export const SopDetailView: React.FC<Props> = ({ company, sopId }) => {
           </div>
         </div>
       </div>
-
-      <Toast
-        isOpen={toast.isOpen}
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
-      />
     </div>
   );
 };

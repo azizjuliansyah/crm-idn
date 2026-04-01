@@ -2,15 +2,15 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 
-import { Input, Button, Table, TableHeader, TableBody, TableRow, TableCell, H2, Subtext, Label, Modal, EmptyState, Toast, ToastType } from '@/components/ui';
+import { Input, Button, Table, TableHeader, TableBody, TableRow, TableCell, H2, Subtext, Label, Modal } from '@/components/ui';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
-
+import { useAppStore } from '@/lib/store/useAppStore';
 
 import { supabase } from '@/lib/supabase';
 import { Company, TicketTopic } from '@/lib/types';
 import {
-  Plus, Edit2, Trash2, Loader2, Ticket, Save
+  Plus, Edit2, Trash2, Loader2, Ticket
 } from 'lucide-react';
 
 interface Props {
@@ -18,6 +18,7 @@ interface Props {
 }
 
 export const TicketTopicSettingsView: React.FC<Props> = ({ company }) => {
+  const { showToast } = useAppStore();
   const [topics, setTopics] = useState<TicketTopic[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -25,29 +26,23 @@ export const TicketTopicSettingsView: React.FC<Props> = ({ company }) => {
   const [form, setForm] = useState<Partial<TicketTopic>>({ name: '', description: '' });
 
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; name: string }>({ isOpen: false, id: null, name: '' });
-  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
-    isOpen: false,
-    message: '',
-    type: 'success',
-  });
-
-  const showToast = (message: string, type: ToastType = 'success') => {
-    setToast({ isOpen: true, message, type });
-  };
 
   const fetchData = useCallback(async (isInitial = false) => {
     if (isInitial) setLoading(true);
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('ticket_topics')
         .select('*')
         .eq('company_id', company.id)
         .order('id');
+      if (error) throw error;
       if (data) setTopics(data);
+    } catch (err: any) {
+      showToast("Error fetching ticket topics: " + err.message, 'error');
     } finally {
       if (isInitial) setLoading(false);
     }
-  }, [company.id]);
+  }, [company.id, showToast]);
 
   useEffect(() => {
     fetchData(true);
@@ -59,20 +54,22 @@ export const TicketTopicSettingsView: React.FC<Props> = ({ company }) => {
     setIsProcessing(true);
     try {
       if (form.id) {
-        await supabase.from('ticket_topics').update({
+        const { error } = await supabase.from('ticket_topics').update({
           name: form.name,
           description: form.description
         }).eq('id', form.id);
+        if (error) throw error;
       } else {
-        await supabase.from('ticket_topics').insert({
+        const { error } = await supabase.from('ticket_topics').insert({
           name: form.name,
           description: form.description,
           company_id: company.id
         });
+        if (error) throw error;
       }
       setIsModalOpen(false);
       fetchData();
-      showToast('Topik tiket berhasil disimpan.');
+      showToast('Topik tiket berhasil disimpan.', 'success');
     } catch (err: any) {
       showToast(err.message, 'error');
     } finally {
@@ -92,7 +89,7 @@ export const TicketTopicSettingsView: React.FC<Props> = ({ company }) => {
       if (error) throw error;
       setConfirmDelete({ isOpen: false, id: null, name: '' });
       fetchData();
-      showToast('Topik tiket berhasil dihapus.');
+      showToast('Topik tiket berhasil dihapus.', 'success');
     } catch (err: any) {
       showToast(err.message, 'error');
     } finally {
@@ -110,7 +107,7 @@ export const TicketTopicSettingsView: React.FC<Props> = ({ company }) => {
           <Subtext className="text-[10px] uppercase font-semibold text-gray-400">Kelola kategori topik bantuan untuk mempermudah klasifikasi tiket support.</Subtext>
         </div>
         <Button
-          onClick={() => { setForm({ name: '' }); setIsModalOpen(true); }}
+          onClick={() => { setForm({ name: '', description: '' }); setIsModalOpen(true); }}
           leftIcon={<Plus size={14} strokeWidth={3} />}
           variant='primary'
           size='sm'
@@ -219,13 +216,6 @@ export const TicketTopicSettingsView: React.FC<Props> = ({ company }) => {
         description="Semua tiket terkait mungkin akan kehilangan referensi topiknya."
         isProcessing={isProcessing}
         variant="horizontal"
-      />
-
-      <Toast
-        isOpen={toast.isOpen}
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

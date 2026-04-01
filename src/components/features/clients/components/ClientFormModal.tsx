@@ -1,7 +1,10 @@
+'use client';
 import React, { useState, useMemo } from 'react';
 import { Input, Button, Subtext, Label, Modal, ComboBox } from '@/components/ui';
 import { Loader2, Check, Save, Tags, MapPin, X } from 'lucide-react';
 import { Client, ClientCompany, ClientCompanyCategory } from '@/lib/types';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
 
 interface ClientFormModalProps {
   isOpen: boolean;
@@ -14,9 +17,6 @@ interface ClientFormModalProps {
   clientCompanies: ClientCompany[];
   categories: ClientCompanyCategory[];
   companyId: number;
-
-  onQuickAddCompany: (newCo: any) => Promise<any>;
-  onQuickAddCategory: (newCatName: string) => Promise<any>;
 }
 
 export const ClientFormModal: React.FC<ClientFormModalProps> = ({
@@ -28,10 +28,9 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
   isProcessing,
   clientCompanies,
   categories,
-  companyId,
-  onQuickAddCompany,
-  onQuickAddCategory
+  companyId
 }) => {
+  const queryClient = useQueryClient();
   const [isAddingCo, setIsAddingCo] = useState(false);
   const [newCo, setNewCo] = useState({ name: '', category_id: '', address: '' });
   const [coProcessing, setCoProcessing] = useState(false);
@@ -45,41 +44,55 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
     return clientCompanies.find(co => co.id === form.client_company_id) || null;
   }, [form.client_company_id, clientCompanies]);
 
-  const handleQuickAddCategoryInner = async () => {
+  const handleQuickAddCategory = async () => {
     if (!newCatInCoName.trim()) return;
     setCatInCoProcessing(true);
     try {
-      const newCat = await onQuickAddCategory(newCatInCoName.trim());
-      if (newCat) {
-        setNewCo(prev => ({ ...prev, category_id: String(newCat.id) }));
-        setNewCatInCoName('');
-        setIsAddingCatInCo(false);
-      }
+      const { data, error } = await supabase
+        .from('client_company_categories')
+        .insert({ name: newCatInCoName.trim(), company_id: companyId })
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ['client-company-categories', companyId] });
+      setNewCo(prev => ({ ...prev, category_id: String(data.id) }));
+      setNewCatInCoName('');
+      setIsAddingCatInCo(false);
+    } catch (err: any) {
+      console.error(err);
     } finally {
       setCatInCoProcessing(false);
     }
   };
 
-  const handleQuickAddCompanyInner = async (e: React.MouseEvent) => {
+  const handleQuickAddCompany = async (e: React.MouseEvent) => {
     e.preventDefault();
-    if (!newCo.name.trim() || !newCo.category_id || !newCo.address.trim()) {
-      // Handled by parent or just alert/toast
-      return;
-    }
+    if (!newCo.name.trim() || !newCo.category_id || !newCo.address.trim()) return;
+    
     setCoProcessing(true);
     try {
-      const addedCo = await onQuickAddCompany({
-        name: newCo.name.trim(),
-        category_id: parseInt(newCo.category_id),
-        address: newCo.address.trim(),
-        company_id: companyId
-      });
-      if (addedCo) {
-        setForm(prev => ({ ...prev, client_company_id: addedCo.id }));
-        setIsAddingCo(false);
-        setNewCo({ name: '', category_id: '', address: '' });
-        setIsAddingCatInCo(false);
-      }
+      const { data, error } = await supabase
+        .from('client_companies')
+        .insert({
+          name: newCo.name.trim(),
+          category_id: parseInt(newCo.category_id),
+          address: newCo.address.trim(),
+          company_id: companyId
+        })
+        .select('*')
+        .single();
+
+      if (error) throw error;
+
+      await queryClient.invalidateQueries({ queryKey: ['client-companies', companyId] });
+      setForm(prev => ({ ...prev, client_company_id: data.id }));
+      setIsAddingCo(false);
+      setNewCo({ name: '', category_id: '', address: '' });
+      setIsAddingCatInCo(false);
+    } catch (err: any) {
+      console.error(err);
     } finally {
       setCoProcessing(false);
     }
@@ -106,7 +119,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
           </Button>
           <Button
             variant="primary"
-            onClick={(e) => onSave(form)}
+            onClick={() => onSave(form)}
             disabled={isProcessing}
             className="rounded-md"
           >
@@ -130,13 +143,13 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-[10px]  text-gray-400 uppercase  ml-1">Nama Lengkap Client</Label>
-            <Input type="text" value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-lg  outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-sm" placeholder="John Doe..." />
+            <Label className="text-[10px] text-gray-400 uppercase ml-1">Nama Lengkap Client</Label>
+            <Input type="text" value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-lg outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-sm" placeholder="John Doe..." />
           </div>
 
           <div className="md:col-span-2 space-y-2">
             <div className="flex items-center justify-between px-1">
-              <Label className="text-[10px]  text-gray-400 uppercase ">Pilih Perusahaan Client</Label>
+              <Label className="text-[10px] text-gray-400 uppercase">Pilih Perusahaan Client</Label>
             </div>
 
             {isAddingCo ? (
@@ -148,12 +161,12 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <Label className="text-[9px]  text-gray-400 uppercase">Nama Perusahaan*</Label>
+                    <Label className="text-[9px] text-gray-400 uppercase">Nama Perusahaan*</Label>
                     <Input
                       type="text"
                       value={newCo.name}
                       onChange={e => setNewCo({ ...newCo, name: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-white border border-indigo-100 rounded-lg  text-xs outline-none"
+                      className="w-full px-4 py-2.5 bg-white border border-indigo-100 rounded-lg text-xs outline-none"
                       placeholder="PT Contoh Jaya"
                     />
                   </div>
@@ -174,7 +187,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                             type="button"
                             variant="success"
                             size="sm"
-                            onClick={handleQuickAddCategoryInner}
+                            onClick={handleQuickAddCategory}
                             disabled={catInCoProcessing || !newCatInCoName.trim()}
                             className="!px-3"
                           >
@@ -203,14 +216,14 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                     )}
                   </div>
                   <div className="md:col-span-2 space-y-1">
-                    <Label className="text-[9px]  text-gray-400 uppercase">Alamat Perusahaan*</Label>
-                    <Input type="text" value={newCo.address} onChange={e => setNewCo({ ...newCo, address: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-indigo-100 rounded-lg  text-xs outline-none" placeholder="Alamat..." />
+                    <Label className="text-[9px] text-gray-400 uppercase">Alamat Perusahaan*</Label>
+                    <Input type="text" value={newCo.address} onChange={e => setNewCo({ ...newCo, address: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-indigo-100 rounded-lg text-xs outline-none" placeholder="Alamat..." />
                   </div>
                 </div>
                 <Button
                   type="button"
                   disabled={coProcessing}
-                  onClick={handleQuickAddCompanyInner}
+                  onClick={handleQuickAddCompany}
                   className="w-full"
                   variant="primary"
                 >
@@ -219,7 +232,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
               </div>
             ) : (
               <ComboBox
-                value={form.client_company_id || ''}
+                value={form.client_company_id?.toString() || ''}
                 onChange={(val: string | number) => setForm({ ...form, client_company_id: val ? Number(val) : null })}
                 options={[
                   { value: '', label: '-- Personal / Tanpa Perusahaan --' },
@@ -232,33 +245,33 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
           </div>
 
           <div className="space-y-2">
-            <Label className="text-[10px]  text-gray-400 uppercase  ml-1">Email Client</Label>
-            <Input type="email" value={form.email || ''} onChange={e => setForm({ ...form, email: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-lg  outline-none shadow-sm focus:bg-white" placeholder="client@email.com" />
+            <Label className="text-[10px] text-gray-400 uppercase ml-1">Email Client</Label>
+            <Input type="email" value={form.email || ''} onChange={e => setForm({ ...form, email: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-lg outline-none shadow-sm focus:bg-white" placeholder="client@email.com" />
           </div>
           <div className="space-y-2">
-            <Label className="text-[10px]  text-gray-400 uppercase  ml-1">WhatsApp Client</Label>
-            <Input type="text" value={form.whatsapp || ''} onChange={e => setForm({ ...form, whatsapp: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-lg  outline-none shadow-sm focus:bg-white" placeholder="08..." />
+            <Label className="text-[10px] text-gray-400 uppercase ml-1">WhatsApp Client</Label>
+            <Input type="text" value={form.whatsapp || ''} onChange={e => setForm({ ...form, whatsapp: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-lg outline-none shadow-sm focus:bg-white" placeholder="08..." />
           </div>
         </div>
 
         {selectedCoDetails && !isAddingCo && (
-          <div className="p-5 bg-blue-50/50 border border-blue-100 rounded-xl flex flex-col gap-4">
+          <div className="p-5 bg-blue-50/50 border border-blue-100 rounded-xl flex flex-col gap-4 text-gray-900">
             <div className="flex items-center gap-2 text-indigo-600">
-              <Label className="text-[10px]  uppercase ">Informasi Perusahaan</Label>
+              <Label className="text-[10px] uppercase">Informasi Perusahaan</Label>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Subtext className="text-[9px]  text-gray-400 uppercase ">Kategori</Subtext>
+                <Subtext className="text-[9px] text-gray-400 uppercase">Kategori</Subtext>
                 <div className="flex items-center gap-2">
                   <Tags size={12} className="text-indigo-400" />
-                  <Subtext className="text-xs  text-gray-700 uppercase">{(selectedCoDetails as any).client_company_categories?.name || 'Umum'}</Subtext>
+                  <Subtext className="text-xs text-gray-700 uppercase">{(selectedCoDetails as any).client_company_categories?.name || 'Umum'}</Subtext>
                 </div>
               </div>
               <div className="space-y-1">
-                <Subtext className="text-[9px]  text-gray-400 uppercase ">Alamat</Subtext>
+                <Subtext className="text-[9px] text-gray-400 uppercase">Alamat</Subtext>
                 <div className="flex items-center gap-2">
                   <MapPin size={12} className="text-indigo-400 shrink-0" />
-                  <Subtext className="text-xs  text-gray-600 truncate">{selectedCoDetails.address || '-'}</Subtext>
+                  <Subtext className="text-xs text-gray-600 truncate">{selectedCoDetails.address || '-'}</Subtext>
                 </div>
               </div>
             </div>

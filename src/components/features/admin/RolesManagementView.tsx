@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Badge, Card, Toast, ToastType, H2, Label } from '@/components/ui';
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Badge, H2, Label } from '@/components/ui';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { supabase } from '@/lib/supabase';
 import { Company, CompanyRole } from '@/lib/types';
-import { Plus, Edit2, Trash2, Loader2, AlertTriangle, CheckCircle2, X, Shield } from 'lucide-react';
+import { Plus, Edit2, Trash2, Shield } from 'lucide-react';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
 
 import { AdminRoleEditorModal } from './components/AdminRoleEditorModal';
@@ -18,20 +19,12 @@ interface Props {
 }
 
 export const RolesManagementView: React.FC<Props> = ({ company, roles, onUpdate }) => {
+  const { showToast } = useAppStore();
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [roleForm, setRoleForm] = useState({ id: '', name: '', permissions: [] as string[] });
   const [isProcessing, setIsProcessing] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
-    isOpen: false,
-    message: '',
-    type: 'success',
-  });
-
-  const showToast = (message: string, type: ToastType = 'success') => {
-    setToast({ isOpen: true, message, type });
-  };
 
   const handleSaveRole = async () => {
     if (!roleForm.name) return showToast('Nama Role wajib diisi', 'error');
@@ -46,7 +39,7 @@ export const RolesManagementView: React.FC<Props> = ({ company, roles, onUpdate 
       }
       setIsRoleModalOpen(false);
       onUpdate();
-      showToast('Role berhasil disimpan.');
+      showToast('Role berhasil disimpan.', 'success');
     } catch (err: any) {
       showToast(err.message, 'error');
     } finally {
@@ -63,7 +56,7 @@ export const RolesManagementView: React.FC<Props> = ({ company, roles, onUpdate 
       setIsConfirmModalOpen(false);
       setPendingDelete(null);
       onUpdate();
-      showToast('Role berhasil dihapus.');
+      showToast('Role berhasil dihapus.', 'success');
     } catch (err: any) {
       showToast(err.message, 'error');
     } finally {
@@ -163,13 +156,6 @@ export const RolesManagementView: React.FC<Props> = ({ company, roles, onUpdate 
         description="Hapus role ini secara permanen?"
         isProcessing={isProcessing}
         variant="horizontal"
-      />
-
-      <Toast
-        isOpen={toast.isOpen}
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

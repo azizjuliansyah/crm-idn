@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Input, Textarea, Button, H2, H3, Subtext, Label, Modal, Toast, ToastType } from '@/components/ui';
-
+import { Input, Textarea, Button, H2, Subtext, Label } from '@/components/ui';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { supabase } from '@/lib/supabase';
-import { Company, CompanyMember, CompanyRole, Profile } from '@/lib/types';
-import { ShieldAlert, TrendingUp, Trash2, Edit2, Loader2, AlertTriangle, CheckCircle2, ShieldCheck, Mail, Save, X, Plus, Upload, Building2, Camera, UserPlus, Zap, FileText, FileCheck } from 'lucide-react';
+import { Company } from '@/lib/types';
+import { Loader2, Save, Building2, Camera } from 'lucide-react';
 
 // Helper for image compression
 const compressImage = (file: File, maxWidth: number = 800, quality: number = 0.8): Promise<Blob> => {
@@ -42,20 +42,12 @@ interface Props {
 }
 
 export const CompanySettingsView: React.FC<Props> = ({ company, onCompanyUpdate }) => {
+  const { showToast, fetchCompanies } = useAppStore();
   const [coName, setCoName] = useState(company.name);
   const [coAddress, setCoAddress] = useState(company.address);
   const [coLogo, setCoLogo] = useState(company.logo_url || '');
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
-    isOpen: false,
-    message: '',
-    type: 'success',
-  });
-
-  const showToast = (message: string, type: ToastType = 'success') => {
-    setToast({ isOpen: true, message, type });
-  };
 
   const handleUploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -97,6 +89,7 @@ export const CompanySettingsView: React.FC<Props> = ({ company, onCompanyUpdate 
 
       if (error) throw error;
 
+      await fetchCompanies();
       if (onCompanyUpdate) onCompanyUpdate();
       showToast('Profil perusahaan berhasil diperbarui secara permanen.');
     } catch (err: any) {
@@ -185,13 +178,6 @@ export const CompanySettingsView: React.FC<Props> = ({ company, onCompanyUpdate 
             </div>
           </div>
         </div>
-
-        <Toast
-          isOpen={toast.isOpen}
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
-        />
       </div>
     </div>
   );

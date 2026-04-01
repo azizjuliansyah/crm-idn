@@ -1,14 +1,11 @@
+'use client';
+
 import React, { useState } from 'react';
 import { Input, Button, H3, Subtext, Label, Avatar, Card } from '@/components/ui';
-
+import { useAppStore } from '@/lib/store/useAppStore';
 import { supabase } from '@/lib/supabase';
 import { Profile } from '@/lib/types';
-import { User, Mail, Phone, Camera, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
-
-interface Props {
-  user: Profile;
-  onUpdate: () => void;
-}
+import { User, Mail, Phone, Camera, Loader2 } from 'lucide-react';
 
 // Utility untuk kompresi gambar
 const compressImage = (file: File, maxWidth: number = 600, quality: number = 0.8): Promise<Blob> => {
@@ -44,10 +41,15 @@ const compressImage = (file: File, maxWidth: number = 600, quality: number = 0.8
   });
 };
 
+interface Props {
+  user: Profile;
+  onUpdate: () => void;
+}
+
 export const ProfileEditView: React.FC<Props> = ({ user, onUpdate }) => {
+  const { showToast } = useAppStore();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
 
   const [form, setForm] = useState({
     full_name: user.full_name,
@@ -59,7 +61,6 @@ export const ProfileEditView: React.FC<Props> = ({ user, onUpdate }) => {
     if (!file) return;
 
     setUploading(true);
-    setMessage(null);
     try {
       // Kompresi sebelum upload
       const compressedBlob = await compressImage(file);
@@ -81,9 +82,9 @@ export const ProfileEditView: React.FC<Props> = ({ user, onUpdate }) => {
       if (updateError) throw updateError;
 
       onUpdate();
-      setMessage({ text: "Foto profil berhasil diperbarui.", type: 'success' });
+      showToast("Foto profil berhasil diperbarui.", 'success');
     } catch (err: any) {
-      setMessage({ text: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setUploading(false);
     }
@@ -92,7 +93,6 @@ export const ProfileEditView: React.FC<Props> = ({ user, onUpdate }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setMessage(null);
 
     try {
       const { error } = await supabase
@@ -106,9 +106,9 @@ export const ProfileEditView: React.FC<Props> = ({ user, onUpdate }) => {
       if (error) throw error;
 
       onUpdate();
-      setMessage({ text: "Profil Anda berhasil diperbarui.", type: 'success' });
+      showToast("Profil Anda berhasil diperbarui.", 'success');
     } catch (err: any) {
-      setMessage({ text: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setLoading(false);
     }
@@ -149,13 +149,6 @@ export const ProfileEditView: React.FC<Props> = ({ user, onUpdate }) => {
               <Subtext className="text-xs max-w-[200px]">Format JPG atau PNG. Akan dikompresi otomatis untuk efisiensi.</Subtext>
             </div>
           </div>
-
-          {message && (
-            <div className={`p-4 rounded-lg flex items-center gap-3 ${message.type === 'success' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
-              {message.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
-              <Subtext className="text-xs  leading-none">{message.text}</Subtext>
-            </div>
-          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

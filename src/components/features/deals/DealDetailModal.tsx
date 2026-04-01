@@ -1,14 +1,18 @@
+'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Input, Textarea, Button, H3, Subtext, Label, SectionHeader, Modal, Avatar, Breadcrumb, Timeline, TimelineItem, TimelineIcon, TimelineContent, ComboBox, ToastType } from '@/components/ui';
+import { Input, Textarea, Button, H3, Subtext, Label, SectionHeader, Modal, Avatar, Breadcrumb, Timeline, TimelineItem, TimelineIcon, TimelineContent, ComboBox } from '@/components/ui';
 
 import { supabase } from '@/lib/supabase';
 import { Deal, Company, CompanyMember, Pipeline, Client, ClientCompany, ClientCompanyCategory, LogActivity, Profile } from '@/lib/types';
 import {
-  ArrowUp, MessageSquare, RefreshCw, Pencil,
-  Clock, FileText, FilePlus, UserCircle, Target, Star, Trash2, ChevronLeft, ChevronRight, X, Loader2, Save, Minus, Plus, Check as CheckIcon, Briefcase
+  ArrowUp, MessageSquare, RefreshCw,
+  Clock, FileText, FilePlus, Star, Trash2, ChevronLeft, X, Save, Minus, Plus, Briefcase
 } from 'lucide-react';
 import { ClientFormModal } from '@/components/features/clients/components/ClientFormModal';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
+import { useAppStore } from '@/lib/store/useAppStore';
+
+import { useQueryClient } from '@tanstack/react-query';
 
 interface Props {
   isOpen: boolean;
@@ -26,16 +30,14 @@ interface Props {
   onEditQuotation?: (quotationId: number) => void;
   onConvertToProject?: () => void;
   categories: ClientCompanyCategory[];
-  setClientCompanies: React.Dispatch<React.SetStateAction<ClientCompany[]>>;
-  setCategories: React.Dispatch<React.SetStateAction<ClientCompanyCategory[]>>;
-  setToast: React.Dispatch<React.SetStateAction<{ isOpen: boolean; message: string; type: ToastType }>>;
 }
 
 export const DealDetailModal: React.FC<Props> = ({
   isOpen, onClose, deal, company, user, members, pipeline,
   clients, clientCompanies, categories, onUpdate, onDelete, onCreateQuotation, onEditQuotation,
-  onConvertToProject, setClientCompanies, setCategories, setToast
+  onConvertToProject
 }) => {
+  const queryClient = useQueryClient();
   const [isProcessing, setIsProcessing] = useState(false);
   const [activities, setActivities] = useState<LogActivity[]>([]);
   const [loadingActivities, setLoadingActivities] = useState(false);
@@ -46,6 +48,7 @@ export const DealDetailModal: React.FC<Props> = ({
   const [followUpDate, setFollowUpDate] = useState<string>('');
   const [followUpNotes, setFollowUpNotes] = useState<string>('');
   const [followUpErrors, setFollowUpErrors] = useState<{ count?: string; date?: string }>({});
+  const { showToast } = useAppStore();
 
   // Quick Add Client State
   const [isAddingClient, setIsAddingClient] = useState(false);
@@ -102,11 +105,11 @@ export const DealDetailModal: React.FC<Props> = ({
       });
 
       setForm(prev => ({ ...prev, stage_id: newStageId }));
-      setToast({ isOpen: true, message: `Tahapan diubah ke ${newStageName}`, type: 'success' });
+      showToast(`Tahapan diubah ke ${newStageName}`, 'success');
       onUpdate();
       await fetchActivities();
     } catch (err: any) {
-      setToast({ isOpen: true, message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -124,10 +127,10 @@ export const DealDetailModal: React.FC<Props> = ({
       });
       if (error) throw error;
       setNewComment('');
-      setToast({ isOpen: true, message: 'Komentar berhasil ditambahkan!', type: 'success' });
+      showToast('Komentar berhasil ditambahkan!', 'success');
       await fetchActivities();
     } catch (err: any) {
-      setToast({ isOpen: true, message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -179,12 +182,12 @@ export const DealDetailModal: React.FC<Props> = ({
       });
 
       setForm(prev => ({ ...prev, ...updateData }));
-      setToast({ isOpen: true, message: 'Progres follow up berhasil dicatat!', type: 'success' });
+      showToast('Progres follow up berhasil dicatat!', 'success');
       setIsFollowUpExpanded(false);
       onUpdate();
       await fetchActivities();
     } catch (err: any) {
-      setToast({ isOpen: true, message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -221,9 +224,10 @@ export const DealDetailModal: React.FC<Props> = ({
       const { error } = await supabase.from('deals').update(dealData).eq('id', deal.id);
       if (error) throw error;
 
+      showToast('Deal berhasil diperbarui!', 'success');
       onUpdate();
     } catch (err: any) {
-      setToast({ isOpen: true, message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -245,41 +249,14 @@ export const DealDetailModal: React.FC<Props> = ({
     }
   };
 
-
-
-  const handleQuickAddCategory = async (name: string) => {
-    const { data, error } = await supabase
-      .from('client_company_categories')
-      .insert({ name: name.trim(), company_id: company.id })
-      .select()
-      .single();
-    if (error) throw error;
-    setCategories(prev => [...prev, data as any].sort((a: any, b: any) => a.name.localeCompare(b.name)));
-    return data;
-  };
-
-  const handleQuickAddCompany = async (coData: any) => {
-    const { data, error } = await supabase
-      .from('client_companies')
-      .insert({
-        company_id: company.id,
-        ...coData
-      })
-      .select()
-      .single();
-    if (error) throw error;
-    setClientCompanies(prev => [...prev, data as any].sort((a: any, b: any) => a.name.localeCompare(b.name)));
-    return data;
-  };
-
   const handleQuickAddClient = async (savedForm: Partial<Client>) => {
     if (!savedForm.name?.trim()) {
-      setToast({ isOpen: true, message: "Nama Client wajib diisi.", type: 'error' });
+      showToast("Nama Client wajib diisi.", 'error');
       return;
     }
     setIsProcessingQuick(true);
     try {
-      const fullWa = savedForm.whatsapp ? `+62${savedForm.whatsapp.replace(/\\D/g, '')}` : null;
+      const fullWa = savedForm.whatsapp ? `+62${savedForm.whatsapp.replace(/\D/g, '')}` : null;
       const { data, error } = await supabase
         .from('clients')
         .insert({
@@ -295,6 +272,8 @@ export const DealDetailModal: React.FC<Props> = ({
 
       if (error) throw error;
 
+      queryClient.invalidateQueries({ queryKey: ['clients', company.id] });
+
       const co = clientCompanies.find(cc => cc.id === data.client_company_id);
       setForm(prev => ({
         ...prev,
@@ -305,12 +284,12 @@ export const DealDetailModal: React.FC<Props> = ({
         whatsapp: data.whatsapp
       }));
 
-      onUpdate(); // Trigger refresh in parent
+      onUpdate(); 
       setIsAddingClient(false);
       setNewClient({ salutation: '', name: '', email: '', whatsapp: '', client_company_id: null });
-      setToast({ isOpen: true, message: 'Client berhasil ditambahkan!', type: 'success' });
+      showToast('Client berhasil ditambahkan!', 'success');
     } catch (err: any) {
-      setToast({ isOpen: true, message: "Gagal menambah client: " + err.message, type: 'error' });
+      showToast("Gagal menambah client: " + err.message, 'error');
     } finally {
       setIsProcessingQuick(false);
     }
@@ -320,7 +299,6 @@ export const DealDetailModal: React.FC<Props> = ({
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num).replace('Rp', 'Rp ');
   };
 
-  // Robust handling for 1:1 relation where quotations can be an object or an array
   const quotation: any = Array.isArray(deal.quotations) ? deal.quotations[0] : deal.quotations;
   const currentStageName = pipeline?.stages?.find(s => s.id === form.stage_id)?.name.toLowerCase() || '';
   const isClosingWon = currentStageName.includes('won') || currentStageName.includes('closing');
@@ -336,7 +314,6 @@ export const DealDetailModal: React.FC<Props> = ({
       noScroll
     >
       <div className="flex flex-col h-[88vh] bg-white text-[#111827] font-sans overflow-hidden rounded-md border border-gray-200">
-        {/* HEADER SECTION */}
         <header className="px-6 h-16 flex items-center justify-between border-b border-gray-100 bg-white shrink-0">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" onClick={onClose} className="!p-1.5 text-gray-400">
@@ -382,7 +359,6 @@ export const DealDetailModal: React.FC<Props> = ({
               )
             )}
 
-            {/* Convert to Project Button - Only show when closing/won */}
             {onConvertToProject && isClosingWon && (
               <Button
                 onClick={onConvertToProject}
@@ -410,29 +386,26 @@ export const DealDetailModal: React.FC<Props> = ({
           </div>
         </header>
 
-        {/* METADATA BAR */}
         <div className="px-8 py-4 flex items-center justify-between border-b border-gray-50 bg-gray-50/30 shrink-0">
           <div className="flex items-center gap-6">
             <div className="px-2 pb-1 border border-gray-200 rounded-sm">
-              <Label className="!capitalize !text-black !">DEAL ID: {deal.id}</Label>
+              <Label className="!capitalize !text-black">DEAL ID: {deal.id}</Label>
             </div>
             <div className="flex items-center gap-1.5 text-[11px] font-medium text-black">
               <Clock size={14} /> Input: {form.input_date ? new Date(form.input_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
             </div>
             {quotation && (
               <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full">
-                <Label className="text-emerald-600 !capitalize ! font-medium">{quotation.number}</Label>
+                <Label className="text-emerald-600 !capitalize font-medium">{quotation.number}</Label>
               </div>
             )}
           </div>
-          <div className="flex items-center  gap-2">
-            <Label className="!capitalize !text-black !">Expected Value:</Label>
-            <Label className="text-sm !capitalize !text-black ! font-semibold">{formatIDR(form.expected_value)}</Label>
+          <div className="flex items-center gap-2">
+            <Label className="!capitalize !text-black">Expected Value:</Label>
+            <Label className="text-sm !capitalize !text-black font-semibold">{formatIDR(form.expected_value)}</Label>
           </div>
-
         </div>
 
-        {/* STEPPER STATUS */}
         <div className="px-8 pt-6 pb-2 shrink-0">
           <div className="flex items-center h-10 w-full overflow-hidden rounded-sm border border-gray-200">
             {pipeline?.stages?.map((stage, idx) => {
@@ -460,7 +433,7 @@ export const DealDetailModal: React.FC<Props> = ({
                   key={stage.id}
                   onClick={() => handleStatusChange(stage.id)}
                   disabled={isProcessing}
-                  className={`relative flex-1 h-full flex items-center justify-center transition-all cursor-pointer font-medium text-[9px] uppercase  ${bgColor} ${borderColor} ${isLast ? '' : 'border-r'}`}
+                  className={`relative flex-1 h-full flex items-center justify-center transition-all cursor-pointer font-medium text-[9px] uppercase ${bgColor} ${borderColor} ${isLast ? '' : 'border-r'}`}
                   style={{
                     clipPath: isLast
                       ? 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 4% 50%)'
@@ -472,15 +445,11 @@ export const DealDetailModal: React.FC<Props> = ({
                   {stage.name}
                 </button>
               );
-
             })}
           </div>
         </div>
 
-        {/* MAIN CONTENT */}
         <div className="flex-1 flex overflow-hidden px-8 py-6 gap-10">
-
-          {/* COLUMN LEFT: LOG AKTIVITAS (TIMELINE) */}
           <div className="w-1/2 flex flex-col min-w-0 border-r border-gray-100 pr-10">
             <div className="bg-gray-50 border border-gray-100 rounded-xl mb-6 shrink-0 overflow-hidden transition-all">
               <div
@@ -488,8 +457,8 @@ export const DealDetailModal: React.FC<Props> = ({
                 onClick={() => setIsFollowUpExpanded(!isFollowUpExpanded)}
               >
                 <div>
-                  <H3 className="text-xs text-gray-900 mb-1 !capitalize ! font-semibold">Intensitas Follow Up</H3>
-                  <Subtext className="text-[10px] text-gray-500 font-medium !capitalize !">
+                  <H3 className="text-xs text-gray-900 mb-1 !capitalize font-semibold">Intensitas Follow Up</H3>
+                  <Subtext className="text-[10px] text-gray-500 font-medium !capitalize">
                     {form.follow_up || 0} Kali Follow Up • {form.follow_up_date ? `Next: ${new Date(form.follow_up_date).toLocaleDateString('id-ID')}` : 'Belum Atur Jadwal'}
                   </Subtext>
                 </div>
@@ -534,7 +503,7 @@ export const DealDetailModal: React.FC<Props> = ({
                         {followUpErrors.count && <p className="text-[9px] text-rose-500 font-medium ml-1">{followUpErrors.count}</p>}
                       </div>
                     </div>
-                    <div className=" flex flex-col">
+                    <div className="flex flex-col">
                       <Label className="text-[10px] text-gray-400 uppercase font-semibold mt-2">Tgl Follow Up Berikutnya *</Label>
                       <input
                         type="date"
@@ -608,7 +577,7 @@ export const DealDetailModal: React.FC<Props> = ({
                 ) : activities.length === 0 ? (
                   <div className="py-20 text-center text-gray-300">
                     <MessageSquare size={32} className="mx-auto mb-2 opacity-10" />
-                    <Subtext className="text-[10px]  uppercase ">Belum ada aktivitas tercatat</Subtext>
+                    <Subtext className="text-[10px] uppercase">Belum ada aktivitas tercatat</Subtext>
                   </div>
                 ) : (
                   <Timeline>
@@ -619,7 +588,7 @@ export const DealDetailModal: React.FC<Props> = ({
                         </TimelineIcon>
                         <TimelineContent>
                           <div className="flex items-center gap-2 mb-1">
-                            <Label className="text-xs  text-gray-900">{act.profile?.full_name}</Label>
+                            <Label className="text-xs text-gray-900">{act.profile?.full_name}</Label>
                             <Label className="text-[9px] text-gray-300">
                               {new Date(act.created_at).toLocaleDateString('id-ID', { month: 'short', day: 'numeric' })}
                             </Label>
@@ -636,7 +605,6 @@ export const DealDetailModal: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* COLUMN RIGHT: DETAIL INFORMASI */}
           <div className="w-1/2 flex flex-col min-w-0">
             <SectionHeader
               title="Detail Informasi Deal"
@@ -655,25 +623,24 @@ export const DealDetailModal: React.FC<Props> = ({
             </div>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar pr-4 space-y-6">
-
               {quotation && (
                 <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-sm space-y-3">
                   <div className="flex items-center justify-between">
                     <Label className="text-emerald-600">Penawaran Terhubung</Label>
-                    <Label className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[8px]  uppercase rounded">AKTIF</Label>
+                    <Label className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[8px] uppercase rounded">AKTIF</Label>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 bg-white rounded flex items-center justify-center text-emerald-600 shadow-sm">
                         <FileText size={16} />
                       </div>
-                      <Label className="text-sm  text-gray-900">{quotation.number}</Label>
+                      <Label className="text-sm text-gray-900">{quotation.number}</Label>
                     </div>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => onEditQuotation?.(quotation.id)}
-                      className="!p-0 text-emerald-600 h-auto "
+                      className="!p-0 text-emerald-600 h-auto"
                     >
                       LIHAT DETAIL
                     </Button>
@@ -716,7 +683,6 @@ export const DealDetailModal: React.FC<Props> = ({
                   type="number"
                   value={form.expected_value}
                   onChange={e => setForm({ ...form, expected_value: Number(e.target.value) })}
-                  leftIcon={<Label>RP</Label>}
                   placeholder="0"
                 />
                 <ComboBox
@@ -766,8 +732,6 @@ export const DealDetailModal: React.FC<Props> = ({
         clientCompanies={clientCompanies}
         categories={categories}
         companyId={company.id}
-        onQuickAddCompany={handleQuickAddCompany}
-        onQuickAddCategory={handleQuickAddCategory}
       />
     </Modal>
   );

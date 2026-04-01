@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 
-import { Input, Textarea, Button, Modal, ComboBox, ToastType } from '@/components/ui';
-
+import { Input, Textarea, Button, Modal, ComboBox } from '@/components/ui';
+import { useAppStore } from '@/lib/store/useAppStore';
 
 import { supabase } from '@/lib/supabase';
 import { Company, KbCategory, KbArticle } from '@/lib/types';
-import { Loader2, Save } from 'lucide-react';
+import { Save } from 'lucide-react';
 
 interface Props {
   isOpen: boolean;
@@ -16,12 +16,12 @@ interface Props {
   categories: KbCategory[];
   article?: KbArticle | null;
   onSuccess: () => void;
-  setToast: (toast: { isOpen: boolean; message: string; type: ToastType }) => void;
 }
 
 export const KnowledgeBaseArticleModal: React.FC<Props> = ({
-  isOpen, onClose, company, categories, article, onSuccess, setToast
+  isOpen, onClose, company, categories, article, onSuccess
 }) => {
+  const { showToast } = useAppStore();
   const [form, setForm] = useState<Partial<KbArticle>>({
     title: '', content: '', category_id: null
   });
@@ -40,23 +40,25 @@ export const KnowledgeBaseArticleModal: React.FC<Props> = ({
     setIsProcessing(true);
     try {
       if (form.id) {
-        await supabase.from('kb_articles').update({
+        const { error } = await supabase.from('kb_articles').update({
           title: form.title,
           content: form.content,
           category_id: form.category_id
         }).eq('id', form.id);
+        if (error) throw error;
       } else {
-        await supabase.from('kb_articles').insert({
+        const { error } = await supabase.from('kb_articles').insert({
           ...form,
           company_id: company.id
         });
+        if (error) throw error;
       }
       onSuccess();
       onClose();
-      setToast({ isOpen: true, message: form.id ? 'Artikel berhasil diperbarui!' : 'Artikel baru berhasil dibuat!', type: 'success' });
+      showToast(form.id ? 'Artikel berhasil diperbarui!' : 'Artikel baru berhasil dibuat!', 'success');
     } catch (err: any) {
       console.error("Error saving article:", err);
-      setToast({ isOpen: true, message: "Gagal menyimpan artikel: " + err.message, type: 'error' });
+      showToast("Gagal menyimpan artikel: " + err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -100,7 +102,6 @@ export const KnowledgeBaseArticleModal: React.FC<Props> = ({
             value={form.category_id || ''}
             onChange={(val: string | number) => setForm({ ...form, category_id: val ? Number(val) : null })}
             options={[
-              // { value: '', label: 'Pilih Kategori' },
               ...categories.map(c => ({ value: c.id.toString(), label: c.name }))
             ]}
           />

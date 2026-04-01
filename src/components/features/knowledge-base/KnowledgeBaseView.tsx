@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, SearchInput, Toast, ToastType, Badge } from '@/components/ui';
-
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, SearchInput } from '@/components/ui';
+import { useAppStore } from '@/lib/store/useAppStore';
 
 import { supabase } from '@/lib/supabase';
 import { Company, KbCategory, KbArticle, AiSetting } from '@/lib/types';
 import {
-  Plus, Search, Edit2, Trash2, Loader2, BookOpen,
-  Tags, FileText, Calendar, Eye
+  Plus, Edit2, Trash2, Loader2, BookOpen,
+  Tags, FileText, Eye
 } from 'lucide-react';
 import { KnowledgeBaseChat } from './KnowledgeBaseChat';
 import { KnowledgeBaseArticleModal } from './KnowledgeBaseArticleModal';
@@ -24,6 +24,7 @@ interface Props {
 
 export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
   const router = useRouter();
+  const { showToast } = useAppStore();
   const [articles, setArticles] = useState<KbArticle[]>([]);
   const [categories, setCategories] = useState<KbCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,11 +36,6 @@ export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean, id: number | null, title: string }>({ isOpen: false, id: null, title: '' });
-  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
-    isOpen: false,
-    message: '',
-    type: 'success',
-  });
 
   const [aiSetting, setAiSetting] = useState<AiSetting | null>(null);
 
@@ -52,13 +48,18 @@ export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
         supabase.from('ai_settings').select('*').eq('company_id', company.id).maybeSingle()
       ]);
 
+      if (artRes.error) throw artRes.error;
+      if (catRes.error) throw catRes.error;
+
       if (artRes.data) setArticles(artRes.data as any);
       if (catRes.data) setCategories(catRes.data);
       if (aiRes.data) setAiSetting(aiRes.data);
+    } catch (err: any) {
+      showToast(err.message, 'error');
     } finally {
       setLoading(false);
     }
-  }, [company.id]);
+  }, [company.id, showToast]);
 
   useEffect(() => {
     fetchData();
@@ -76,10 +77,10 @@ export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
       setConfirmDelete({ isOpen: false, id: null, title: '' });
       const { error } = await supabase.from('kb_articles').delete().eq('id', id);
       if (error) throw error;
-      setToast({ isOpen: true, message: 'Artikel telah dihapus.', type: 'success' });
+      showToast('Artikel telah dihapus.', 'success');
       fetchData();
     } catch (err: any) {
-      setToast({ isOpen: true, message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     }
   };
 
@@ -227,7 +228,6 @@ export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
             categories={categories}
             article={selectedArticle}
             onSuccess={fetchData}
-            setToast={setToast}
           />
         )}
 
@@ -238,7 +238,6 @@ export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
             company={company}
             categories={categories}
             onSuccess={fetchData}
-            setToast={setToast}
           />
         )}
 
@@ -254,12 +253,6 @@ export const KnowledgeBaseView: React.FC<Props> = ({ company }) => {
           itemName={confirmDelete.title}
           description="Apakah Anda yakin ingin menghapus artikel ini dari basis pengetahuan?"
           variant="horizontal"
-        />
-        <Toast
-          isOpen={toast.isOpen}
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
         />
       </div>
     </div>

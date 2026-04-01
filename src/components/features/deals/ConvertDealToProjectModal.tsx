@@ -1,7 +1,9 @@
+'use client';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Deal, ProjectPipeline, ProjectPipelineStage } from '@/lib/types';
-import { Modal, Button, ComboBox, Label, H4, Subtext, ToastType } from '@/components/ui';
+import { Deal, ProjectPipeline } from '@/lib/types';
+import { Modal, Button, ComboBox, Label, H4, Subtext } from '@/components/ui';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { Briefcase, Layers, CheckCircle2 } from 'lucide-react';
 
 interface ConvertDealToProjectModalProps {
@@ -11,7 +13,6 @@ interface ConvertDealToProjectModalProps {
     companyId: number;
     userId: string;
     onSuccess: () => void;
-    setToast: (toast: { isOpen: boolean; message: string; type: ToastType }) => void;
 }
 
 export const ConvertDealToProjectModal: React.FC<ConvertDealToProjectModalProps> = ({
@@ -21,13 +22,13 @@ export const ConvertDealToProjectModal: React.FC<ConvertDealToProjectModalProps>
     companyId,
     userId,
     onSuccess,
-    setToast
 }) => {
     const [pipelines, setPipelines] = useState<ProjectPipeline[]>([]);
     const [selectedPipelineId, setSelectedPipelineId] = useState<string>('');
     const [selectedStageId, setSelectedStageId] = useState<string>('');
     const [isProcessing, setIsProcessing] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const { showToast } = useAppStore();
 
     useEffect(() => {
         if (isOpen) {
@@ -52,11 +53,7 @@ export const ConvertDealToProjectModal: React.FC<ConvertDealToProjectModalProps>
                 }
             }
         } catch (error: any) {
-            setToast({
-                isOpen: true,
-                message: 'Gagal memuat data pipeline proyek: ' + error.message,
-                type: 'error'
-            });
+            showToast('Gagal memuat data pipeline proyek: ' + error.message, 'error');
         } finally {
             setIsLoading(false);
         }
@@ -75,11 +72,7 @@ export const ConvertDealToProjectModal: React.FC<ConvertDealToProjectModalProps>
 
     const handleConvert = async () => {
         if (!selectedPipelineId || !selectedStageId) {
-            setToast({
-                isOpen: true,
-                message: 'Silakan pilih pipeline proyek dan tahapan terlebih dahulu.',
-                type: 'error'
-            });
+            showToast('Silakan pilih pipeline proyek dan tahapan terlebih dahulu.', 'error');
             return;
         }
 
@@ -116,24 +109,14 @@ export const ConvertDealToProjectModal: React.FC<ConvertDealToProjectModalProps>
                 activity_type: 'system',
             });
 
-            // 4. Update deal status (optional, usually deleted in lead->deal, but deal->project might keep it as "Won")
-            // Based on user request "mirip seperti leads convert to deals", let's assume it should be deleted or marked differently.
-            // For now, let's delete to follow the exact pattern requested.
+            // 4. Update deal status
             await supabase.from('deals').delete().eq('id', deal.id);
 
-            setToast({
-                isOpen: true,
-                message: 'Berhasil mengonversi Deal menjadi Proyek!',
-                type: 'success',
-            });
+            showToast('Berhasil mengonversi Deal menjadi Proyek!', 'success');
             onSuccess();
             onClose();
         } catch (err: any) {
-            setToast({
-                isOpen: true,
-                message: 'Gagal mengonversi ke Proyek: ' + err.message,
-                type: 'error',
-            });
+            showToast('Gagal mengonversi ke Proyek: ' + err.message, 'error');
         } finally {
             setIsProcessing(false);
         }
