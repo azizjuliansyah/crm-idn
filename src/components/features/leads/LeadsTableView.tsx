@@ -21,7 +21,7 @@ import { formatIDR } from '@/lib/utils/formatters';
 import { BaseDataTable, ColumnConfig } from '@/components/shared/tables/BaseDataTable';
 
 interface Props {
-  leads: Lead[];
+  data: Lead[];
   sortConfig: { key: any; direction: 'asc' | 'desc' } | null;
   onSort: (key: any) => void;
   selectedIds: number[];
@@ -32,13 +32,18 @@ interface Props {
   onToggleUrgency: (id: number, current: boolean) => void;
   onUpdateStatus: (id: number, status: string) => void;
   stages: any[];
-  hasMore?: boolean;
-  isLoadingMore?: boolean;
-  onLoadMore?: () => void;
+  
+  // Pagination
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+  isLoading?: boolean;
 }
 
 export const LeadsTableView: React.FC<Props> = ({
-  leads,
+  data,
   sortConfig,
   onSort,
   selectedIds,
@@ -49,9 +54,12 @@ export const LeadsTableView: React.FC<Props> = ({
   onToggleUrgency,
   onUpdateStatus,
   stages,
-  hasMore,
-  isLoadingMore,
-  onLoadMore
+  page,
+  pageSize,
+  totalCount,
+  onPageChange,
+  onPageSizeChange,
+  isLoading
 }) => {
   const getStatusVariant = (status: string): 'info' | 'success' | 'danger' | 'warning' | 'primary' | 'neutral' | 'sky' | 'indigo' | 'amber' | 'emerald' | 'rose' => {
     switch (status.toLowerCase()) {
@@ -68,7 +76,7 @@ export const LeadsTableView: React.FC<Props> = ({
       header: 'ID',
       key: 'id',
       sortable: true,
-      className: 'text-gray-500 font-mono w-20',
+      className: 'w-20 font-mono text-[11px] text-gray-400 py-5 px-6',
       render: (lead) => (
         <span 
           className="cursor-pointer hover:text-blue-600 transition-colors hover:underline"
@@ -194,16 +202,21 @@ export const LeadsTableView: React.FC<Props> = ({
 
   return (
     <BaseDataTable
-      data={leads}
+      data={data}
       columns={columns}
       sortConfig={sortConfig}
       onSort={onSort}
       selectedIds={selectedIds}
       onToggleSelect={onToggleSelect}
       onToggleSelectAll={onToggleSelectAll}
-      hasMore={hasMore}
-      isLoadingMore={isLoadingMore}
-      onLoadMore={onLoadMore}
+      
+      page={page}
+      pageSize={pageSize}
+      totalCount={totalCount}
+      onPageChange={onPageChange}
+      onPageSizeChange={onPageSizeChange}
+      isLoading={isLoading}
+      
       emptyMessage="Tidak ada lead yang ditemukan"
       emptyIcon={<Users size={48} className="mx-auto opacity-10 text-gray-400" />}
       rowClassName={(lead) => lead.is_urgent ? '!border-l-4 !border-l-amber-400 !bg-amber-50/50' : ''}

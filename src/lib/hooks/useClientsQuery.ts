@@ -1,31 +1,41 @@
-import { useInfiniteQuery, useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Client, ClientCompany, ClientCompanyCategory } from '@/lib/types';
 
 interface FetchClientsParams {
   companyId: number;
   searchTerm?: string;
+  companyFilter?: string;
   sortConfig?: { key: string; direction: 'asc' | 'desc' } | null;
+  page?: number;
+  pageSize?: number;
 }
 
 export function useClientsQuery({
   companyId,
   searchTerm,
+  companyFilter,
   sortConfig,
+  page = 1,
+  pageSize = 20,
 }: FetchClientsParams) {
-  return useInfiniteQuery({
-    queryKey: ['clients-list', { companyId, searchTerm, sortConfig }],
-    queryFn: async ({ pageParam = 0 }) => {
-      const from = pageParam * 20;
-      const to = from + 19;
+  return useQuery({
+    queryKey: ['clients-list', { companyId, searchTerm, companyFilter, sortConfig, page, pageSize }],
+    queryFn: async () => {
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
 
       let query = supabase
         .from('clients')
-        .select('*', { count: 'exact' })
+        .select('*, client_company:client_companies(*)', { count: 'exact' })
         .eq('company_id', companyId);
 
       if (searchTerm) {
-        query = query.ilike('name', `%${searchTerm}%`);
+        query = query.or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,whatsapp.ilike.%${searchTerm}%`);
+      }
+
+      if (companyFilter && companyFilter !== 'all') {
+        query = query.eq('client_company_id', companyFilter);
       }
 
       if (sortConfig) {
@@ -39,12 +49,9 @@ export function useClientsQuery({
 
       return {
         data: data as Client[],
-        nextPage: data.length === 20 ? pageParam + 1 : undefined,
         totalCount: count || 0,
       };
     },
-    initialPageParam: 0,
-    getNextPageParam: (lastPage) => lastPage.nextPage,
     enabled: !!companyId,
   });
 }

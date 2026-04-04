@@ -1,6 +1,6 @@
 import React from 'react';
 import { DateFilterDropdown, ComboBox } from '@/components/ui';
-import { CompanyMember, LeadStage } from '@/lib/types';
+import { CompanyMember, LeadStage, ClientCompany } from '@/lib/types';
 
 interface LeadFilterBarProps {
   dateFilterType: string;
@@ -13,8 +13,11 @@ interface LeadFilterBarProps {
   setStatusFilter: (val: string) => void;
   assigneeFilter: string;
   setAssigneeFilter: (val: string) => void;
+  companyFilter: string;
+  setCompanyFilter: (val: string) => void;
   stages: LeadStage[];
   members: CompanyMember[];
+  clientCompanies: ClientCompany[];
 }
 
 export const LeadFilterBar: React.FC<LeadFilterBarProps> = ({
@@ -23,8 +26,10 @@ export const LeadFilterBar: React.FC<LeadFilterBarProps> = ({
   endDateFilter, setEndDateFilter,
   statusFilter, setStatusFilter,
   assigneeFilter, setAssigneeFilter,
+  companyFilter, setCompanyFilter,
   stages,
-  members
+  members,
+  clientCompanies
 }) => {
   return (
     <div className="flex items-center gap-3 shrink-0">
@@ -35,6 +40,16 @@ export const LeadFilterBar: React.FC<LeadFilterBarProps> = ({
         endDate={endDateFilter}
         onStartDateChange={setStartDateFilter}
         onEndDateChange={setEndDateFilter}
+      />
+      <ComboBox
+        value={companyFilter}
+        onChange={(val: string | number) => setCompanyFilter(val.toString())}
+        options={[
+          { value: 'all', label: 'SEMUA PERUSAHAAN' },
+          ...clientCompanies.map(c => ({ value: c.id.toString(), label: c.name.toUpperCase() }))
+        ]}
+        className="w-48"
+        placeholderSize="text-[10px] font-bold text-gray-900 uppercase "
       />
       <ComboBox
         value={statusFilter}

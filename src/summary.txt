@@ -1,0 +1,38 @@
+CRM Bulk Action Standardization Session Summary
+
+Objective:
+Standardizing CRM bulk actions by implementing multi-select state management, bulk delete, and bulk status update functionality across Projects, Support Tickets, Complaints, Knowledge Base, and Invoice Requests modules.
+
+Key Changes Implemented:
+
+1. Support Tickets
+- Hooks: Added useSupportTicketMutations with bulk methods.
+- UI: Integrated selectedIds, bulk buttons in StandardFilterBar, and selection props in TableView.
+- Modals: Integrated ConfirmBulkDeleteModal and ConfirmBulkStatusModal.
+
+2. Complaints
+- Hooks: Added useComplaintMutations with bulk methods.
+- UI: Integrated selection logic and bulk headers in ComplaintsView.
+- Table: Connected selection props to BaseDataTable.
+
+3. Knowledge Base
+- Hooks: Added useKnowledgeBaseMutations for bulk delete.
+- UI: Added selection functionality and bulk delete button to KnowledgeBaseView.
+- Fixes: Resolved linting errors for handleEditArticle and component types.
+
+4. Sales Requests (Category View)
+- UI: Standardized header layout in SalesRequestsView.tsx with bulk action zone alignment.
+
+5. Invoice Requests
+- Hooks: Added useInvoiceRequestMutations for bulk status and delete.
+- UI: Integrated multi-select and bulk header buttons in InvoiceRequestsView.
+- Modals: Connected respective bulk confirmation modals.
+
+Standards Established:
+- Parent View manages the 'selectedIds' state.
+- Bulk buttons appear in a group separated by a border in the StandardFilterBar.
+- All bulk actions use the 'horizontal' variant of confirmation modals.
+- BaseDataTable receives selection props via the TableView wrapper.
+
+Status: COMPLETED
+All requested modules now share a unified, premium bulk action interface.

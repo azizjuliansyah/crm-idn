@@ -1,70 +1,91 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input, Textarea, Button, Label, Modal, ComboBox } from '@/components/ui';
-import { Loader2, Check, Save, Package, Tags, Scale, X } from 'lucide-react';
+import { Loader2, Check, Package, Tags, Scale, X } from 'lucide-react';
 import { Product, ProductCategory, ProductUnit } from '@/lib/types';
+import { useProductMutations } from '@/lib/hooks/useProductsQuery';
 
 interface ProductFormModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (form: Partial<Product>) => Promise<void>;
-    form: Partial<Product>;
-    setForm: React.Dispatch<React.SetStateAction<Partial<Product>>>;
-    isProcessing: boolean;
-
+    product: Product | null;
+    companyId: number;
     categories: ProductCategory[];
     units: ProductUnit[];
-
-    onQuickAddCategory: (name: string) => Promise<any>;
-    onQuickAddUnit: (name: string) => Promise<any>;
+    onSuccess: () => void;
 }
 
 export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     isOpen,
     onClose,
-    onSave,
-    form,
-    setForm,
-    isProcessing,
+    product,
+    companyId,
     categories,
     units,
-    onQuickAddCategory,
-    onQuickAddUnit
+    onSuccess
 }) => {
+    const [form, setForm] = useState<Partial<Product>>({
+        name: '', 
+        category_id: null, 
+        unit_id: null, 
+        price: 0, 
+        description: ''
+    });
+
     const [isAddingCat, setIsAddingCat] = useState(false);
     const [newCatName, setNewCatName] = useState('');
-    const [catProcessing, setCatProcessing] = useState(false);
-
     const [isAddingUnit, setIsAddingUnit] = useState(false);
     const [newUnitName, setNewUnitName] = useState('');
-    const [unitProcessing, setUnitProcessing] = useState(false);
 
-    const handleQuickAddCategoryInner = async () => {
-        if (!newCatName.trim()) return;
-        setCatProcessing(true);
+    const { upsertProduct, addCategory, addUnit } = useProductMutations();
+
+    useEffect(() => {
+        if (product) {
+            setForm(product);
+        } else {
+            setForm({
+                name: '', 
+                category_id: categories[0]?.id || null, 
+                unit_id: units[0]?.id || null, 
+                price: 0, 
+                description: ''
+            });
+        }
+    }, [product, categories, units, isOpen]);
+
+    const handleSave = async () => {
+        if (!form.name || form.price === undefined) return;
         try {
-            const newCat = await onQuickAddCategory(newCatName.trim());
-            if (newCat) {
-                setForm(prev => ({ ...prev, category_id: newCat.id }));
-                setNewCatName('');
-                setIsAddingCat(false);
-            }
-        } finally {
-            setCatProcessing(false);
+            await upsertProduct.mutateAsync({
+                ...form,
+                company_id: companyId
+            } as any);
+            onSuccess();
+        } catch (err) {
+            console.error(err);
         }
     };
 
-    const handleQuickAddUnitInner = async () => {
-        if (!newUnitName.trim()) return;
-        setUnitProcessing(true);
+    const handleQuickAddCategory = async () => {
+        if (!newCatName.trim()) return;
         try {
-            const newUnit = await onQuickAddUnit(newUnitName.trim());
-            if (newUnit) {
-                setForm(prev => ({ ...prev, unit_id: newUnit.id }));
-                setNewUnitName('');
-                setIsAddingUnit(false);
-            }
-        } finally {
-            setUnitProcessing(false);
+            const data = await addCategory.mutateAsync({ name: newCatName.trim(), company_id: companyId });
+            setForm(prev => ({ ...prev, category_id: data.id }));
+            setNewCatName('');
+            setIsAddingCat(false);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const handleQuickAddUnit = async () => {
+        if (!newUnitName.trim()) return;
+        try {
+            const data = await addUnit.mutateAsync({ name: newUnitName.trim(), company_id: companyId });
+            setForm(prev => ({ ...prev, unit_id: data.id }));
+            setNewUnitName('');
+            setIsAddingUnit(false);
+        } catch (err) {
+            console.error(err);
         }
     };
 
@@ -76,12 +97,23 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 setIsAddingCat(false);
                 setIsAddingUnit(false);
             }}
-            title={form.id ? "Edit Data Produk" : "Tambah Produk Baru"}
+            title={product ? "Edit Data Produk" : "Tambah Produk Baru"}
             size="lg"
             footer={
-                <Button onClick={() => onSave(form)} disabled={isProcessing} variant='success'>
-                    {isProcessing && <Loader2 className="animate-spin" size={14} />} Simpan Produk
-                </Button>
+                <div className="flex items-center justify-end gap-3 w-full">
+                    <Button variant="ghost" onClick={onClose} disabled={upsertProduct.status === 'pending'} className="rounded-md text-[10px] uppercase font-bold tracking-wider">
+                        Batal
+                    </Button>
+                    <Button 
+                        onClick={handleSave} 
+                        isLoading={upsertProduct.status === 'pending'}
+                        disabled={upsertProduct.status === 'pending'} 
+                        variant='primary'
+                        className="rounded-md text-[10px] uppercase font-bold tracking-wider shadow-lg shadow-blue-100"
+                    >
+                        Simpan Produk
+                    </Button>
+                </div>
             }
         >
             <div className="flex flex-col gap-6 pb-4">
@@ -101,21 +133,18 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     </div>
 
                     <div className="space-y-2">
-                        <div className="flex items-center justify-between px-1">
-                            <Label className="text-[10px] text-gray-400 uppercase ">Kategori Produk</Label>
-                        </div>
+                        <Label className="text-[10px] text-gray-400 uppercase ml-1">Kategori Produk</Label>
                         {isAddingCat ? (
                             <div className="flex gap-2 animate-in slide-in-from-left-2 duration-200">
                                 <Input
                                     autoFocus
-                                    type="text"
                                     value={newCatName}
                                     onChange={e => setNewCatName(e.target.value)}
-                                    className="flex-1 px-4 py-2.5 bg-indigo-50/30 border border-indigo-100 rounded-lg text-xs outline-none"
+                                    className="flex-1 bg-indigo-50/30 border-indigo-100"
                                     placeholder="Kategori baru..."
                                 />
-                                <Button type="button" onClick={handleQuickAddCategoryInner} disabled={catProcessing || !newCatName.trim()} className="px-3 bg-indigo-600 text-white rounded-lg">
-                                    {catProcessing ? <Loader2 size={12} className="animate-spin" /> : <Check size={14} />}
+                                <Button type="button" onClick={handleQuickAddCategory} isLoading={addCategory.status === 'pending'} className="px-3" variant="success">
+                                    <Check size={14} />
                                 </Button>
                                 <Button type="button" variant="ghost" onClick={() => setIsAddingCat(false)} className="p-2 text-gray-400"><X size={14} /></Button>
                             </div>
@@ -132,21 +161,18 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     </div>
 
                     <div className="space-y-2">
-                        <div className="flex items-center justify-between px-1">
-                            <Label className="text-[10px] text-gray-400 uppercase ">Satuan Produk</Label>
-                        </div>
+                        <Label className="text-[10px] text-gray-400 uppercase ml-1">Satuan Produk</Label>
                         {isAddingUnit ? (
                             <div className="flex gap-2 animate-in slide-in-from-left-2 duration-200">
                                 <Input
                                     autoFocus
-                                    type="text"
                                     value={newUnitName}
                                     onChange={e => setNewUnitName(e.target.value)}
-                                    className="flex-1 px-4 py-2.5 bg-emerald-50/30 border border-emerald-100 rounded-lg text-xs outline-none"
+                                    className="flex-1 bg-emerald-50/30 border-emerald-100"
                                     placeholder="Satuan baru..."
                                 />
-                                <Button type="button" onClick={handleQuickAddUnitInner} disabled={unitProcessing || !newUnitName.trim()} className="px-3 bg-emerald-600 text-white rounded-lg">
-                                    {unitProcessing ? <Loader2 size={12} className="animate-spin" /> : <Check size={14} />}
+                                <Button type="button" onClick={handleQuickAddUnit} isLoading={addUnit.status === 'pending'} className="px-3" variant="success">
+                                    <Check size={14} />
                                 </Button>
                                 <Button type="button" variant="ghost" onClick={() => setIsAddingUnit(false)} className="p-2 text-gray-400"><X size={14} /></Button>
                             </div>
@@ -154,7 +180,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                             <ComboBox
                                 value={form.unit_id || ''}
                                 onChange={(val: string | number) => setForm({ ...form, unit_id: val ? Number(val) : null })}
-                                options={units.map(u => ({ value: u.id, label: u.name }))}
+                                options={units.map(u => ({ value: u.id, label: u.name.toUpperCase() }))}
                                 onAddNew={() => setIsAddingUnit(true)}
                                 addNewLabel="Tambah Satuan Baru"
                                 leftIcon={<Scale size={16} />}
@@ -181,7 +207,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         <Textarea
                             value={form.description || ''}
                             onChange={e => setForm({ ...form, description: e.target.value })}
-                            className="w-full h-32 px-5 py-4 bg-gray-50 border border-gray-100 rounded-lg outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-sm resize-none"
+                            className="w-full h-32 px-5 py-4 bg-gray-50 border border-gray-100 rounded-lg outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-sm resize-none text-xs"
                             placeholder="Berikan detail mengenai produk atau layanan ini..."
                         />
                     </div>

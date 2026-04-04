@@ -20,6 +20,11 @@ import { useKanbanReorder } from '@/lib/hooks/useKanbanReorder';
 import { formatIDR } from '@/lib/utils/formatters';
 import { useRouter } from 'next/navigation';
 import { useDealsQuery, useDealMetadata, useDealMutations } from '@/lib/hooks/useDealsQuery';
+import { Trash2, RefreshCw } from 'lucide-react';
+import { ConfirmBulkDeleteModal } from '@/components/shared/modals/ConfirmBulkDeleteModal';
+import { ConfirmBulkStatusModal } from '@/components/shared/modals/ConfirmBulkStatusModal';
+import { BulkActionGroup } from '@/components/shared/filters/BulkActionGroup';
+import { exportToExcel, ExcelColumn } from '@/lib/utils/excelExport';
 
 interface Props {
   activeCompany: Company | null;
@@ -34,9 +39,13 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean, id: number | null }>({ isOpen: false, id: null });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const { showToast } = useAppStore();
 
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [isConfirmBulkDeleteOpen, setIsConfirmBulkDeleteOpen] = useState(false);
+  const [isConfirmBulkStatusOpen, setIsConfirmBulkStatusOpen] = useState(false);
   const router = useRouter();
 
   // 1. Metadata Hooks
@@ -60,6 +69,8 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
     searchTerm, setSearchTerm,
     statusFilter, setStatusFilter,
     assigneeFilter, setAssigneeFilter,
+    companyFilter, setCompanyFilter,
+    probabilityFilter, setProbabilityFilter,
     dateFilterType, setDateFilterType,
     startDateFilter, setStartDateFilter,
     endDateFilter, setEndDateFilter,
@@ -69,11 +80,9 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
 
   // 3. Deals Query Hook
   const {
-    data,
+    data: dealsData,
     isLoading: loadingDeals,
-    isFetchingNextPage: isLoadingMore,
-    hasNextPage: hasMore,
-    fetchNextPage: loadMore,
+    isPlaceholderData: isFetchingNewPage,
     refetch: refresh
   } = useDealsQuery({
     companyId: activeCompany?.id || 0,
@@ -81,17 +90,21 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
     searchTerm,
     statusFilter,
     assigneeFilter,
+    companyFilter,
+    probabilityFilter,
     startDate: startDateFilter,
     endDate: endDateFilter,
     dateFilterType,
     followUpFilter,
-    sortConfig
+    sortConfig,
+    page,
+    pageSize
   });
 
-  const deals = data?.pages.flatMap(page => page.data) || [];
+  const deals = dealsData?.data || [];
 
   // 4. Mutations Hook
-  const { deleteDeal, updateDealStatus } = useDealMutations();
+  const { deleteDeal, updateDealStatus, bulkDeleteDeals, bulkUpdateDealsStage } = useDealMutations();
 
   // 5. Initialize Kanban Hook
   const { handleReorder } = useKanbanReorder<Deal>({
@@ -133,6 +146,65 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
       refresh();
       showToast(!current ? 'Deal ditandai sebagai urgent!' : 'Status urgent dihapus.', 'success');
     } catch (error: any) { showToast('Gagal mengubah status urgensi: ' + error.message, 'error'); }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      await bulkDeleteDeals.mutateAsync(selectedIds);
+      showToast(`${selectedIds.length} deal berhasil dihapus!`, 'success');
+      setSelectedIds([]);
+      setIsConfirmBulkDeleteOpen(false);
+    } catch (error: any) {
+      showToast('Gagal menghapus deal: ' + error.message, 'error');
+    }
+  };
+
+  const handleBulkUpdateStage = async (stageId: string | number) => {
+    try {
+      await bulkUpdateDealsStage.mutateAsync({ dealIds: selectedIds, stageId });
+      showToast(`Tahapan ${selectedIds.length} deal berhasil diperbarui!`, 'success');
+      setSelectedIds([]);
+      setIsConfirmBulkStatusOpen(false);
+    } catch (error: any) {
+      showToast('Gagal mengubah tahapan: ' + error.message, 'error');
+    }
+  };
+
+  const handleExportDeals = () => {
+    const dataToExport = selectedIds.length > 0 
+      ? deals.filter(d => selectedIds.includes(d.id)) 
+      : deals;
+
+    if (dataToExport.length === 0) {
+      showToast('Tidak ada data untuk diekspor', 'info');
+      return;
+    }
+
+    const columns: ExcelColumn[] = [
+      { header: 'ID', key: 'id', width: 10 },
+      { header: 'Nama Transaksi', key: 'name', width: 30 },
+      { header: 'Perusahaan', key: 'company_name', width: 25 },
+      { header: 'Tahapan', key: 'stage_label', width: 20 },
+      { header: 'Probabilitas', key: 'formatted_probability', width: 15 },
+      { header: 'Nilai Transaksi', key: 'formatted_value', width: 20 },
+      { header: 'Sales Assignee', key: 'sales_name', width: 20 },
+      { header: 'Tanggal Dibuat', key: 'created_at_label', width: 20 },
+    ];
+
+    const formattedData = dataToExport.map(d => ({
+      ...d,
+      company_name: d.customer_company || 'Perorangan',
+      stage_label: pipeline?.stages?.find(s => s.id === d.stage_id)?.name || d.stage_id,
+      formatted_probability: `${d.probability || 0}%`,
+      formatted_value: new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(d.expected_value || 0),
+      sales_name: d.sales_profile?.full_name || '-',
+      created_at_label: new Date(d.created_at).toLocaleDateString('id-ID', {
+        day: '2-digit', month: 'long', year: 'numeric'
+      }),
+    }));
+
+    exportToExcel(formattedData, columns, 'CRM_Deals_Report');
+    showToast('Data Transaksi berhasil diekspor ke Excel', 'success');
   };
 
   const handleCreateQuotation = (clientId: number, dealId: number) => { router.push(`/dashboard/sales/quotations/create?client_id=${clientId}&deal_id=${dealId}`); };
@@ -177,6 +249,7 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
         subtitle="Monitoring transaksi dan pipeline penjualan."
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
+        onExport={handleExportDeals}
         searchPlaceholder="Cari deal, klien..."
         viewModes={{
           current: viewMode,
@@ -191,20 +264,31 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
           onClick: () => setIsAddModalOpen(true),
           icon: <Plus size={14} strokeWidth={3} />
         }}
+        bulkActions={
+          <BulkActionGroup
+            selectedCount={selectedIds.length}
+            onUpdateStatus={() => setIsConfirmBulkStatusOpen(true)}
+            onDelete={() => setIsConfirmBulkDeleteOpen(true)}
+            updateLabel="Ubah Tahapan"
+          />
+        }
       >
         <DealFilterBar
           dateFilterType={dateFilterType} setDateFilterType={setDateFilterType}
           startDateFilter={startDateFilter} setStartDateFilter={setStartDateFilter}
           endDateFilter={endDateFilter} setEndDateFilter={setEndDateFilter}
           followUpFilter={followUpFilter} setFollowUpFilter={setFollowUpFilter}
-          statusFilter={statusFilter} setStatusFilter={setStatusFilter}
-          assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter}
+          statusFilter={statusFilter} setStatusFilter={(val) => { setStatusFilter(val); setPage(1); }}
+          assigneeFilter={assigneeFilter} setAssigneeFilter={(val) => { setAssigneeFilter(val); setPage(1); }}
+          companyFilter={companyFilter} setCompanyFilter={(val) => { setCompanyFilter(val); setPage(1); }}
+          probabilityFilter={probabilityFilter} setProbabilityFilter={(val) => { setProbabilityFilter(val); setPage(1); }}
           pipeline={pipeline}
           members={members}
+          clientCompanies={clientCompanies}
         />
       </StandardFilterBar>
 
-      <div className="h-[80vh] mb-4 overflow-hidden relative">
+      <div className="h-[75vh] mb-4 overflow-hidden relative">
         {loadingMetadata || (loadingDeals && deals.length === 0) ? (
           <div className="w-full h-full flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -213,16 +297,25 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
           <DealsKanbanView
             pipeline={pipeline} dealsByStage={dealsByStage} onEdit={setSelectedDeal} onDelete={(id, e) => handleDelete(id)}
             onReorder={onDrop} onCreateQuotation={handleCreateQuotation} onEditQuotation={handleEditQuotation}
-            hasMore={hasMore} isLoadingMore={isLoadingMore} onLoadMore={loadMore}
+            hasMore={false} isLoadingMore={false} onLoadMore={() => {}}
           />
         ) : (
           <DealsTableView
-            deals={deals} sortConfig={sortConfig} onSort={handleSort} selectedIds={selectedIds}
+            data={deals} sortConfig={sortConfig} onSort={handleSort} selectedIds={selectedIds}
             onToggleSelect={handleToggleSelect} onToggleSelectAll={handleToggleSelectAll} onEdit={setSelectedDeal}
             onDelete={handleDelete} onToggleUrgency={handleToggleUrgency} onUpdateStage={handleUpdateStage} 
             pipeline={pipeline}
-            onCreateQuotation={handleCreateQuotation} onEditQuotation={handleEditQuotation} hasMore={hasMore}
-            isLoadingMore={isLoadingMore} onLoadMore={loadMore}
+            onCreateQuotation={handleCreateQuotation} onEditQuotation={handleEditQuotation}
+            
+            page={page}
+            pageSize={pageSize}
+            totalCount={dealsData?.totalCount || 0}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+                setPageSize(size);
+                setPage(1);
+            }}
+            isLoading={loadingDeals || isFetchingNewPage}
           />
         )}
       </div>
@@ -271,7 +364,28 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
 
       <ConfirmDeleteModal
         isOpen={confirmDelete.isOpen} onClose={() => setConfirmDelete({ isOpen: false, id: null })} onConfirm={executeDelete}
-        title="Hapus Deal" itemName="Deal ini" description="Apakah Anda yakin ingin menghapus data deal ini dari sistem?" variant="horizontal"
+        title="Hapus Deal" itemName="Deal ini" description="Apakah Anda yakin ingin menghapus data deal ini dari sistem?"
+      />
+
+      <ConfirmBulkDeleteModal
+        isOpen={isConfirmBulkDeleteOpen}
+        onClose={() => setIsConfirmBulkDeleteOpen(false)}
+        onConfirm={handleBulkDelete}
+        count={selectedIds.length}
+        title="Hapus Deal Terpilih"
+        description={`Apakah Anda yakin ingin menghapus ${selectedIds.length} deal yang dipilih? Tindakan ini tidak dapat dibatalkan.`}
+        isProcessing={bulkDeleteDeals.status === 'pending'}
+      />
+
+      <ConfirmBulkStatusModal
+        isOpen={isConfirmBulkStatusOpen}
+        onClose={() => setIsConfirmBulkStatusOpen(false)}
+        onConfirm={handleBulkUpdateStage}
+        count={selectedIds.length}
+        options={pipeline?.stages?.map(s => ({ id: s.id, name: s.name })) || []}
+        title="Ubah Tahapan Deal"
+        label="Pilih Tahapan Baru"
+        isProcessing={bulkUpdateDealsStage.status === 'pending'}
       />
     </div>
   );

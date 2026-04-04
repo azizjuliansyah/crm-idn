@@ -19,7 +19,9 @@ import { ClientFormModal } from './components/ClientFormModal';
 import { useClientsQuery, useClientMetadata, useClientMutations } from '@/lib/hooks/useClientsQuery';
 import { useClientFilters } from '@/lib/hooks/useClientFilters';
 import { ClientsTableView } from './ClientsTableView';
+import { ClientFilterBar } from './ClientFilterBar';
 import { StandardFilterBar } from '@/components/shared/filters/StandardFilterBar';
+import { BulkActionGroup } from '@/components/shared/filters/BulkActionGroup';
 
 interface Props {
   company: Company;
@@ -30,6 +32,8 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [selectedClient, setSelectedClient] = useState<Partial<Client>>({});
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   // Custom Modal States
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; name: string }>({ 
@@ -43,20 +47,22 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
   // Filters State
   const { 
     searchTerm, setSearchTerm,
+    companyFilter, setCompanyFilter,
     sortConfig, handleSort
   } = useClientFilters([]);
 
   // Data Fetching
   const {
-    data,
+    data: queryData,
     isLoading: loadingClients,
-    isFetchingNextPage: isLoadingMore,
-    hasNextPage: hasMore,
-    fetchNextPage: loadMore
+    isPlaceholderData: isFetchingNewPage,
   } = useClientsQuery({
     companyId: company.id,
     searchTerm,
-    sortConfig
+    companyFilter,
+    sortConfig,
+    page,
+    pageSize
   });
 
   // Metadata
@@ -77,12 +83,12 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
   }, [rawCompanies, categories]);
 
   const clients = useMemo(() => {
-    const flatClients = data?.pages.flatMap(page => page.data) || [];
-    return flatClients.map(item => ({
+    const rawData = queryData?.data || [];
+    return rawData.map(item => ({
       ...item,
       client_company: clientCompaniesList.find(co => co.id === item.client_company_id)
     })) as ClientWithCompany[];
-  }, [data, clientCompaniesList]);
+  }, [queryData, clientCompaniesList]);
 
   // Handlers
   const toggleSelect = (id: number) => {
@@ -148,16 +154,18 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
           icon: <UserPlus size={14} />
         }}
         bulkActions={
-          selectedIds.length > 0 && (
-            <Button
-              onClick={() => setIsConfirmBulkOpen(true)}
-              className="px-4 py-2.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl text-[10px] uppercase flex items-center gap-2 hover:bg-rose-600 hover:text-white transition-all shadow-sm font-bold"
-            >
-              <Trash2 size={14} /> Hapus {selectedIds.length} Client
-            </Button>
-          )
+          <BulkActionGroup
+            selectedCount={selectedIds.length}
+            onDelete={() => setIsConfirmBulkOpen(true)}
+          />
         }
-      />
+      >
+        <ClientFilterBar
+          companyFilter={companyFilter}
+          setCompanyFilter={(val) => { setCompanyFilter(val); setPage(1); }}
+          clientCompanies={rawCompanies}
+        />
+      </StandardFilterBar>
 
       <ClientsTableView 
         clients={clients}
@@ -168,9 +176,16 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
         onDelete={(id, name) => setConfirmDelete({ isOpen: true, id, name })}
         sortConfig={sortConfig}
         onSort={handleSort}
-        hasMore={hasMore}
-        isLoadingMore={isLoadingMore}
-        onLoadMore={() => loadMore()}
+        
+        page={page}
+        pageSize={pageSize}
+        totalCount={queryData?.totalCount || 0}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setPage(1); // Reset to first page when size changes
+        }}
+        isLoading={loadingClients || isFetchingNewPage}
       />
 
       <ClientFormModal
@@ -196,7 +211,6 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
         itemName={`Data client ${confirmDelete.name}`}
         description="Anda akan menghapus data ini secara permanen. Seluruh riwayat transaksi yang terhubung dengan client ini mungkin terpengaruh."
         isProcessing={deleteClient.status === 'pending'}
-        variant="horizontal"
       />
 
       <ConfirmBulkDeleteModal
@@ -206,7 +220,6 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
         count={selectedIds.length}
         description={`Apakah Anda yakin ingin menghapus seluruh client yang dipilih secara permanen? Tindakan ini tidak dapat dibatalkan.`}
         isProcessing={bulkDeleteClients.status === 'pending'}
-        variant="horizontal"
       />
 
     </div>

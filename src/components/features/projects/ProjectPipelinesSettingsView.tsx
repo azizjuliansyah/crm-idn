@@ -453,7 +453,6 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
         itemName="Pipeline ini"
         isProcessing={isProcessing}
         description="Seluruh data proyek yang berada dalam pipeline ini akan terpengaruh atau terhapus. Lanjutkan?"
-        variant="horizontal"
       />
 
       <Toast

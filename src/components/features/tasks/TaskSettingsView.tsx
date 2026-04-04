@@ -229,7 +229,6 @@ export const TaskSettingsView: React.FC<Props> = ({ company }) => {
         title="Hapus Tahapan Task"
         itemName={confirmDelete.name}
         isProcessing={isProcessing}
-        variant="horizontal"
       />
     </div>
   );

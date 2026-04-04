@@ -22,13 +22,17 @@ import {
 import { useRouter } from 'next/navigation';
 
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
+import { ConfirmBulkDeleteModal } from '@/components/shared/modals/ConfirmBulkDeleteModal';
+import { ConfirmBulkStatusModal } from '@/components/shared/modals/ConfirmBulkStatusModal';
 import { useTasksQuery, useTaskMetadata, useTaskMutations } from '@/lib/hooks/useTasksQuery';
 import { useTaskFilters } from '@/lib/hooks/useTaskFilters';
 import { TasksTableView } from './TasksTableView';
 import { TasksKanbanView } from './TasksKanbanView';
 import { TasksGanttView } from './TasksGanttView';
 import { TaskFormModal } from './TaskFormModal';
+import { TaskFilterBar } from './TaskFilterBar';
 import { StandardFilterBar } from '@/components/shared/filters/StandardFilterBar';
+import { BulkActionGroup } from '@/components/shared/filters/BulkActionGroup';
 import { useAppStore } from '@/lib/store/useAppStore';
 
 interface Props {
@@ -44,10 +48,55 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; title: string }>({ 
-    isOpen: false, 
+    isOpen: false,
     id: null, 
     title: '' 
   });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
+  // Selection & Bulk Actions
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [isConfirmBulkDeleteOpen, setIsConfirmBulkDeleteOpen] = useState(false);
+  const [isConfirmBulkStatusOpen, setIsConfirmBulkStatusOpen] = useState(false);
+
+  const { upsertTask, deleteTask, updateTaskStage, bulkDeleteTasks, bulkUpdateTasksStage } = useTaskMutations();
+
+  const handleToggleSelect = (id: number) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleSelectAll = () => {
+    if (selectedIds.length === tasks.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(tasks.map(t => t.id));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      await bulkDeleteTasks.mutateAsync(selectedIds);
+      showToast(`${selectedIds.length} task berhasil dihapus.`, 'success');
+      setSelectedIds([]);
+      setIsConfirmBulkDeleteOpen(false);
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  const handleBulkUpdateStatus = async (stageId: string) => {
+    try {
+      await bulkUpdateTasksStage.mutateAsync({ ids: selectedIds, stageId });
+      showToast(`${selectedIds.length} tahapan task berhasil diperbarui.`, 'success');
+      setSelectedIds([]);
+      setIsConfirmBulkStatusOpen(false);
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    }
+  };
 
   const [form, setForm] = useState<any>({
     title: '', description: '', stage_id: '', assigned_id: '',
@@ -57,19 +106,25 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
   // Filters
   const {
     searchTerm, setSearchTerm,
-    viewMode, setViewMode
+    viewMode, setViewMode,
+    stageId, setStageId,
+    assigneeFilter, setAssigneeFilter,
+    sortConfig, handleSort,
   } = useTaskFilters([]);
 
   // Data Fetching
   const {
-    data,
+    data: tasksData,
     isLoading: tasksLoading,
-    isFetchingNextPage: isLoadingMore,
-    hasNextPage: hasMore,
-    fetchNextPage: loadMore
+    isPlaceholderData: isFetchingNewPage,
   } = useTasksQuery({
     projectId,
-    searchTerm
+    searchTerm,
+    assigneeFilter,
+    stageId: stageId ?? undefined,
+    sortConfig,
+    page,
+    pageSize
   });
 
   const { project: projectQuery, stages: stagesQuery } = useTaskMetadata(projectId, company.id);
@@ -78,11 +133,11 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
   const loadingMetadata = projectQuery.isLoading || stagesQuery.isLoading;
 
   const tasks = useMemo(() => {
-    return data?.pages.flatMap(page => page.data) || [];
-  }, [data]);
+    return tasksData?.data || [];
+  }, [tasksData]);
 
   // Mutations
-  const { upsertTask, deleteTask, updateTaskStage } = useTaskMutations();
+  // const { upsertTask, deleteTask, updateTaskStage } = useTaskMutations(); // Moved to top
 
   // Handlers
   const handleOpenAdd = () => {
@@ -195,18 +250,47 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
           label: "Task Baru",
           onClick: handleOpenAdd
         }}
-      />
+        bulkActions={
+          <BulkActionGroup
+            selectedCount={selectedIds.length}
+            onUpdateStatus={() => setIsConfirmBulkStatusOpen(true)}
+            onDelete={() => setIsConfirmBulkDeleteOpen(true)}
+            updateLabel="Ubah Tahapan"
+          />
+        }
+      >
+        <TaskFilterBar
+          statusFilter={stageId || 'all'}
+          setStatusFilter={(val) => { setStageId(val === 'all' ? null : val); setPage(1); }}
+          assigneeFilter={assigneeFilter}
+          setAssigneeFilter={(val) => { setAssigneeFilter(val); setPage(1); }}
+          stages={stages}
+          members={members}
+        />
+      </StandardFilterBar>
 
-      <div className="h-[80vh] overflow-hidden flex flex-col">
+      <div className="h-[75vh] overflow-hidden flex flex-col">
         {viewMode === 'table' ? (
           <TasksTableView 
-            tasks={tasks}
+            data={tasks}
             stages={stages}
             onEdit={handleOpenEdit}
             onDelete={(id, title) => setConfirmDelete({ isOpen: true, id, title })}
-            hasMore={hasMore}
-            isLoadingMore={isLoadingMore}
-            onLoadMore={() => loadMore()}
+            selectedIds={selectedIds}
+            onToggleSelect={(id) => handleToggleSelect(Number(id))}
+            onToggleSelectAll={handleToggleSelectAll}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+            
+            page={page}
+            pageSize={pageSize}
+            totalCount={tasksData?.totalCount || 0}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(1);
+            }}
+            isLoading={tasksLoading || isFetchingNewPage}
           />
         ) : viewMode === 'kanban' ? (
           <TasksKanbanView 
@@ -215,9 +299,9 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
             onEdit={handleOpenEdit}
             onDelete={(id, title) => setConfirmDelete({ isOpen: true, id, title })}
             onStatusChange={handleStatusChange}
-            hasMore={hasMore}
-            isLoadingMore={isLoadingMore}
-            onLoadMore={() => loadMore()}
+            hasMore={false}
+            isLoadingMore={false}
+            onLoadMore={() => {}}
           />
         ) : (
           <TasksGanttView 
@@ -247,7 +331,27 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
         title="Hapus Pekerjaan"
         itemName={confirmDelete.title}
         isProcessing={deleteTask.status === 'pending'}
-        variant="horizontal"
+      />
+
+      <ConfirmBulkDeleteModal
+        isOpen={isConfirmBulkDeleteOpen}
+        onClose={() => setIsConfirmBulkDeleteOpen(false)}
+        onConfirm={handleBulkDelete}
+        count={selectedIds.length}
+        title="Hapus Task Masal"
+        description={`Apakah Anda yakin ingin menghapus ${selectedIds.length} task yang dipilih secara permanen?`}
+        isProcessing={bulkDeleteTasks.status === 'pending'}
+      />
+
+      <ConfirmBulkStatusModal
+        isOpen={isConfirmBulkStatusOpen}
+        onClose={() => setIsConfirmBulkStatusOpen(false)}
+        onConfirm={(stageId) => handleBulkUpdateStatus(String(stageId))}
+        count={selectedIds.length}
+        options={stages.map(s => ({ id: s.id, name: s.name.toUpperCase() }))}
+        title="Ubah Tahapan Task"
+        label="Pilih Tahapan Baru"
+        isProcessing={bulkUpdateTasksStage.status === 'pending'}
       />
     </div>
   );

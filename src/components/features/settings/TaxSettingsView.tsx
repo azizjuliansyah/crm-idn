@@ -282,7 +282,6 @@ export const TaxSettingsView: React.FC<Props> = ({ company }) => {
         title="Hapus Pengaturan Pajak"
         itemName={confirmDelete.name}
         isProcessing={isProcessing}
-        variant="horizontal"
       />
 
       <Toast

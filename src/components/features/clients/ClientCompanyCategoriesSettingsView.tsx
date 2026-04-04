@@ -208,7 +208,6 @@ export const ClientCompanyCategoriesSettingsView: React.FC<Props> = ({ company }
         itemName={confirmDelete.name}
         description="Seluruh data perusahaan yang terhubung dengan kategori ini akan kehilangan referensinya."
         isProcessing={isProcessing}
-        variant="horizontal"
       />
 
       <Toast

@@ -210,7 +210,7 @@ export const ProductUnitsView: React.FC<Props> = ({ company }) => {
         title="Hapus Satuan"
         itemName={confirmDelete.name}
         description={`Tindakan ini permanen. Pastikan tidak ada produk yang menggunakan satuan ${confirmDelete.name}.`}
-        variant="horizontal"
+        isProcessing={isProcessing}
       />
 
       <Toast

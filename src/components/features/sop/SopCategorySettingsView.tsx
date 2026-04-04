@@ -239,7 +239,6 @@ export const SopCategorySettingsView: React.FC<Props> = ({ company }) => {
         itemName="Kategori ini"
         description="Seluruh SOP terkait akan kehilangan kategorinya. Tindakan ini tidak dapat dibatalkan."
         isProcessing={isProcessing}
-        variant="horizontal"
       />
 
       <Modal

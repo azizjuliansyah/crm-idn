@@ -241,7 +241,6 @@ export const SupportPipelineSettingsView: React.FC<Props> = ({ company }) => {
         title="Hapus Tahapan"
         itemName={confirmDelete.name}
         isProcessing={isProcessing}
-        variant="horizontal"
       />
 
       <Toast

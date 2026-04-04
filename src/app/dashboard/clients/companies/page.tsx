@@ -1,11 +1,13 @@
 'use client';
 
 import React from 'react';
-import { useDashboard } from '../../DashboardContext';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { ClientCompaniesView } from '@/components/features/clients/ClientCompaniesView';
 
 export default function ClientCompaniesPage() {
-  const { activeCompany } = useDashboard();
-  if (!activeCompany) return null;
-  return <ClientCompaniesView company={activeCompany} />;
+  const { activeCompany: company } = useAppStore();
+
+  if (!company) return null;
+
+  return <ClientCompaniesView company={company} />;
 }

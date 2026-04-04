@@ -15,31 +15,9 @@ export function useQuotationFilters(quotations: Quotation[]) {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'date', direction: 'desc' });
 
   const filteredQuotations = useMemo(() => {
-    let result = [...quotations];
-
-    // Note: Server-side filtering is already handled in fetchQuotations, 
-    // but client-side sorting and additional filtering can happen here if needed.
-    // Currently, we'll keep the sorting logic here as per the original implementation.
-
-    if (sortConfig) {
-      result.sort((a, b) => {
-        let valA: any, valB: any;
-        switch (sortConfig.key) {
-          case 'number': valA = a.number; valB = b.number; break;
-          case 'client': valA = a.client?.name || ''; valB = b.client?.name || ''; break;
-          case 'date': valA = a.date; valB = b.date; break;
-          case 'total': valA = a.total; valB = b.total; break;
-          case 'status': valA = a.status; valB = b.status; break;
-          default: valA = a.id; valB = b.id;
-        }
-        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-
-    return result;
-  }, [quotations, sortConfig]);
+    // Server-side filtering is now handled in useQuotationsQuery.
+    return quotations;
+  }, [quotations]);
 
   const handleSort = (key: SortKey) => {
     setSortConfig(prev => {

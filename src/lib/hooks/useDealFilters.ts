@@ -8,6 +8,8 @@ export function useDealFilters(deals: Deal[]) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [assigneeFilter, setAssigneeFilter] = useState('all');
+  const [companyFilter, setCompanyFilter] = useState('all');
+  const [probabilityFilter, setProbabilityFilter] = useState('all');
   const [dateFilterType, setDateFilterType] = useState('all');
   const [startDateFilter, setStartDateFilter] = useState('');
   const [endDateFilter, setEndDateFilter] = useState('');
@@ -26,6 +28,8 @@ export function useDealFilters(deals: Deal[]) {
     searchTerm, setSearchTerm,
     statusFilter, setStatusFilter,
     assigneeFilter, setAssigneeFilter,
+    companyFilter, setCompanyFilter,
+    probabilityFilter, setProbabilityFilter,
     dateFilterType, setDateFilterType,
     startDateFilter, setStartDateFilter,
     endDateFilter, setEndDateFilter,

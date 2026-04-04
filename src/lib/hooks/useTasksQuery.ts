@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Task, TaskStage, Project } from '@/lib/types';
 
@@ -6,18 +6,26 @@ interface FetchTasksParams {
   projectId: number;
   searchTerm?: string;
   stageId?: string;
+  assigneeFilter?: string;
+  sortConfig?: { key: string; direction: 'asc' | 'desc' } | null;
+  page?: number;
+  pageSize?: number;
 }
 
 export function useTasksQuery({
   projectId,
   searchTerm,
   stageId,
+  assigneeFilter,
+  sortConfig,
+  page = 1,
+  pageSize = 20,
 }: FetchTasksParams) {
-  return useInfiniteQuery({
-    queryKey: ['tasks-list', { projectId, searchTerm, stageId }],
-    queryFn: async ({ pageParam = 0 }) => {
-      const from = pageParam * 20;
-      const to = from + 19;
+  return useQuery({
+    queryKey: ['tasks-list', { projectId, searchTerm, stageId, assigneeFilter, sortConfig, page, pageSize }],
+    queryFn: async () => {
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
 
       let query = supabase
         .from('tasks')
@@ -25,27 +33,33 @@ export function useTasksQuery({
         .eq('project_id', projectId);
 
       if (searchTerm) {
-        query = query.ilike('title', `%${searchTerm}%`);
+        query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
       }
 
-      if (stageId) {
+      if (stageId && stageId !== 'all') {
         query = query.eq('stage_id', stageId);
       }
 
+      if (assigneeFilter && assigneeFilter !== 'all') {
+        query = query.eq('assigned_id', assigneeFilter);
+      }
+
+      if (sortConfig) {
+        query = query.order(sortConfig.key, { ascending: sortConfig.direction === 'asc' });
+      } else {
+        query = query.order('id', { ascending: false });
+      }
+
       const { data, error, count } = await query
-        .order('id', { ascending: false })
         .range(from, to);
 
       if (error) throw error;
 
       return {
         data: data as Task[],
-        nextPage: data.length === 20 ? pageParam + 1 : undefined,
         totalCount: count || 0,
       };
     },
-    initialPageParam: 0,
-    getNextPageParam: (lastPage) => lastPage.nextPage,
     enabled: !!projectId,
   });
 }
@@ -102,7 +116,27 @@ export function useTaskMutations() {
     },
   });
 
-  return { upsertTask, deleteTask, updateTaskStage };
+  const bulkDeleteTasks = useMutation({
+    mutationFn: async (ids: number[]) => {
+      const { error } = await supabase.from('tasks').delete().in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks-list'] });
+    },
+  });
+
+  const bulkUpdateTasksStage = useMutation({
+    mutationFn: async ({ ids, stageId }: { ids: number[]; stageId: string }) => {
+      const { error } = await supabase.from('tasks').update({ stage_id: stageId }).in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks-list'] });
+    },
+  });
+
+  return { upsertTask, deleteTask, updateTaskStage, bulkDeleteTasks, bulkUpdateTasksStage };
 }
 
 export function useTaskMetadata(projectId: number, companyId: number) {

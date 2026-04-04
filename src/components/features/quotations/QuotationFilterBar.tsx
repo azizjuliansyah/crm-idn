@@ -1,30 +1,35 @@
 import React from 'react';
-import { SearchInput, ComboBox } from '@/components/ui';
+import { ComboBox } from '@/components/ui';
 
 interface QuotationFilterBarProps {
-  searchTerm: string;
-  setSearchTerm: (val: string) => void;
   filterStatus: string;
   setFilterStatus: (val: string) => void;
+  filterClientId: string;
+  setFilterClientId: (val: string) => void;
+  clients: any[];
 }
 
 export const QuotationFilterBar: React.FC<QuotationFilterBarProps> = ({
-  searchTerm,
-  setSearchTerm,
   filterStatus,
-  setFilterStatus
+  setFilterStatus,
+  filterClientId,
+  setFilterClientId,
+  clients
 }) => {
   return (
-    <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-gray-50">
-      <div className="w-[400px] shrink-0">
-        <SearchInput
-          placeholder="Cari nomor, client..."
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-        />
-      </div>
+    <div className="flex items-center gap-3 shrink-0">
 
       <div className="flex items-center gap-3 shrink-0 ml-auto">
+        <ComboBox
+          value={filterClientId}
+          onChange={(val: string | number) => setFilterClientId(val as string)}
+          options={[
+            { value: 'all', label: 'SEMUA CLIENT' },
+            ...clients.map(c => ({ value: c.id.toString(), label: c.name.toUpperCase() }))
+          ]}
+          className="w-48"
+          placeholderSize="text-[10px] font-bold text-gray-900 uppercase "
+        />
         <ComboBox
           value={filterStatus}
           onChange={(val: string | number) => setFilterStatus(val as string)}

@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Project, ProjectPipeline, ProjectPipelineStage, CompanyMember, Client, ClientCompany, ClientCompanyCategory } from '@/lib/types';
 
@@ -8,7 +8,10 @@ interface FetchProjectsParams {
   searchTerm?: string;
   statusFilter?: string;
   assigneeFilter?: string;
+  clientFilter?: string;
   sortConfig?: { key: string; direction: 'asc' | 'desc' } | null;
+  page?: number;
+  pageSize?: number;
 }
 
 export function useProjectsQuery({
@@ -17,13 +20,16 @@ export function useProjectsQuery({
   searchTerm,
   statusFilter,
   assigneeFilter,
+  clientFilter,
   sortConfig,
+  page = 1,
+  pageSize = 20,
 }: FetchProjectsParams) {
-  return useInfiniteQuery({
-    queryKey: ['projects', { companyId, pipelineId, searchTerm, statusFilter, assigneeFilter, sortConfig }],
-    queryFn: async ({ pageParam = 0 }) => {
-      const from = pageParam * 20;
-      const to = from + 19;
+  return useQuery({
+    queryKey: ['projects', { companyId, pipelineId, searchTerm, statusFilter, assigneeFilter, clientFilter, sortConfig, page, pageSize }],
+    queryFn: async () => {
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
 
       let query = supabase.from('projects').select(`
         *,
@@ -46,6 +52,10 @@ export function useProjectsQuery({
         query = query.eq('lead_id', assigneeFilter);
       }
 
+      if (clientFilter && clientFilter !== 'all') {
+        query = query.eq('client_id', clientFilter);
+      }
+
       if (sortConfig) {
         query = query.order(sortConfig.key, { ascending: sortConfig.direction === 'asc' });
       } else {
@@ -57,12 +67,9 @@ export function useProjectsQuery({
 
       return {
         data: data as Project[],
-        nextPage: data.length === 20 ? pageParam + 1 : undefined,
         totalCount: count || 0,
       };
     },
-    initialPageParam: 0,
-    getNextPageParam: (lastPage) => lastPage.nextPage,
     enabled: !!companyId && !!pipelineId,
   });
 }
@@ -93,7 +100,27 @@ export function useProjectMutations() {
     },
   });
 
-  return { deleteProject, updateProjectStatus };
+  const bulkDeleteProjects = useMutation({
+    mutationFn: async (ids: number[]) => {
+      const { error } = await supabase.from('projects').delete().in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
+  });
+
+  const bulkUpdateProjectsStatus = useMutation({
+    mutationFn: async ({ ids, stageId }: { ids: number[]; stageId: string | number }) => {
+      const { error } = await supabase.from('projects').update({ stage_id: stageId }).in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
+  });
+
+  return { deleteProject, updateProjectStatus, bulkDeleteProjects, bulkUpdateProjectsStatus };
 }
 
 export function useProjectMetadata(companyId: number, pipelineId: number) {

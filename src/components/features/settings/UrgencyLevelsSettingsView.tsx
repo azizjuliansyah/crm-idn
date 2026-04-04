@@ -326,7 +326,6 @@ export const UrgencyLevelsSettingsView: React.FC<Props> = ({ company }) => {
                 itemName={confirmDelete.name}
                 description="Hapus tingkat urgensi ini? Request yang menggunakan urgensi ini mungkin akan kehilangan labelnya."
                 isProcessing={isProcessing}
-                variant="horizontal"
             />
         </div>
     );

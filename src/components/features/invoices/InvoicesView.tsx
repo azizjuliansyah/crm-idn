@@ -2,29 +2,34 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { Button, Table, TableHeader, TableBody, TableRow, TableCell, TableEmpty, H2, Subtext, Label, SearchInput, ComboBox } from '@/components/ui';
+import { Button, H2, Subtext, Label, ComboBox, TableContainer } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { Company, Invoice } from '@/lib/types';
 import {
   Plus, Edit2, Trash2, Loader2, FileBadge,
   FileDown, Download, FilePlus
 } from 'lucide-react';
-import { ActionButton } from '@/components/shared/buttons/ActionButton';
-import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
-import { InfiniteScrollSentinel } from '@/components/ui';
-import { useInfiniteScroll } from '@/lib/hooks/useInfiniteScroll';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { generateTemplate1, generateTemplate5, generateTemplate6 } from '@/lib/pdf-templates';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAppStore } from '@/lib/store/useAppStore';
+import { ActionButton } from '@/components/shared/buttons/ActionButton';
+import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
+import { ConfirmBulkDeleteModal } from '@/components/shared/modals/ConfirmBulkDeleteModal';
+import { ConfirmBulkStatusModal } from '@/components/shared/modals/ConfirmBulkStatusModal';
+import { BulkActionGroup } from '@/components/shared/filters/BulkActionGroup';
+import { BaseDataTable } from '@/components/shared/tables/BaseDataTable';
+import { StandardFilterBar } from '@/components/shared/filters/StandardFilterBar';
+import { useInvoicesQuery, useInvoiceMutations } from '@/lib/hooks/useInvoicesQuery';
+import { useInvoiceFilters } from '@/lib/hooks/useInvoiceFilters';
+import { useQuotationMetadata } from '@/lib/hooks/useQuotationsQuery';
+import { InvoiceFilterBar } from './InvoiceFilterBar';
+import { exportToExcel, ExcelColumn } from '@/lib/utils/excelExport';
 
 interface Props {
   company: Company;
 }
-
-type SortKey = 'number' | 'client' | 'date' | 'total' | 'status';
-type SortConfig = { key: SortKey; direction: 'asc' | 'desc' } | null;
 
 const getImgDimensions = (url: string): Promise<{ width: number, height: number, element: HTMLImageElement }> => {
   return new Promise((resolve, reject) => {
@@ -40,52 +45,115 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
   const router = useRouter();
   const { activeCompanyMembers, user, showToast } = useAppStore();
   const searchParams = useSearchParams();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterClientId, setFilterClientId] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'id' as any, direction: 'desc' });
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
+  // Filters State
+  const filters = useInvoiceFilters([]);
+
+  // Data Fetching
+  const {
+    data: invoicesData,
+    isLoading: invoicesLoading,
+    isPlaceholderData: isFetchingNewPage,
+  } = useInvoicesQuery({
+    companyId: String(company.id),
+    searchTerm: filters.searchTerm,
+    filterStatus: filters.filterStatus,
+    filterClientId: filters.filterClientId,
+    sortConfig: filters.sortConfig,
+    page,
+    pageSize,
+  });
+
+  const invoices = invoicesData?.data || [];
+
+  // Metadata
+  const { clients: clientsQuery } = useQuotationMetadata(String(company.id));
+  const clients = clientsQuery.data || [];
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; number: string }>({ isOpen: false, id: null, number: '' });
 
-  const fetchInvoices = useCallback(async ({ from, to }: { from: number, to: number }) => {
-    if (!company?.id) return { data: [], error: null, count: 0 };
-    
-    let query = supabase
-      .from('invoices')
-      .select('*, client:clients(*, client_company:client_companies(*)), invoice_items(*, products(*)), kwitansis(id)', { count: 'exact' })
-      .eq('company_id', company.id);
+  // Selection & Bulk Actions
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [isConfirmBulkDeleteOpen, setIsConfirmBulkDeleteOpen] = useState(false);
+  const [isConfirmBulkStatusOpen, setIsConfirmBulkStatusOpen] = useState(false);
 
-    if (searchTerm) {
-      query = query.or(`number.ilike.%${searchTerm}%,client_name.ilike.%${searchTerm}%`);
+  const { bulkDeleteInvoices, bulkUpdateInvoicesStatus } = useInvoiceMutations();
+
+  const handleToggleSelect = (id: number) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleSelectAll = () => {
+    if (selectedIds.length === invoices.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(invoices.map(i => i.id));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      await bulkDeleteInvoices.mutateAsync(selectedIds);
+      showToast(`${selectedIds.length} invoice berhasil dihapus.`, 'success');
+      setSelectedIds([]);
+      setIsConfirmBulkDeleteOpen(false);
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  const handleBulkUpdateStatus = async (status: string) => {
+    try {
+      await bulkUpdateInvoicesStatus.mutateAsync({ ids: selectedIds, status });
+      showToast(`${selectedIds.length} invoice berhasil diperbarui.`, 'success');
+      setSelectedIds([]);
+      setIsConfirmBulkStatusOpen(false);
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  const handleExportInvoices = () => {
+    const dataToExport = selectedIds.length > 0 
+      ? invoices.filter(i => selectedIds.includes(i.id)) 
+      : invoices;
+
+    if (dataToExport.length === 0) {
+      showToast('Tidak ada data untuk diekspor', 'info');
+      return;
     }
 
-    if (filterStatus !== 'all') {
-      query = query.eq('status', filterStatus);
-    }
+    const columns: ExcelColumn[] = [
+      { header: 'ID', key: 'id', width: 10 },
+      { header: 'Tanggal', key: 'date_label', width: 15 },
+      { header: 'Nomor Invoice', key: 'number', width: 25 },
+      { header: 'Pelanggan', key: 'client_name', width: 25 },
+      { header: 'Perusahaan', key: 'company_name', width: 25 },
+      { header: 'Total Nilai', key: 'formatted_total', width: 20 },
+      { header: 'Status', key: 'status', width: 15 },
+    ];
 
-    if (filterClientId !== 'all') {
-      query = query.eq('client_id', parseInt(filterClientId));
-    }
+    const formattedData = dataToExport.map(i => ({
+      ...i,
+      date_label: formatDateString(i.date),
+      client_name: i.client?.name || '-',
+      company_name: i.client?.client_company?.name || 'Personal',
+      formatted_total: formatIDR(i.total),
+    }));
 
-    const { data, error, count } = await query
-      .order('id', { ascending: false })
-      .range(from, to);
-
-    return { data: data || [], error, count };
-  }, [company?.id, searchTerm, filterStatus, filterClientId]);
-
-  const {
-    data: invoices,
-    isLoading: invoicesLoading,
-    isLoadingMore,
-    hasMore,
-    loadMore,
-    refresh
-  } = useInfiniteScroll<Invoice>(fetchInvoices, {
-    pageSize: 20,
-    dependencies: [company?.id, searchTerm, filterStatus, filterClientId]
-  });
+    exportToExcel(formattedData, columns, 'CRM_Invoices_Report');
+    showToast('Data Invoice berhasil diekspor ke Excel', 'success');
+  };
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [filters.searchTerm, filters.filterStatus, filters.filterClientId]);
 
   useEffect(() => {
     const success = searchParams.get('success');
@@ -101,46 +169,6 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
     }
   }, [searchParams, showToast]);
 
-  const uniqueClients = useMemo(() => {
-    const map = new Map();
-    invoices.forEach(inv => {
-      if (inv.client) {
-        map.set(inv.client.id, inv.client.name);
-      }
-    });
-    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
-  }, [invoices]);
-
-  const filteredInvoices = useMemo(() => {
-    let result = [...invoices];
-
-    if (sortConfig) {
-      result.sort((a, b) => {
-        let valA: any, valB: any;
-        switch (sortConfig.key) {
-          case 'number': valA = a.number; valB = b.number; break;
-          case 'client': valA = a.client?.name || ''; valB = b.client?.name || ''; break;
-          case 'date': valA = a.date; valB = b.date; break;
-          case 'total': valA = a.total; valB = b.total; break;
-          case 'status': valA = a.status; valB = b.status; break;
-          default: valA = a.id; valB = b.id;
-        }
-        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-
-    return result;
-  }, [invoices, sortConfig]);
-
-  const handleSort = (key: SortKey) => {
-    setSortConfig(prev => {
-      if (prev?.key === key) return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
-      return { key, direction: 'asc' };
-    });
-  };
-
   const executeDelete = async () => {
     if (!confirmDelete.id) return;
     setIsProcessing(true);
@@ -149,7 +177,7 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
       if (error) throw error;
       setConfirmDelete({ isOpen: false, id: null, number: '' });
       showToast(`Invoice ${confirmDelete.number} telah dihapus.`, 'success');
-      refresh();
+      // React Query handles refinement
     } catch (err: any) {
       showToast(err.message, 'error');
     } finally {
@@ -357,7 +385,6 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
       }
 
       showToast(`Kwitansi berhasil dibuat.`, 'success');
-      refresh();
     } catch (err: any) {
       showToast(err.message, 'error');
     } finally {
@@ -440,162 +467,164 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
 
   return (
     <div className="flex flex-col gap-6 text-gray-900">
-      <div className="flex flex-col gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
-        <div className="flex items-center justify-between">
-          <div>
-            <H2 className="text-xl ">Daftar Invoice</H2>
-            <Subtext className="text-[10px]  uppercase ">Kelola dan pantau seluruh tagihan pelanggan.</Subtext>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/dashboard/sales/invoices/create"
-              onMouseEnter={() => router.prefetch('/dashboard/sales/invoices/create')}
-              className="inline-flex items-center gap-2 px-6 py-2.5 text-[10px] font-bold uppercase tracking-wider text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all shadow-lg shadow-blue-100"
-            >
-              <Plus size={14} strokeWidth={3} />
-              Buat Invoice
-            </Link>
-          </div>
-        </div>
+      <StandardFilterBar
+        title="Daftar Invoice"
+        subtitle="Kelola dan pantau seluruh tagihan pelanggan."
+        searchTerm={filters.searchTerm}
+        onSearchChange={filters.setSearchTerm}
+        onExport={handleExportInvoices}
+        searchPlaceholder="Cari nomor, client..."
+        primaryAction={{
+          label: "Buat Invoice",
+          onClick: () => router.push('/dashboard/sales/invoices/create'),
+          icon: <Plus size={14} strokeWidth={3} />
+        }}
+        bulkActions={
+          <BulkActionGroup
+            selectedCount={selectedIds.length}
+            onUpdateStatus={() => setIsConfirmBulkStatusOpen(true)}
+            onDelete={() => setIsConfirmBulkDeleteOpen(true)}
+          />
+        }
+      >
+        <InvoiceFilterBar 
+          filterStatus={filters.filterStatus}
+          setFilterStatus={filters.setFilterStatus}
+          filterClientId={filters.filterClientId}
+          setFilterClientId={filters.setFilterClientId}
+          clients={clients}
+        />
+      </StandardFilterBar>
 
-        <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-gray-50">
-          <div className="w-[400px] shrink-0">
-            <SearchInput
-              placeholder="Cari nomor, client..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0 ml-auto">
-            <ComboBox
-              value={filterClientId}
-              onChange={(val: string | number) => setFilterClientId(val as string)}
-              options={[
-                { value: 'all', label: 'SEMUA PELANGGAN' },
-                ...uniqueClients.map(([id, name]) => ({ value: id.toString(), label: name.toUpperCase() }))
-              ]}
-              className="w-40"
-              placeholderSize="text-[10px] font-bold text-gray-900 uppercase "
-            />
-
-            <ComboBox
-              value={filterStatus}
-              onChange={(val: string | number) => setFilterStatus(val as string)}
-              options={[
-                { value: 'all', label: 'SEMUA STATUS' },
-                { value: 'Unpaid', label: 'UNPAID' },
-                { value: 'Partial', label: 'PARTIAL' },
-                { value: 'Paid', label: 'PAID' },
-              ]}
-              className="w-40"
-              hideSearch={true}
-              placeholderSize="text-[10px] font-bold text-gray-900 uppercase "
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm h-[80vh] mb-4 flex flex-col overflow-hidden">
-        <div className="overflow-x-auto overflow-y-auto h-full custom-scrollbar">
-          <Table>
-            <TableHeader className="sticky top-0 z-10 bg-gray-50/80 backdrop-blur-md border-b border-gray-100">
-              <TableRow className="hover:bg-transparent">
-                <TableCell onClick={() => handleSort('date')} isHeader className="cursor-pointer">Tanggal</TableCell>
-                <TableCell onClick={() => handleSort('number')} isHeader className="cursor-pointer">Nomor</TableCell>
-                <TableCell onClick={() => handleSort('client')} isHeader className="cursor-pointer">Pelanggan</TableCell>
-                <TableCell onClick={() => handleSort('total')} isHeader className="cursor-pointer text-center">Total</TableCell>
-                <TableCell onClick={() => handleSort('status')} isHeader className="cursor-pointer text-center">Status</TableCell>
-                <TableCell isHeader className="text-center">Aksi</TableCell>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredInvoices.map(inv => (
-                <TableRow key={inv.id} className="group hover:bg-indigo-50/30 transition-colors border-b border-gray-50/50 last:border-0">
-                  <TableCell className="py-5 px-6">
-                    <Label className="text-[11px] text-gray-500">{formatDateString(inv.date)}</Label>
-                  </TableCell>
-                  <TableCell className="py-5 px-6">
-                    <Link
-                      href={`/dashboard/sales/invoices/${inv.id}`}
-                      onMouseEnter={() => router.prefetch(`/dashboard/sales/invoices/${inv.id}`)}
-                      className="text-indigo-600 text-xs font-medium hover:underline flex items-center gap-1.5"
-                    >
-                      <FileBadge size={12} className="text-indigo-400" />
-                      {inv.number}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="py-5 px-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-[10px] uppercase shadow-sm border border-indigo-100">{inv.client?.name.charAt(0)}</div>
-                      <div>
-                        <Subtext className="text-xs text-gray-900 font-bold">{inv.client?.name}</Subtext>
-                        <Subtext className="text-[10px] !text-gray-400 mt-1 uppercase font-bold italic">{inv.client?.client_company?.name || 'Personal'}</Subtext>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right font-bold text-indigo-600 text-xs py-5 px-6 bg-indigo-50/5 group-hover:bg-indigo-50/20">{formatIDR(inv.total)}</TableCell>
-                  <TableCell className="text-center py-5 px-6">
-                    <Label className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase  border transition-all duration-300 ${inv.status === 'Paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                      inv.status === 'Partial' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                        inv.status === 'Unpaid' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-                          'bg-gray-50 text-gray-400 border-gray-200'
-                       }`}>
-                      {inv.status}
-                    </Label>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-center gap-2">
-                      <ActionButton
-                        icon={FileDown}
-                        variant="emerald"
-                        onClick={() => handleDownloadPDF(inv)}
-                        title="Unduh PDF"
-                      />
-                      {inv.status === 'Paid' && (inv as any).kwitansis?.length > 0 && (
-                        <ActionButton
-                          icon={Download}
-                          variant="rose"
-                          onClick={() => handleDownloadKwitansi(inv)}
-                          title="Unduh Kwitansi"
-                        />
-                      )}
-                      {inv.status === 'Paid' && (inv as any).kwitansis?.length === 0 && hasApprovalPermission && (
-                        <ActionButton
-                          icon={FilePlus}
-                          variant="indigo"
-                          onClick={() => handleCreateKwitansi(inv)}
-                          title="Buat Kwitansi"
-                        />
-                      )}
-                      <ActionButton
-                        icon={Edit2}
-                        variant="blue"
-                        href={`/dashboard/sales/invoices/${inv.id}`}
-                        title="Edit"
-                      />
-                      <ActionButton
-                        icon={Trash2}
-                        variant="rose"
-                        onClick={() => setConfirmDelete({ isOpen: true, id: inv.id, number: inv.number })}
-                        title="Hapus"
-                      />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-              <InfiniteScrollSentinel 
-                onIntersect={loadMore}
-                enabled={hasMore}
-                isLoading={isLoadingMore}
-                colSpan={6}
-              />
-              {filteredInvoices.length === 0 && !invoicesLoading && (
-                <TableEmpty colSpan={6} message="Belum ada invoice tercatat" icon={<FileBadge size={48} />} />
-              )}
-            </TableBody>
-          </Table>
-        </div>
+      <div className="h-[75vh]">
+        <BaseDataTable
+          data={invoices}
+          selectedIds={selectedIds}
+          onToggleSelect={(id) => handleToggleSelect(Number(id))}
+          onToggleSelectAll={handleToggleSelectAll}
+          columns={[
+            { 
+              header: 'ID', 
+              key: 'id', 
+              sortable: true,
+              className: 'w-20 font-mono text-[11px] text-gray-400 py-5 px-6',
+              render: (inv) => `#${String(inv.id).padStart(4, '0')}`
+            },
+            { 
+              header: 'Tanggal', 
+              key: 'date', 
+              sortable: true,
+              render: (inv) => <Label className="text-[11px] text-gray-500">{formatDateString(inv.date)}</Label>
+            },
+            { 
+              header: 'Nomor', 
+              key: 'number', 
+              sortable: true,
+              render: (inv) => (
+                <Link
+                  href={`/dashboard/sales/invoices/${inv.id}`}
+                  onMouseEnter={() => router.prefetch(`/dashboard/sales/invoices/${inv.id}`)}
+                  className="text-indigo-600 text-xs font-medium hover:underline flex items-center gap-1.5"
+                >
+                  <FileBadge size={12} className="text-indigo-400" />
+                  {inv.number}
+                </Link>
+              )
+            },
+            { 
+              header: 'Pelanggan', 
+              key: 'client', 
+              sortable: true,
+              render: (inv) => (
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-[10px] uppercase shadow-sm border border-indigo-100">{inv.client?.name.charAt(0)}</div>
+                  <div>
+                    <Subtext className="text-xs text-gray-900 font-bold">{inv.client?.name}</Subtext>
+                    <Subtext className="text-[10px] !text-gray-400 mt-1 uppercase font-bold italic">{inv.client?.client_company?.name || 'Personal'}</Subtext>
+                  </div>
+                </div>
+              )
+            },
+            { 
+              header: 'Total', 
+              key: 'total', 
+              sortable: true,
+              className: 'text-right font-bold text-indigo-600 text-xs bg-indigo-50/5 group-hover:bg-indigo-50/20',
+              render: (inv) => formatIDR(inv.total)
+            },
+            { 
+              header: 'Status', 
+              key: 'status', 
+              sortable: true,
+              className: 'text-center',
+              render: (inv) => (
+                <Label className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase border transition-all duration-300 ${inv.status === 'Paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                  inv.status === 'Partial' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                    inv.status === 'Unpaid' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                      'bg-gray-50 text-gray-400 border-gray-200'
+                  }`}>
+                  {inv.status}
+                </Label>
+              )
+            },
+            {
+              header: 'Aksi',
+              key: 'actions',
+              className: 'text-center',
+              render: (inv) => (
+                <div className="flex items-center justify-center gap-2">
+                  <ActionButton
+                    icon={FileDown}
+                    variant="emerald"
+                    onClick={() => handleDownloadPDF(inv)}
+                    title="Unduh PDF"
+                  />
+                  {inv.status === 'Paid' && (inv as any).kwitansis?.length > 0 && (
+                    <ActionButton
+                      icon={Download}
+                      variant="rose"
+                      onClick={() => handleDownloadKwitansi(inv)}
+                      title="Unduh Kwitansi"
+                    />
+                  )}
+                  {inv.status === 'Paid' && (inv as any).kwitansis?.length === 0 && hasApprovalPermission && (
+                    <ActionButton
+                      icon={FilePlus}
+                      variant="indigo"
+                      onClick={() => handleCreateKwitansi(inv)}
+                      title="Buat Kwitansi"
+                    />
+                  )}
+                  <ActionButton
+                    icon={Edit2}
+                    variant="blue"
+                    href={`/dashboard/sales/invoices/${inv.id}`}
+                    title="Edit"
+                  />
+                  <ActionButton
+                    icon={Trash2}
+                    variant="rose"
+                    onClick={() => setConfirmDelete({ isOpen: true, id: inv.id, number: inv.number })}
+                    title="Hapus"
+                  />
+                </div>
+              )
+            }
+          ]}
+          sortConfig={filters.sortConfig}
+          onSort={filters.handleSort as (key: string) => void}
+          page={page}
+          pageSize={pageSize}
+          totalCount={invoicesData?.totalCount || 0}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+          isLoading={invoicesLoading}
+          emptyMessage="Belum ada invoice tercatat"
+          emptyIcon={<FileBadge size={48} />}
+        />
       </div>
 
 
@@ -606,7 +635,31 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
         title="Hapus Invoice"
         itemName={confirmDelete.number}
         isProcessing={isProcessing}
-        variant="horizontal"
+      />
+
+      <ConfirmBulkDeleteModal
+        isOpen={isConfirmBulkDeleteOpen}
+        onClose={() => setIsConfirmBulkDeleteOpen(false)}
+        onConfirm={handleBulkDelete}
+        count={selectedIds.length}
+        title="Hapus Invoice Masal"
+        description={`Apakah Anda yakin ingin menghapus ${selectedIds.length} invoice yang dipilih? Data rincian item pada invoice tersebut juga akan hilang.`}
+        isProcessing={bulkDeleteInvoices.status === 'pending'}
+      />
+
+      <ConfirmBulkStatusModal
+        isOpen={isConfirmBulkStatusOpen}
+        onClose={() => setIsConfirmBulkStatusOpen(false)}
+        onConfirm={(statusId) => handleBulkUpdateStatus(String(statusId))}
+        count={selectedIds.length}
+        options={[
+          { id: 'Unpaid', name: 'UNPAID' },
+          { id: 'Partial', name: 'PARTIAL' },
+          { id: 'Paid', name: 'PAID' },
+        ]}
+        title="Ubah Status Invoice"
+        label="Pilih Status Baru"
+        isProcessing={bulkUpdateInvoicesStatus.status === 'pending'}
       />
     </div>
   );

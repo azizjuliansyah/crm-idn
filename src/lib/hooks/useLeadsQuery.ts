@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Lead, LeadStage, LeadSource, CompanyMember, ClientCompany, ClientCompanyCategory } from '@/lib/types';
 
@@ -7,10 +7,13 @@ interface FetchLeadsParams {
   searchTerm?: string;
   statusFilter?: string;
   assigneeFilter?: string;
+  companyFilter?: string;
   startDate?: string;
   endDate?: string;
   dateFilterType?: string;
   sortConfig?: { key: string; direction: 'asc' | 'desc' } | null;
+  page?: number;
+  pageSize?: number;
 }
 
 export function useLeadsQuery({
@@ -18,16 +21,19 @@ export function useLeadsQuery({
   searchTerm,
   statusFilter,
   assigneeFilter,
+  companyFilter,
   startDate,
   endDate,
   dateFilterType,
   sortConfig,
+  page = 1,
+  pageSize = 20,
 }: FetchLeadsParams) {
-  return useInfiniteQuery({
-    queryKey: ['leads', { companyId, searchTerm, statusFilter, assigneeFilter, dateFilterType, startDate, endDate, sortConfig }],
-    queryFn: async ({ pageParam = 0 }) => {
-      const from = pageParam * 20;
-      const to = from + 19;
+  return useQuery({
+    queryKey: ['leads', { companyId, searchTerm, statusFilter, assigneeFilter, companyFilter, dateFilterType, startDate, endDate, sortConfig, page, pageSize }],
+    queryFn: async () => {
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
 
       let query = supabase.from('leads').select(`
         *,
@@ -38,7 +44,7 @@ export function useLeadsQuery({
       query = query.eq('company_id', companyId);
 
       if (searchTerm) {
-        query = query.ilike('name', `%${searchTerm}%`);
+        query = query.or(`name.ilike.%${searchTerm}%,client_company_name.ilike.%${searchTerm}%`);
       }
 
       if (statusFilter && statusFilter !== 'all') {
@@ -47,6 +53,10 @@ export function useLeadsQuery({
 
       if (assigneeFilter && assigneeFilter !== 'all') {
         query = query.eq('sales_id', assigneeFilter);
+      }
+
+      if (companyFilter && companyFilter !== 'all') {
+        query = query.eq('client_company_id', companyFilter);
       }
 
       if (dateFilterType === 'custom') {
@@ -59,11 +69,13 @@ export function useLeadsQuery({
         query = query.gte('input_date', filterDate.toISOString().split('T')[0]);
       }
 
+      // Always prioritize urgent leads
+      query = query.order('is_urgent', { ascending: false });
+
       if (sortConfig) {
         query = query.order(sortConfig.key, { ascending: sortConfig.direction === 'asc' });
       } else {
         query = query
-          .order('is_urgent', { ascending: false })
           .order('kanban_order', { ascending: true })
           .order('created_at', { ascending: false });
       }
@@ -73,12 +85,9 @@ export function useLeadsQuery({
 
       return {
         data: data as Lead[],
-        nextPage: data.length === 20 ? pageParam + 1 : undefined,
         totalCount: count || 0,
       };
     },
-    initialPageParam: 0,
-    getNextPageParam: (lastPage) => lastPage.nextPage,
     enabled: !!companyId,
   });
 }
@@ -109,7 +118,27 @@ export function useLeadMutations() {
     },
   });
 
-  return { deleteLead, updateLeadStatus };
+  const bulkDeleteLeads = useMutation({
+    mutationFn: async (leadIds: number[]) => {
+      const { error } = await supabase.from('leads').delete().in('id', leadIds);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+    },
+  });
+
+  const bulkUpdateLeadsStatus = useMutation({
+    mutationFn: async ({ leadIds, status }: { leadIds: number[]; status: string }) => {
+      const { error } = await supabase.from('leads').update({ status }).in('id', leadIds);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+    },
+  });
+
+  return { deleteLead, updateLeadStatus, bulkDeleteLeads, bulkUpdateLeadsStatus };
 }
 
 export function useLeadMetadata(companyId: number) {

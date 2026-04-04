@@ -20,34 +20,50 @@ import {
 import { BaseDataTable, ColumnConfig } from '@/components/shared/tables/BaseDataTable';
 
 interface Props {
-  projects: Project[];
+  data: Project[];
   pipeline: ProjectPipeline | null;
   onEdit: (project: Project) => void;
   onDelete: (id: number, name: string) => void;
-  hasMore?: boolean;
-  isLoadingMore?: boolean;
-  onLoadMore?: () => void;
   sortConfig?: { key: string; direction: 'asc' | 'desc' } | null;
   onSort?: (key: string) => void;
+
+  // Selection
+  selectedIds?: (string | number)[];
+  onToggleSelect?: (id: string | number) => void;
+  onToggleSelectAll?: () => void;
+
+  // Pagination
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+  isLoading?: boolean;
 }
 
 export const ProjectsTableView: React.FC<Props> = ({
-  projects,
+  data,
   pipeline,
   onEdit,
   onDelete,
-  hasMore,
-  isLoadingMore,
-  onLoadMore,
   sortConfig,
-  onSort
+  onSort,
+  page,
+  pageSize,
+  totalCount,
+  onPageChange,
+  onPageSizeChange,
+  selectedIds,
+  onToggleSelect,
+  onToggleSelectAll,
+  isLoading
 }) => {
   const columns: ColumnConfig<Project>[] = [
     {
       header: 'ID',
       key: 'id',
       sortable: true,
-      className: 'text-gray-500 font-mono w-20',
+      className: 'w-20 font-mono text-[11px] text-gray-400 py-5 px-6',
       render: (project) => `#${String(project.id).padStart(4, '0')}`
     },
     {
@@ -111,6 +127,7 @@ export const ProjectsTableView: React.FC<Props> = ({
     {
       header: 'Tahapan',
       key: 'stage_id',
+      sortable: true,
       render: (project) => (
         <div className="flex flex-col gap-1.5">
           <Badge variant="ghost" className="px-2 py-0.5 border border-emerald-100 text-[9px] text-emerald-600 uppercase bg-emerald-50/50 w-fit">
@@ -157,13 +174,22 @@ export const ProjectsTableView: React.FC<Props> = ({
 
   return (
     <BaseDataTable
-      data={projects}
+      data={data}
       columns={columns}
       sortConfig={sortConfig || null}
       onSort={onSort || (() => {})}
-      hasMore={hasMore}
-      isLoadingMore={isLoadingMore}
-      onLoadMore={onLoadMore}
+      
+      page={page}
+      pageSize={pageSize}
+      totalCount={totalCount}
+      onPageChange={onPageChange}
+      onPageSizeChange={onPageSizeChange}
+      isLoading={isLoading}
+
+      selectedIds={selectedIds}
+      onToggleSelect={onToggleSelect}
+      onToggleSelectAll={onToggleSelectAll}
+      
       emptyMessage="Belum ada proyek terdaftar"
       emptyIcon={<Briefcase size={48} className="mx-auto opacity-10 text-gray-400" />}
     />

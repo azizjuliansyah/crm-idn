@@ -24,7 +24,7 @@ import { formatIDR } from '@/lib/utils/formatters';
 import { BaseDataTable, ColumnConfig } from '@/components/shared/tables/BaseDataTable';
 
 interface Props {
-  deals: Deal[];
+  data: Deal[];
   pipeline: Pipeline | null;
   onEdit: (deal: Deal) => void;
   onDelete: (id: number) => void;
@@ -40,13 +40,17 @@ interface Props {
   onUpdateStage: (id: number, stageId: string | number) => void;
   hasUrgency?: boolean;
 
-  hasMore?: boolean;
-  isLoadingMore?: boolean;
-  onLoadMore?: () => void;
+  // Pagination
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+  isLoading?: boolean;
 }
 
 export const DealsTableView: React.FC<Props> = ({
-  deals,
+  data,
   pipeline,
   onEdit,
   onDelete,
@@ -59,9 +63,12 @@ export const DealsTableView: React.FC<Props> = ({
   onToggleSelectAll,
   onToggleUrgency,
   onUpdateStage,
-  hasMore,
-  isLoadingMore,
-  onLoadMore
+  page,
+  pageSize,
+  totalCount,
+  onPageChange,
+  onPageSizeChange,
+  isLoading
 }) => {
   const getStatusVariant = (status: string) => {
     const s = status.toLowerCase();
@@ -273,16 +280,21 @@ export const DealsTableView: React.FC<Props> = ({
 
   return (
     <BaseDataTable
-      data={deals}
+      data={data}
       columns={columns}
       sortConfig={sortConfig}
       onSort={onSort}
       selectedIds={selectedIds}
       onToggleSelect={onToggleSelect}
       onToggleSelectAll={onToggleSelectAll}
-      hasMore={hasMore}
-      isLoadingMore={isLoadingMore}
-      onLoadMore={onLoadMore}
+      
+      page={page}
+      pageSize={pageSize}
+      totalCount={totalCount}
+      onPageChange={onPageChange}
+      onPageSizeChange={onPageSizeChange}
+      isLoading={isLoading}
+      
       emptyMessage="Tidak ada transaksi ditemukan"
       emptyIcon={<TrendingUp size={48} className="mx-auto opacity-10 text-gray-400" />}
       rowClassName={(deal) => deal.is_urgent ? '!border-l-4 !border-l-amber-400 !bg-amber-50/50' : ''}

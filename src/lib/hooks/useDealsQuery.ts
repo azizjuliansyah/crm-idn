@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Deal, Pipeline, PipelineStage, CompanyMember, Client, ClientCompany, ClientCompanyCategory } from '@/lib/types';
 
@@ -8,11 +8,15 @@ interface FetchDealsParams {
   searchTerm?: string;
   statusFilter?: string;
   assigneeFilter?: string;
+  companyFilter?: string;
+  probabilityFilter?: string;
   startDate?: string;
   endDate?: string;
   dateFilterType?: string;
   followUpFilter?: string;
   sortConfig?: { key: string; direction: 'asc' | 'desc' } | null;
+  page?: number;
+  pageSize?: number;
 }
 
 export function useDealsQuery({
@@ -21,19 +25,23 @@ export function useDealsQuery({
   searchTerm,
   statusFilter,
   assigneeFilter,
+  companyFilter,
+  probabilityFilter,
   startDate,
   endDate,
   dateFilterType,
   followUpFilter,
   sortConfig,
+  page = 1,
+  pageSize = 20,
 }: FetchDealsParams) {
-  return useInfiniteQuery({
-    queryKey: ['deals', { companyId, pipelineId, searchTerm, statusFilter, assigneeFilter, dateFilterType, startDate, endDate, followUpFilter, sortConfig }],
-    queryFn: async ({ pageParam = 0 }) => {
-      if (!pipelineId) return { data: [], nextPage: undefined, totalCount: 0 };
+  return useQuery({
+    queryKey: ['deals', { companyId, pipelineId, searchTerm, statusFilter, assigneeFilter, companyFilter, probabilityFilter, dateFilterType, startDate, endDate, followUpFilter, sortConfig, page, pageSize }],
+    queryFn: async () => {
+      if (!pipelineId) return { data: [], totalCount: 0 };
       
-      const from = pageParam * 20;
-      const to = from + 19;
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
 
       let query = supabase.from('deals').select(`
         *,
@@ -45,7 +53,7 @@ export function useDealsQuery({
       query = query.eq('pipeline_id', pipelineId);
 
       if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,contact_name.ilike.%${searchTerm}%`);
+        query = query.or(`name.ilike.%${searchTerm}%,contact_name.ilike.%${searchTerm}%,customer_company.ilike.%${searchTerm}%`);
       }
 
       if (statusFilter && statusFilter !== 'all') {
@@ -54,6 +62,18 @@ export function useDealsQuery({
 
       if (assigneeFilter && assigneeFilter !== 'all') {
         query = query.eq('sales_id', assigneeFilter);
+      }
+
+      if (companyFilter && companyFilter !== 'all') {
+        query = query.eq('client_company_id', companyFilter);
+      }
+
+      if (probabilityFilter && probabilityFilter !== 'all') {
+        const prob = parseInt(probabilityFilter);
+        if (!isNaN(prob)) {
+          if (prob === 100) query = query.eq('probability', 100);
+          else query = query.gte('probability', prob).lt('probability', prob + 25);
+        }
       }
 
       if (dateFilterType === 'custom') {
@@ -72,24 +92,22 @@ export function useDealsQuery({
         query = query.eq('follow_up', parseInt(followUpFilter));
       }
 
+      // Always prioritize urgent deals
+      query = query.order('is_urgent', { ascending: false });
+
       const orderKey = sortConfig?.key || 'created_at';
       const orderDirection = sortConfig?.direction || 'desc';
 
-      query = query
-        .order('is_urgent', { ascending: false })
-        .order(orderKey, { ascending: orderDirection === 'asc' });
+      query = query.order(orderKey, { ascending: orderDirection === 'asc' });
 
       const { data, error, count } = await query.range(from, to);
       if (error) throw error;
 
       return {
         data: data as Deal[],
-        nextPage: data.length === 20 ? pageParam + 1 : undefined,
         totalCount: count || 0,
       };
     },
-    initialPageParam: 0,
-    getNextPageParam: (lastPage) => lastPage.nextPage,
     enabled: !!companyId && !!pipelineId,
   });
 }
@@ -120,7 +138,27 @@ export function useDealMutations() {
     },
   });
 
-  return { deleteDeal, updateDealStatus };
+  const bulkDeleteDeals = useMutation({
+    mutationFn: async (dealIds: number[]) => {
+      const { error } = await supabase.from('deals').delete().in('id', dealIds);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
+    },
+  });
+
+  const bulkUpdateDealsStage = useMutation({
+    mutationFn: async ({ dealIds, stageId }: { dealIds: number[]; stageId: string | number }) => {
+      const { error } = await supabase.from('deals').update({ stage_id: stageId }).in('id', dealIds);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
+    },
+  });
+
+  return { deleteDeal, updateDealStatus, bulkDeleteDeals, bulkUpdateDealsStage };
 }
 
 export function useDealMetadata(companyId: number, pipelineId?: number) {

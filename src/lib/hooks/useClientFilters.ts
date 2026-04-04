@@ -6,6 +6,7 @@ import { Client } from '@/lib/types';
  */
 export function useClientFilters(clients: Client[]) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [companyFilter, setCompanyFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>({ 
     key: 'id', 
     direction: 'desc' 
@@ -27,6 +28,7 @@ export function useClientFilters(clients: Client[]) {
 
   return {
     searchTerm, setSearchTerm,
+    companyFilter, setCompanyFilter,
     sortConfig, setSortConfig,
     filteredClients,
     handleSort

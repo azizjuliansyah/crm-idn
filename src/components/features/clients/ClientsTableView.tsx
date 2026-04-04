@@ -26,9 +26,14 @@ interface Props {
   onDelete: (id: number, name: string) => void;
   sortConfig: { key: string; direction: 'asc' | 'desc' } | null;
   onSort: (key: string) => void;
-  hasMore?: boolean;
-  isLoadingMore?: boolean;
-  onLoadMore?: () => void;
+  
+  // Pagination
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+  isLoading?: boolean;
 }
 
 export const ClientsTableView: React.FC<Props> = ({
@@ -40,11 +45,21 @@ export const ClientsTableView: React.FC<Props> = ({
   onDelete,
   sortConfig,
   onSort,
-  hasMore,
-  isLoadingMore,
-  onLoadMore
+  page,
+  pageSize,
+  totalCount,
+  onPageChange,
+  onPageSizeChange,
+  isLoading
 }) => {
   const columns: ColumnConfig<ClientWithCompany>[] = [
+    {
+      header: 'ID',
+      key: 'id',
+      sortable: true,
+      className: 'w-20 font-mono text-[11px] text-gray-400 py-5 px-6',
+      render: (item) => `#${String(item.id).padStart(4, '0')}`
+    },
     {
       header: 'Client / Kontak',
       key: 'name',
@@ -59,7 +74,6 @@ export const ClientsTableView: React.FC<Props> = ({
               {item.salutation && <span className="text-emerald-500 mr-1">{item.salutation}</span>}
               {item.name}
             </div>
-            <Subtext className="text-[10px] text-gray-400 font-mono mt-1 uppercase tracking-tight">#{String(item.id).padStart(4, '0')}</Subtext>
           </div>
         </div>
       )
@@ -113,7 +127,7 @@ export const ClientsTableView: React.FC<Props> = ({
   ];
 
   return (
-    <div className="h-[80vh] mb-4">
+    <div className="h-[75vh] mb-4">
       <BaseDataTable
         data={clients}
         columns={columns}
@@ -122,9 +136,14 @@ export const ClientsTableView: React.FC<Props> = ({
         onToggleSelectAll={onToggleSelectAll}
         sortConfig={sortConfig}
         onSort={onSort}
-        hasMore={hasMore}
-        isLoadingMore={isLoadingMore}
-        onLoadMore={onLoadMore}
+        
+        page={page}
+        pageSize={pageSize}
+        totalCount={totalCount}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+        isLoading={isLoading}
+        
         emptyMessage="Belum ada data client"
         emptyIcon={<Contact size={48} className="mx-auto opacity-10 text-gray-400" />}
       />

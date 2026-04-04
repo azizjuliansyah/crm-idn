@@ -215,7 +215,6 @@ export const TicketTopicSettingsView: React.FC<Props> = ({ company }) => {
         itemName={confirmDelete.name}
         description="Semua tiket terkait mungkin akan kehilangan referensi topiknya."
         isProcessing={isProcessing}
-        variant="horizontal"
       />
     </div>
   );

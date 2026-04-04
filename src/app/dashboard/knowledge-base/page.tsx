@@ -9,5 +9,5 @@ export default function KnowledgeBasePage() {
 
   if (!company) return null;
 
-  return <KnowledgeBaseView company={company} />;
+  return <KnowledgeBaseView activeCompany={company} />;
 }

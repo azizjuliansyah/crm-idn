@@ -8,6 +8,7 @@ export function useProjectFilters(projects: Project[]) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [assigneeFilter, setAssigneeFilter] = useState('all');
+  const [clientFilter, setClientFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
   const filteredProjects = useMemo(() => {
@@ -28,6 +29,7 @@ export function useProjectFilters(projects: Project[]) {
     searchTerm, setSearchTerm,
     statusFilter, setStatusFilter,
     assigneeFilter, setAssigneeFilter,
+    clientFilter, setClientFilter,
     sortConfig, setSortConfig,
     filteredProjects,
     handleSort

@@ -1,6 +1,6 @@
 import React from 'react';
 import { DateFilterDropdown, ComboBox } from '@/components/ui';
-import { CompanyMember, Pipeline } from '@/lib/types';
+import { CompanyMember, Pipeline, ClientCompany } from '@/lib/types';
 
 interface DealFilterBarProps {
   dateFilterType: string;
@@ -15,8 +15,13 @@ interface DealFilterBarProps {
   setStatusFilter: (val: string) => void;
   assigneeFilter: string;
   setAssigneeFilter: (val: string) => void;
+  companyFilter: string;
+  setCompanyFilter: (val: string) => void;
+  probabilityFilter: string;
+  setProbabilityFilter: (val: string) => void;
   pipeline: Pipeline | null;
   members: CompanyMember[];
+  clientCompanies: ClientCompany[];
 }
 
 export const DealFilterBar: React.FC<DealFilterBarProps> = ({
@@ -26,8 +31,11 @@ export const DealFilterBar: React.FC<DealFilterBarProps> = ({
   followUpFilter, setFollowUpFilter,
   statusFilter, setStatusFilter,
   assigneeFilter, setAssigneeFilter,
+  companyFilter, setCompanyFilter,
+  probabilityFilter, setProbabilityFilter,
   pipeline,
-  members
+  members,
+  clientCompanies
 }) => {
   return (
     <div className="flex gap-3 shrink-0 items-center">
@@ -38,6 +46,31 @@ export const DealFilterBar: React.FC<DealFilterBarProps> = ({
         endDate={endDateFilter}
         onStartDateChange={setStartDateFilter}
         onEndDateChange={setEndDateFilter}
+      />
+      <ComboBox
+        value={companyFilter}
+        onChange={(val: string | number) => setCompanyFilter(val.toString())}
+        options={[
+          { value: 'all', label: 'SEMUA PERUSAHAAN' },
+          ...clientCompanies.map(c => ({ value: c.id.toString(), label: c.name.toUpperCase() }))
+        ]}
+        className="w-48"
+        placeholderSize="text-[10px] font-bold text-gray-900 uppercase "
+      />
+      <ComboBox
+        value={probabilityFilter}
+        onChange={(val: string | number) => setProbabilityFilter(val.toString())}
+        options={[
+          { value: 'all', label: 'SEMUA PROB.' },
+          { value: '0', label: '0 - 25%' },
+          { value: '25', label: '25 - 50%' },
+          { value: '50', label: '50 - 75%' },
+          { value: '75', label: '75 - 99%' },
+          { value: '100', label: '100% (WIN)' },
+        ]}
+        className="w-32"
+        hideSearch
+        placeholderSize="text-[10px] font-bold text-gray-900 uppercase "
       />
       <ComboBox
         value={followUpFilter}

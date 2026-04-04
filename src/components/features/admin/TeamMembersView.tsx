@@ -148,7 +148,6 @@ export const TeamMembersView: React.FC<Props> = ({ company, members, roles, user
         itemName="Anggota Tim"
         description="Hapus anggota tim ini secara permanen?"
         isProcessing={isProcessing}
-        variant="horizontal"
       />
     </div>
   );

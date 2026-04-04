@@ -129,13 +129,36 @@ export const InfiniteScrollSentinel: React.FC<{
   }
 
   return (
-    <div ref={sentinelRef} className="py-8 w-full">
+    <div ref={sentinelRef} className="py-8 w-full flex justify-center flex-col items-center gap-2">
       {isLoading && (
-        <div className="flex justify-center flex-col items-center gap-2">
+        <>
           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
           <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Memuat Lebih Banyak...</span>
-        </div>
+        </>
       )}
     </div>
   );
 };
+
+interface TableContainerProps {
+  children: React.ReactNode;
+  footer?: React.ReactNode;
+  height?: string;
+  className?: string;
+  containerClassName?: string;
+}
+
+export const TableContainer: React.FC<TableContainerProps> = ({ 
+  children, 
+  footer, 
+  height = 'h-[75vh]', 
+  className = '', 
+  containerClassName = '' 
+}) => (
+  <div className={`bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col overflow-hidden ${height} ${containerClassName}`}>
+    <div className={`overflow-x-auto overflow-y-auto flex-1 custom-scrollbar scroll-smooth outline-none ${className}`}>
+      {children}
+    </div>
+    {footer}
+  </div>
+);

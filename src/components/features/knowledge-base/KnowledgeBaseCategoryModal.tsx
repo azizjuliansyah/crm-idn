@@ -20,7 +20,7 @@ interface Props {
 }
 
 export const KnowledgeBaseCategoryModal: React.FC<Props> = ({
-  isOpen, onClose, company, categories, onSuccess
+  isOpen, onClose, company, categories = [], onSuccess
 }) => {
   const { showToast } = useAppStore();
   const [name, setName] = useState('');
@@ -112,7 +112,6 @@ export const KnowledgeBaseCategoryModal: React.FC<Props> = ({
         }}
         title="Hapus Kategori"
         itemName="Kategori ini"
-        variant="horizontal"
       />
 
       <style>{`

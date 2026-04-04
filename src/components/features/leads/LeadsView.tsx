@@ -17,6 +17,12 @@ import { useKanbanReorder } from '@/lib/hooks/useKanbanReorder';
 import { useAppStore } from '@/lib/store/useAppStore';
 import { useLeadMetadata, useLeadsQuery, useLeadMutations } from '@/lib/hooks/useLeadsQuery';
 import { supabase } from '@/lib/supabase';
+import { Trash2, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui';
+import { BulkActionGroup } from '@/components/shared/filters/BulkActionGroup';
+import { ConfirmBulkDeleteModal } from '@/components/shared/modals/ConfirmBulkDeleteModal';
+import { ConfirmBulkStatusModal } from '@/components/shared/modals/ConfirmBulkStatusModal';
+import { exportToExcel, ExcelColumn } from '@/lib/utils/excelExport';
 
 interface Props {
   activeCompany: Company | null;
@@ -31,6 +37,10 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean, id: number | null }>({ isOpen: false, id: null });
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [isConfirmBulkDeleteOpen, setIsConfirmBulkDeleteOpen] = useState(false);
+  const [isConfirmBulkStatusOpen, setIsConfirmBulkStatusOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const { showToast } = useAppStore();
 
   // 1. Initialize Filters Hook
@@ -38,6 +48,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
     searchTerm, setSearchTerm,
     statusFilter, setStatusFilter,
     assigneeFilter, setAssigneeFilter,
+    companyFilter, setCompanyFilter,
     dateFilterType, setDateFilterType,
     startDateFilter, setStartDateFilter,
     endDateFilter, setEndDateFilter,
@@ -71,25 +82,26 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
   const {
     data: leadsData,
     isLoading: leadsLoading,
-    isFetchingNextPage: isLoadingMore,
-    hasNextPage: hasMore,
-    fetchNextPage: loadMore,
+    isPlaceholderData: isFetchingNewPage,
     refetch: refresh,
   } = useLeadsQuery({
     companyId,
     searchTerm,
     statusFilter,
     assigneeFilter,
+    companyFilter,
     dateFilterType,
     startDate: startDateFilter,
     endDate: endDateFilter,
     sortConfig,
+    page,
+    pageSize
   });
 
-  const leads = leadsData?.pages.flatMap(page => page.data) || [];
+  const leads = leadsData?.data || [];
 
   // 4. Initialize mutations
-  const { deleteLead, updateLeadStatus } = useLeadMutations();
+  const { deleteLead, updateLeadStatus, bulkDeleteLeads, bulkUpdateLeadsStatus } = useLeadMutations();
 
   const handleCreateSuccess = () => {
     setIsAddModalOpen(false);
@@ -134,6 +146,67 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
     } catch (error: any) {
       showToast('Gagal mengubah status urgensi: ' + error.message, 'error');
     }
+  };
+  
+  const handleBulkDelete = async () => {
+    try {
+      await bulkDeleteLeads.mutateAsync(selectedIds);
+      showToast(`${selectedIds.length} lead berhasil dihapus!`, 'success');
+      setSelectedIds([]);
+      setIsConfirmBulkDeleteOpen(false);
+    } catch (error: any) {
+      showToast('Gagal menghapus lead: ' + error.message, 'error');
+    }
+  };
+
+  const handleBulkUpdateStatus = async (statusId: string | number) => {
+    try {
+      await bulkUpdateLeadsStatus.mutateAsync({ leadIds: selectedIds, status: String(statusId) });
+      showToast(`Status ${selectedIds.length} lead berhasil diperbarui!`, 'success');
+      setSelectedIds([]);
+      setIsConfirmBulkStatusOpen(false);
+    } catch (error: any) {
+      showToast('Gagal mengubah status: ' + error.message, 'error');
+    }
+  };
+
+  const handleExportLeads = () => {
+    const dataToExport = selectedIds.length > 0 
+      ? leads.filter(l => selectedIds.includes(l.id)) 
+      : leads;
+
+    if (dataToExport.length === 0) {
+      showToast('Tidak ada data untuk diekspor', 'info');
+      return;
+    }
+
+    const columns: ExcelColumn[] = [
+      { header: 'ID', key: 'id', width: 10 },
+      { header: 'Nama Lead', key: 'name', width: 25 },
+      { header: 'Instansi/Perusahaan', key: 'company_name', width: 25 },
+      { header: 'Status', key: 'status_label', width: 15 },
+      { header: 'Sales Assignee', key: 'sales_name', width: 20 },
+      { header: 'Email', key: 'email', width: 25 },
+      { header: 'WhatsApp', key: 'whatsapp', width: 20 },
+      { header: 'Budget', key: 'formatted_budget', width: 20 },
+      { header: 'Urgent', key: 'urgent_label', width: 10 },
+      { header: 'Tanggal Dibuat', key: 'created_at_label', width: 20 },
+    ];
+
+    const formattedData = dataToExport.map(l => ({
+      ...l,
+      company_name: l.client_company?.name || '-',
+      status_label: stages.find(s => s.name.toLowerCase() === l.status.toLowerCase())?.name || l.status,
+      sales_name: members.find(m => m.user_id === l.sales_id)?.profile?.full_name || '-',
+      formatted_budget: new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(l.expected_value || 0),
+      urgent_label: l.is_urgent ? 'Ya' : 'Tidak',
+      created_at_label: new Date(l.created_at).toLocaleDateString('id-ID', {
+        day: '2-digit', month: 'long', year: 'numeric'
+      }),
+    }));
+
+    exportToExcel(formattedData, columns, 'CRM_Leads_Report');
+    showToast('Data Lead berhasil diekspor ke Excel', 'success');
   };
 
   const handleToggleSelect = (id: string | number) => {
@@ -194,6 +267,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
         subtitle="Kelola prospek dan konversi penjualan Anda."
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
+        onExport={handleExportLeads}
         searchPlaceholder="Cari lead, klien..."
         viewModes={{
           current: viewMode,
@@ -208,19 +282,28 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
           onClick: () => setIsAddModalOpen(true),
           icon: <Plus size={14} strokeWidth={3} />
         }}
+        bulkActions={
+          <BulkActionGroup
+            selectedCount={selectedIds.length}
+            onUpdateStatus={() => setIsConfirmBulkStatusOpen(true)}
+            onDelete={() => setIsConfirmBulkDeleteOpen(true)}
+          />
+        }
       >
         <LeadFilterBar
           dateFilterType={dateFilterType} setDateFilterType={setDateFilterType}
           startDateFilter={startDateFilter} setStartDateFilter={setStartDateFilter}
           endDateFilter={endDateFilter} setEndDateFilter={setEndDateFilter}
-          statusFilter={statusFilter} setStatusFilter={setStatusFilter}
-          assigneeFilter={assigneeFilter} setAssigneeFilter={setAssigneeFilter}
+          statusFilter={statusFilter} setStatusFilter={(val) => { setStatusFilter(val); setPage(1); }}
+          assigneeFilter={assigneeFilter} setAssigneeFilter={(val) => { setAssigneeFilter(val); setPage(1); }}
+          companyFilter={companyFilter} setCompanyFilter={(val) => { setCompanyFilter(val); setPage(1); }}
           stages={stages}
           members={members}
+          clientCompanies={clientCompanies}
         />
       </StandardFilterBar>
 
-      <div className="h-[80vh] overflow-hidden">
+      <div className="h-[75vh] overflow-hidden">
         {loadingMetadata || (leadsLoading && leads.length === 0) ? (
           <div className="w-full h-full flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -233,13 +316,13 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
             onDelete={handleDelete}
             onReorder={onDrop}
             hasUrgency={activeCompany?.has_lead_urgency}
-            hasMore={hasMore}
-            isLoadingMore={isLoadingMore}
-            onLoadMore={loadMore}
+            hasMore={false} // Disable for now or adapt if needed
+            isLoadingMore={false}
+            onLoadMore={() => {}}
           />
         ) : (
           <LeadsTableView
-            leads={leads}
+            data={leads}
             sortConfig={sortConfig}
             onSort={handleSort}
             selectedIds={selectedIds}
@@ -250,9 +333,16 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
             onToggleUrgency={handleToggleUrgency}
             onUpdateStatus={handleUpdateStatus}
             stages={stages}
-            hasMore={hasMore}
-            isLoadingMore={isLoadingMore}
-            onLoadMore={loadMore}
+            
+            page={page}
+            pageSize={pageSize}
+            totalCount={leadsData?.totalCount || 0}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+                setPageSize(size);
+                setPage(1);
+            }}
+            isLoading={leadsLoading || isFetchingNewPage}
           />
         )}
       </div>
@@ -285,13 +375,29 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
       )}
 
       <ConfirmDeleteModal
-        isOpen={confirmDelete.isOpen}
-        onClose={() => setConfirmDelete({ isOpen: false, id: null })}
-        onConfirm={executeDelete}
-        title="Hapus Lead"
-        itemName="Lead ini"
-        description="Apakah Anda yakin ingin menghapus data lead ini dari sistem?"
-        variant="horizontal"
+        isOpen={confirmDelete.isOpen} onClose={() => setConfirmDelete({ isOpen: false, id: null })} onConfirm={executeDelete}
+        title="Hapus Lead" itemName="Lead ini" description="Apakah Anda yakin ingin menghapus data lead ini dari sistem?"
+      />
+
+      <ConfirmBulkDeleteModal
+        isOpen={isConfirmBulkDeleteOpen}
+        onClose={() => setIsConfirmBulkDeleteOpen(false)}
+        onConfirm={handleBulkDelete}
+        count={selectedIds.length}
+        title="Hapus Lead Terpilih"
+        description={`Apakah Anda yakin ingin menghapus ${selectedIds.length} lead yang dipilih? Tindakan ini tidak dapat dibatalkan.`}
+        isProcessing={bulkDeleteLeads.status === 'pending'}
+      />
+
+      <ConfirmBulkStatusModal
+        isOpen={isConfirmBulkStatusOpen}
+        onClose={() => setIsConfirmBulkStatusOpen(false)}
+        onConfirm={handleBulkUpdateStatus}
+        count={selectedIds.length}
+        options={stages.map(s => ({ id: s.name.toLowerCase(), name: s.name }))}
+        title="Ubah Status Lead"
+        label="Pilih Status Baru"
+        isProcessing={bulkUpdateLeadsStatus.status === 'pending'}
       />
     </div>
   );

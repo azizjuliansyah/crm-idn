@@ -368,7 +368,6 @@ export const DealsPipelineSettingsView: React.FC<Props> = ({ company }) => {
         onConfirm={handleDelete}
         itemName="Pipeline"
         isProcessing={isProcessing}
-        variant="horizontal"
       />
 
       <Toast

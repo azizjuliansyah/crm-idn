@@ -270,7 +270,6 @@ export const SalesRequestCategoriesSettingsView: React.FC<Props> = ({ company })
                 itemName={confirmDelete.name}
                 description="Hapus kategori ini? Seluruh request terkait akan kehilangan kategorinya."
                 isProcessing={isProcessing}
-                variant="horizontal"
             />
 
             <Toast

@@ -2,21 +2,29 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Button, H2, Subtext, SearchInput } from '@/components/ui';
+import { Button, H2, Subtext, TableContainer } from '@/components/ui';
 import { useAppStore } from '@/lib/store/useAppStore';
 
 
 import { supabase } from '@/lib/supabase';
 import { SupportTicket, Profile, Company, CompanyMember, SupportStage, Client, TicketTopic } from '@/lib/types';
 import {
-  Plus, Search, Trello, Table as TableIcon,
-  AlertTriangle, CheckCircle2, Trash2, X, Loader2
+  Plus, Trello, Table as TableIcon, Loader2 as LoaderIcon, List, LayoutGrid
 } from 'lucide-react';
+import { ConfirmBulkDeleteModal } from '@/components/shared/modals/ConfirmBulkDeleteModal';
+import { ConfirmBulkStatusModal } from '@/components/shared/modals/ConfirmBulkStatusModal';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { ComplaintAddModal } from '@/components/features/complaints/ComplaintAddModal';
 import { ComplaintDetailModal } from '@/components/features/complaints/ComplaintDetailModal';
 import { ComplaintsTableView } from '@/components/features/complaints/ComplaintsTableView';
 import { ComplaintsKanbanView } from '@/components/features/complaints/ComplaintsKanbanView';
+import { Pagination } from '@/components/shared/tables/Pagination';
+import { useSupportTicketsQuery, useSupportTicketMutations } from '@/lib/hooks/useSupportTicketsQuery';
+import { useSupportTicketFilters } from '@/lib/hooks/useSupportTicketFilters';
+import { StandardFilterBar } from '@/components/shared/filters/StandardFilterBar';
+import { BulkActionGroup } from '@/components/shared/filters/BulkActionGroup';
+import { SupportTicketFilterBar } from '../support/SupportTicketFilterBar';
+import { exportToExcel, ExcelColumn } from '@/lib/utils/excelExport';
 
 interface Props {
   activeCompany: Company;
@@ -27,15 +35,40 @@ interface Props {
 type ViewMode = 'table' | 'kanban';
 
 export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }) => {
-  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
+  // Filters State
+  const filters = useSupportTicketFilters([]);
+
   const [stages, setStages] = useState<SupportStage[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [members, setMembers] = useState<CompanyMember[]>([]);
   const [topics, setTopics] = useState<TicketTopic[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [isConfirmBulkDeleteOpen, setIsConfirmBulkDeleteOpen] = useState(false);
+  const [isConfirmBulkStatusOpen, setIsConfirmBulkStatusOpen] = useState(false);
+
+  // Data Fetching (Paginated for Table)
+  const {
+    data: ticketsData,
+    isLoading: ticketsLoading,
+    refetch: refetchTickets
+  } = useSupportTicketsQuery({
+    companyId: String(company.id),
+    searchTerm: filters.searchTerm,
+    filterStatus: filters.filterStatus,
+    filterClientId: filters.filterClientId,
+    filterTopicId: filters.filterTopicId,
+    filterType: 'complaint',
+    sortConfig: filters.sortConfig,
+    page,
+    pageSize,
+  });
+
+  const tickets = ticketsData?.data || [];
 
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -44,37 +77,111 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null; name: string }>({ isOpen: false, id: null, name: '' });
   const { showToast } = useAppStore();
 
-  const fetchData = useCallback(async (showLoading = true) => {
-    if (showLoading) setLoading(true);
+  const fetchMetadata = useCallback(async () => {
     try {
-      const [ticketsRes, stagesRes, clientsRes, membersRes, topicsRes] = await Promise.all([
-        supabase.from('support_tickets').select('*, assigned_profile:profiles(*), client:clients(*), ticket_topics(*)').eq('company_id', company.id).eq('type', 'complaint').order('kanban_order', { ascending: true }).order('id', { ascending: false }),
+      const [stagesRes, clientsRes, membersRes, topicsRes] = await Promise.all([
         supabase.from('support_stages').select('*').eq('company_id', company.id).order('sort_order', { ascending: true }),
         supabase.from('clients').select('*').eq('company_id', company.id).order('name'),
         supabase.from('company_members').select('*, profile:profiles(*)').eq('company_id', company.id),
         supabase.from('ticket_topics').select('*').eq('company_id', company.id).order('name')
       ]);
 
-      if (ticketsRes.data) setTickets(ticketsRes.data as SupportTicket[]);
       if (stagesRes.data) setStages(stagesRes.data);
       if (clientsRes.data) setClients(clientsRes.data);
       if (membersRes.data) setMembers(membersRes.data as any);
       if (topicsRes.data) setTopics(topicsRes.data);
-    } finally {
-      if (showLoading) setLoading(false);
+    } catch (err) {
+      console.error('Error fetching metadata:', err);
     }
   }, [company.id]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchMetadata();
+  }, [fetchMetadata]);
 
-
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [filters.searchTerm, filters.filterStatus, filters.filterClientId, filters.filterTopicId]);
 
   const handleDeleteClick = (id: number, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     const t = tickets.find(ticket => ticket.id === id);
     setConfirmDelete({ isOpen: true, id, name: t?.title || 'Keluhan ini' });
+  };
+
+  const { bulkDeleteTickets, bulkUpdateTicketsStatus } = useSupportTicketMutations();
+
+  const handleToggleSelect = (id: string | number) => {
+    const numId = Number(id);
+    setSelectedIds(prev =>
+      prev.includes(numId) ? prev.filter(i => i !== numId) : [...prev, numId]
+    );
+  };
+
+  const handleToggleSelectAll = () => {
+    if (selectedIds.length === tickets.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(tickets.map(t => t.id));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      await bulkDeleteTickets.mutateAsync(selectedIds);
+      showToast(`${selectedIds.length} keluhan berhasil dihapus.`, 'success');
+      setSelectedIds([]);
+      setIsConfirmBulkDeleteOpen(false);
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  const handleBulkUpdateStatus = async (status: string) => {
+    try {
+      await bulkUpdateTicketsStatus.mutateAsync({ ids: selectedIds, status });
+      showToast(`${selectedIds.length} status keluhan berhasil diperbarui.`, 'success');
+      setSelectedIds([]);
+      setIsConfirmBulkStatusOpen(false);
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  const handleExportComplaints = () => {
+    const dataToExport = selectedIds.length > 0 
+      ? tickets.filter(t => selectedIds.includes(t.id)) 
+      : tickets;
+
+    if (dataToExport.length === 0) {
+      showToast('Tidak ada data untuk diekspor', 'info');
+      return;
+    }
+
+    const columns: ExcelColumn[] = [
+      { header: 'ID', key: 'id', width: 10 },
+      { header: 'Judul Keluhan', key: 'title', width: 30 },
+      { header: 'Pelanggan', key: 'client_name', width: 25 },
+      { header: 'Topik', key: 'topic_name', width: 20 },
+      { header: 'PIC Support', key: 'assigned_name', width: 25 },
+      { header: 'Status', key: 'status', width: 15 },
+      { header: 'Prioritas', key: 'priority', width: 15 },
+      { header: 'Tanggal Dibuat', key: 'date_label', width: 20 },
+    ];
+
+    const formattedData = dataToExport.map(t => ({
+      ...t,
+      client_name: t.client?.name || 'Umum',
+      topic_name: t.ticket_topics?.name || '-',
+      assigned_name: t.assigned_profile?.full_name || '-',
+      date_label: new Date(t.created_at).toLocaleDateString('id-ID', {
+        day: '2-digit', month: 'long', year: 'numeric'
+      }),
+    }));
+
+    exportToExcel(formattedData, columns, 'CRM_Complaints_Report');
+    showToast('Data Keluhan berhasil diekspor ke Excel', 'success');
   };
 
   const executeDelete = async () => {
@@ -84,7 +191,7 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
       const { error } = await supabase.from('support_tickets').delete().eq('id', confirmDelete.id);
       if (error) throw error;
       showToast('Data keluhan telah dihapus.', 'success');
-      await fetchData(false);
+      refetchTickets();
       setConfirmDelete({ isOpen: false, id: null, name: '' });
     } catch (err: any) {
       showToast(err.message, 'error');
@@ -93,64 +200,52 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
     }
   };
 
-  // Network update based on the generic KanbanBoard's onReorder payload
-  const handleDrop = async (ticketId: number, newStatus: string, index?: number) => {
+  const handleDrop = async (ticketId: number, newStatus: string, index: number = 0) => {
     if (isProcessing) return;
+    setIsProcessing(true);
 
     try {
-      const targetColumnCards = ticketsByStatus[newStatus.toLowerCase()] || [];
-      const draggedCard = tickets.find(t => t.id === ticketId);
-      if (!draggedCard) return;
-
-      const cardsWithoutDragged = targetColumnCards.filter(t => t.id !== ticketId);
+      const stageTickets = tickets.filter(t => (t.status || '').toLowerCase() === newStatus.toLowerCase());
+      const cardsWithoutDragged = stageTickets.filter(t => t.id !== ticketId);
 
       let newOrder = 0;
-
       if (cardsWithoutDragged.length === 0) {
         newOrder = 1000;
-      } else if (index === undefined || index >= cardsWithoutDragged.length) {
-        const lastCard = cardsWithoutDragged[cardsWithoutDragged.length - 1];
-        newOrder = (lastCard.kanban_order || 0) + 1000;
       } else if (index <= 0) {
         const firstCard = cardsWithoutDragged[0];
         newOrder = (firstCard.kanban_order || 0) - 1000;
+      } else if (index >= cardsWithoutDragged.length) {
+        const lastCard = cardsWithoutDragged[cardsWithoutDragged.length - 1];
+        newOrder = (lastCard.kanban_order || 0) + 1000;
       } else {
         const cardBefore = cardsWithoutDragged[index - 1];
         const cardAfter = cardsWithoutDragged[index];
         newOrder = ((cardBefore.kanban_order || 0) + (cardAfter.kanban_order || 0)) / 2;
       }
 
-      // Optimistic Update
-      setTickets(prev => prev.map(t =>
-        t.id === ticketId ? { ...t, status: newStatus.toLowerCase(), kanban_order: newOrder } : t
-      ));
+      const { error } = await supabase
+        .from('support_tickets')
+        .update({ status: newStatus.toLowerCase(), kanban_order: newOrder })
+        .eq('id', ticketId);
 
-      // Network Update
-      const { error } = await supabase.from('support_tickets').update({ status: newStatus.toLowerCase(), kanban_order: newOrder }).eq('id', ticketId);
       if (error) throw error;
       showToast('Status keluhan diperbarui.', 'success');
+      refetchTickets();
     } catch (err: any) {
       showToast(err.message, 'error');
-      await fetchData(false); // Rollback optimistic state
+    } finally {
+      setIsProcessing(false);
     }
   };
-
-  const filteredTickets = useMemo(() => {
-    return tickets.filter(t =>
-      t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (t.client?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [tickets, searchTerm]);
 
   const ticketsByStatus = useMemo(() => {
     const groups: Record<string, SupportTicket[]> = {};
     stages.forEach(s => groups[s.name.toLowerCase()] = []);
-    filteredTickets.forEach(t => {
+    tickets.forEach(t => {
       const sKey = (t.status || '').toLowerCase();
       if (groups[sKey]) groups[sKey].push(t);
     });
 
-    // Sort tickets inside grouping mathematically correctly
     Object.keys(groups).forEach(key => {
       groups[key].sort((a, b) => {
         const orderA = a.kanban_order || 0;
@@ -161,77 +256,88 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
     });
 
     return groups;
-  }, [filteredTickets, stages]);
+  }, [tickets, stages]);
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-rose-600 mb-4" size={32} /><Subtext className="!text-[10px]  uppercase  text-gray-400">Sinkronisasi Complaints...</Subtext></div>;
+  if (ticketsLoading && tickets.length === 0) return (
+    <div className="flex flex-col items-center justify-center py-24 bg-white rounded-2xl border border-gray-100 min-h-[400px]">
+      <LoaderIcon className="animate-spin text-rose-600 mb-4" size={32} />
+      <Subtext className="text-[10px]  uppercase  text-gray-400">Sinkronisasi Customer Complaints...</Subtext>
+    </div>
+  );
 
   return (
     <div className="flex flex-col gap-6 text-gray-900">
-      <div className="flex flex-col gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
-        <div className="flex items-center justify-between">
-          <div>
-            <H2 className="text-xl">Customer Complaints</H2>
-            <Subtext className="text-[10px] uppercase ">Kelola keluhan dan komplain dari pelanggan.</Subtext>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex bg-gray-50 border border-gray-100 p-1 rounded-xl">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setViewMode('table')}
-                className={`!p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-white shadow-sm ring-1 ring-gray-100 text-blue-600' : 'text-gray-400'}`}
-              >
-                <TableIcon size={14} strokeWidth={2.5} />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setViewMode('kanban')}
-                className={`!p-2 rounded-lg transition-all ${viewMode === 'kanban' ? 'bg-white shadow-sm ring-1 ring-gray-100 text-blue-600' : 'text-gray-400'}`}
-              >
-                <Trello size={14} strokeWidth={2.5} />
-              </Button>
-            </div>
-            <Button
-              onClick={() => setIsAddModalOpen(true)}
-              leftIcon={<Plus size={14} strokeWidth={3} />}
-              className="!px-6 py-2.5 text-[10px] uppercase  shadow-lg shadow-blue-100"
-              variant="primary"
-              size="sm"
-            >
-              Complaint Baru
-            </Button>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-gray-50">
-          <div className="w-[400px] shrink-0">
-            <SearchInput
-              placeholder="Cari keluhan..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="h-[80vh] mb-4 overflow-hidden flex flex-col">
-        {viewMode === 'table' ? (
-          <ComplaintsTableView
-            tickets={filteredTickets}
-            onEdit={(t) => { setSelectedTicket(t); setIsDetailModalOpen(true); }}
-            onDelete={handleDeleteClick}
+      <StandardFilterBar
+        title="Customer Complaints"
+        subtitle="Kelola keluhan dan komplain dari pelanggan."
+        searchTerm={filters.searchTerm}
+        onSearchChange={filters.setSearchTerm}
+        onExport={handleExportComplaints}
+        searchPlaceholder="Cari keluhan atau pelanggan..."
+        viewModes={{
+          current: viewMode,
+          onChange: (mode) => setViewMode(mode as ViewMode),
+          options: [
+            { mode: 'table', icon: <TableIcon size={14} strokeWidth={2.5} />, label: 'Table' },
+            { mode: 'kanban', icon: <Trello size={14} strokeWidth={2.5} />, label: 'Kanban' },
+          ]
+        }}
+        primaryAction={{
+          label: "Complaint Baru",
+          onClick: () => setIsAddModalOpen(true),
+          icon: <Plus size={14} strokeWidth={3} />
+        }}
+        bulkActions={
+          <BulkActionGroup
+            selectedCount={selectedIds.length}
+            onUpdateStatus={() => setIsConfirmBulkStatusOpen(true)}
+            onDelete={() => setIsConfirmBulkDeleteOpen(true)}
           />
-        ) : (
+        }
+      >
+        <SupportTicketFilterBar
+          filterStatus={filters.filterStatus}
+          setFilterStatus={filters.setFilterStatus}
+          filterClientId={filters.filterClientId}
+          setFilterClientId={filters.setFilterClientId}
+          filterTopicId={filters.filterTopicId}
+          setFilterTopicId={filters.setFilterTopicId}
+          clients={clients}
+          topics={topics}
+        />
+      </StandardFilterBar>
+
+      {viewMode === 'table' ? (
+        <ComplaintsTableView
+          tickets={tickets}
+          isLoading={ticketsLoading}
+          onEdit={(t: any) => { setSelectedTicket(t); setIsDetailModalOpen(true); }}
+          onDelete={handleDeleteClick}
+          page={page}
+          pageSize={pageSize}
+          totalCount={ticketsData?.totalCount || 0}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+          sortConfig={filters.sortConfig}
+          onSort={filters.handleSort}
+          selectedIds={selectedIds}
+          onToggleSelect={handleToggleSelect}
+          onToggleSelectAll={handleToggleSelectAll}
+        />
+      ) : (
+        <TableContainer height="h-[75vh]">
           <ComplaintsKanbanView
             stages={stages}
             ticketsByStatus={ticketsByStatus}
-            onEdit={(t) => { setSelectedTicket(t); setIsDetailModalOpen(true); }}
+            onEdit={(t: any) => { setSelectedTicket(t); setIsDetailModalOpen(true); }}
             onDelete={handleDeleteClick}
-            onReorder={handleDrop}
+            onReorder={handleDrop as any}
           />
-        )}
-      </div>
+        </TableContainer>
+      )}
 
       {isAddModalOpen && (
         <ComplaintAddModal
@@ -242,7 +348,7 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
           stages={stages}
           clients={clients}
           topics={topics}
-          onSuccess={() => fetchData(false)}
+          onSuccess={() => refetchTickets()}
         />
       )}
 
@@ -257,7 +363,7 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
           stages={stages}
           clients={clients}
           topics={topics}
-          onUpdate={() => fetchData(false)}
+          onUpdate={() => refetchTickets()}
           onDelete={handleDeleteClick}
         />
       )}
@@ -270,9 +376,28 @@ export const ComplaintsView: React.FC<Props> = ({ activeCompany: company, user }
         itemName={confirmDelete.name}
         description="Tindakan ini permanen. Seluruh riwayat aktivitas pada keluhan ini akan hilang."
         isProcessing={isProcessing}
-        variant="horizontal"
       />
 
+      <ConfirmBulkDeleteModal
+        isOpen={isConfirmBulkDeleteOpen}
+        onClose={() => setIsConfirmBulkDeleteOpen(false)}
+        onConfirm={handleBulkDelete}
+        count={selectedIds.length}
+        title="Hapus Keluhan Masal"
+        description={`Apakah Anda yakin ingin menghapus ${selectedIds.length} keluhan yang dipilih? Tindakan ini permanen.`}
+        isProcessing={bulkDeleteTickets.status === 'pending'}
+      />
+
+      <ConfirmBulkStatusModal
+        isOpen={isConfirmBulkStatusOpen}
+        onClose={() => setIsConfirmBulkStatusOpen(false)}
+        onConfirm={(status) => handleBulkUpdateStatus(String(status))}
+        count={selectedIds.length}
+        options={stages.map(s => ({ id: s.name.toLowerCase(), name: s.name.toUpperCase() }))}
+        title="Ubah Status Keluhan"
+        label="Pilih Status Baru"
+        isProcessing={bulkUpdateTicketsStatus.status === 'pending'}
+      />
     </div>
   );
 };

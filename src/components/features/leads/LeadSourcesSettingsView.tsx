@@ -235,7 +235,6 @@ export const LeadSourcesSettingsView: React.FC<Props> = ({ company }) => {
         title="Hapus Sumber"
         itemName={confirmDelete.name}
         isProcessing={isProcessing}
-        variant="horizontal"
       />
 
       <Toast

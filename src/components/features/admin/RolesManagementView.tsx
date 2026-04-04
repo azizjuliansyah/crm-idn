@@ -155,7 +155,6 @@ export const RolesManagementView: React.FC<Props> = ({ company, roles, onUpdate 
         itemName="Role"
         description="Hapus role ini secara permanen?"
         isProcessing={isProcessing}
-        variant="horizontal"
       />
     </div>
   );

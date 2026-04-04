@@ -9,6 +9,7 @@ export function useLeadFilters(leads: Lead[]) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [assigneeFilter, setAssigneeFilter] = useState('all');
+  const [companyFilter, setCompanyFilter] = useState('all');
   const [dateFilterType, setDateFilterType] = useState('all');
   const [startDateFilter, setStartDateFilter] = useState('');
   const [endDateFilter, setEndDateFilter] = useState('');
@@ -33,6 +34,7 @@ export function useLeadFilters(leads: Lead[]) {
     searchTerm, setSearchTerm,
     statusFilter, setStatusFilter,
     assigneeFilter, setAssigneeFilter,
+    companyFilter, setCompanyFilter,
     dateFilterType, setDateFilterType,
     startDateFilter, setStartDateFilter,
     endDateFilter, setEndDateFilter,

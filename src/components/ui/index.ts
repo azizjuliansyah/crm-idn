@@ -19,3 +19,4 @@ export * from './Checkbox';
 export * from './DateFilterDropdown';
 export * from './Toast';
 export * from './Toggle';
+export * from './Select';

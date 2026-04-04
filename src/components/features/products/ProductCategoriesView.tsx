@@ -211,7 +211,6 @@ export const ProductCategoriesView: React.FC<Props> = ({ company }) => {
         title="Hapus Kategori"
         itemName={confirmDelete.name}
         description={`Tindakan ini permanen. Pastikan tidak ada produk yang terhubung dengan kategori ${confirmDelete.name}.`}
-        variant="horizontal"
       />
 
       <Toast

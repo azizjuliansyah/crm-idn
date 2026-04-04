@@ -19,25 +19,52 @@ import {
 import { BaseDataTable, ColumnConfig } from '@/components/shared/tables/BaseDataTable';
 
 interface Props {
-  tasks: Task[];
+  data: Task[];
   stages: TaskStage[];
   onEdit: (task: Task) => void;
   onDelete: (id: number, title: string) => void;
-  hasMore?: boolean;
-  isLoadingMore?: boolean;
-  onLoadMore?: () => void;
+  sortConfig: { key: string; direction: 'asc' | 'desc' } | null;
+  onSort: (key: string) => void;
+
+  // Selection
+  selectedIds?: number[];
+  onToggleSelect?: (id: string | number) => void;
+  onToggleSelectAll?: () => void;
+
+  // Pagination
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+  isLoading?: boolean;
 }
 
 export const TasksTableView: React.FC<Props> = ({
-  tasks,
+  data,
   stages,
   onEdit,
   onDelete,
-  hasMore,
-  isLoadingMore,
-  onLoadMore
+  sortConfig,
+  onSort,
+  page,
+  pageSize,
+  totalCount,
+  onPageChange,
+  onPageSizeChange,
+  isLoading,
+  selectedIds,
+  onToggleSelect,
+  onToggleSelectAll
 }) => {
   const columns: ColumnConfig<Task>[] = [
+    {
+      header: 'ID',
+      key: 'id',
+      sortable: true,
+      className: 'w-20 font-mono text-[11px] text-gray-400 py-5 px-6',
+      render: (t) => `#${String(t.id).padStart(4, '0')}`
+    },
     {
       header: 'Daftar Pekerjaan',
       key: 'title',
@@ -82,6 +109,7 @@ export const TasksTableView: React.FC<Props> = ({
     {
       header: 'Status',
       key: 'stage_id',
+      sortable: true,
       render: (t) => (
         <Badge variant="secondary" className="px-3 py-1 text-[9px] uppercase rounded-full">
           {stages.find(s => s.id === t.stage_id)?.name || 'Unknown'}
@@ -114,11 +142,22 @@ export const TasksTableView: React.FC<Props> = ({
 
   return (
     <BaseDataTable
-      data={tasks}
+      data={data}
       columns={columns}
-      hasMore={hasMore}
-      isLoadingMore={isLoadingMore}
-      onLoadMore={onLoadMore}
+      sortConfig={sortConfig}
+      onSort={onSort}
+      
+      selectedIds={selectedIds}
+      onToggleSelect={onToggleSelect}
+      onToggleSelectAll={onToggleSelectAll}
+
+      page={page}
+      pageSize={pageSize}
+      totalCount={totalCount}
+      onPageChange={onPageChange}
+      onPageSizeChange={onPageSizeChange}
+      isLoading={isLoading}
+      
       emptyMessage="Belum ada task pada proyek ini"
       emptyIcon={<ClipboardList size={48} className="mx-auto opacity-10 text-gray-400" />}
     />
