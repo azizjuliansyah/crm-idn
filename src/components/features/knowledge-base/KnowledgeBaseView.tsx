@@ -265,7 +265,7 @@ export const KnowledgeBaseView: React.FC<Props> = ({ activeCompany: company }) =
             <Button
               variant="secondary"
               onClick={() => setIsCategoryModalOpen(true)}
-              leftIcon={<Settings size={14} />}
+              leftIcon={<Tag size={14} />}
               className="text-[10px] uppercase font-bold"
               size="sm"
             >

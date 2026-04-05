@@ -2,12 +2,14 @@
 
 import React from 'react';
 import { useAppStore } from '@/lib/store/useAppStore';
-import { AiSettingsView } from '@/components/features/ai/AiSettingsView';
+import { AiSettingsView } from '@/components/features/settings/AiSettingsView';
 
 export default function AiSettingsPage() {
-  const { activeCompany: company } = useAppStore();
+  const { activeCompany } = useAppStore();
+  
+  if (!activeCompany) {
+    return <div className="p-8 text-center text-gray-500">Pilih workspace terlebih dahulu untuk mengatur konfigurasi AI.</div>;
+  }
 
-  if (!company) return null;
-
-  return <AiSettingsView company={company} />;
+  return <AiSettingsView company={activeCompany} />;
 }

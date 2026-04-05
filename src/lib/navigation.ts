@@ -15,7 +15,6 @@ export function getPathFromViewId(viewId: string): string {
     case 'support_pipeline': return '/dashboard/support/pipelines';
     case 'complaints': return '/dashboard/complaints';
     case 'knowledge_base': return '/dashboard/knowledge-base';
-    case 'ai_assistant': return '/dashboard/ai';
     case 'daftar_produk': return '/dashboard/products';
     case 'kategori_produk': return '/dashboard/products/categories';
     case 'satuan_produk': return '/dashboard/products/units';
@@ -113,7 +112,6 @@ export function getViewIdFromPath(pathname: string): string {
   if (pathname.startsWith('/dashboard/support')) return 'customer_support';
   if (pathname.startsWith('/dashboard/complaints')) return 'complaints';
   if (pathname.startsWith('/dashboard/knowledge-base')) return 'knowledge_base';
-  if (pathname === '/dashboard/ai') return 'ai_assistant';
 
   // Products
   if (pathname === '/dashboard/products' || pathname.startsWith('/dashboard/products/list')) return 'daftar_produk';

@@ -125,7 +125,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     'Produk', 'Kategori Produk', 'Satuan', 'Penjualan', 'Penawaran', 'Proforma Invoice',
     'Invoice', 'Kwitansi', 'Pengaturan Penjualan', 'Penomoran Otomatis', 'Pengaturan Pajak',
     'Template Dokumen', 'Knowledge Base', 'Pengaturan AI', 'Customer Support',
-    'Support Pipeline', 'Konfigurasi Email', 'Request Invoice', 'SOP', 'AI Assistant', 'Ticket Topic', 'Tingkat Urgensi'
+    'Support Pipeline', 'Konfigurasi Email', 'Request Invoice', 'SOP', 'Ticket Topic', 'Tingkat Urgensi'
   ];
 
   const fetchPipelines = useCallback(async () => {
@@ -199,7 +199,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           const perms = [...(roleData.permissions || [])];
 
           if (perms.includes('Dashboard')) {
-            const autoDashboard = ['Data Client', 'Perusahaan Client', 'Produk', 'Projects', 'Penjualan', 'Penawaran', 'Proforma Invoice', 'Invoice', 'Kwitansi', 'Knowledge Base', 'Customer Support', 'Request Invoice', 'Request Kwitansi', 'SOP', 'AI Assistant'];
+            const autoDashboard = ['Data Client', 'Perusahaan Client', 'Produk', 'Projects', 'Penjualan', 'Penawaran', 'Proforma Invoice', 'Invoice', 'Kwitansi', 'Knowledge Base', 'Customer Support', 'Request Invoice', 'Request Kwitansi', 'SOP'];
             autoDashboard.forEach(p => { if (!perms.includes(p)) perms.push(p); });
           }
           setUserPermissions(perms);
@@ -207,7 +207,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           setUserPermissions(ALL_POSSIBLE_MENU_LABELS);
           setCurrentRoleName('Super Admin');
         } else {
-          setUserPermissions(['Dashboard', 'Data Client', 'Perusahaan Client', 'Produk', 'Penjualan', 'Knowledge Base', 'Customer Support', 'SOP', 'AI Assistant']);
+          setUserPermissions(['Dashboard', 'Data Client', 'Perusahaan Client', 'Produk', 'Penjualan', 'Knowledge Base', 'Customer Support', 'SOP']);
           setCurrentRoleName('Member');
         }
       }
@@ -265,7 +265,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (activeView === 'sop_archive') return 'Arsip SOP (Non-Aktif)';
     if (activeView === 'sop_editor') return 'SOP Editor';
     if (activeView === 'sop_detail') return 'Standard Operating Procedure';
-    if (activeView === 'ai_assistant') return 'AI Workspace Assistant';
+    if (activeView === 'sop_detail') return 'Standard Operating Procedure';
 
     return activeView.replace(/_/g, ' ');
   };
@@ -683,13 +683,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 </div>
               )}
 
-              {canShow('AI Assistant') && renderMenuItem('ai_assistant', 'AI Assistant', <Sparkles />, 'bg-indigo-600')}
-
               {(canShow('Perusahaan') || canShow('Konfigurasi Email') || canShow('Anggota Tim') || canShow('Manajemen Role') ||
                 canShow('Pengaturan Leads') || canShow('Pengaturan Sumber Leads') || canShow('Pengaturan Deals Pipeline') ||
                 canShow('Project Pipeline') || canShow('Task Pipeline') || canShow('Support Pipeline') || canShow('Pengaturan Kategori Client') ||
                 canShow('Penomoran Otomatis') || canShow('Pengaturan Pajak') || canShow('Template Dokumen') || canShow('Kategori Produk') ||
-                canShow('Satuan') || canShow('Pengaturan AI') || canShow('Ticket Topic')) && (
+                canShow('Satuan') || canShow('Ticket Topic')) && (
                   <div className="space-y-0.5 relative group">
                     {activeStates.isSettingsActive && (
                       <div className="absolute left-[-12px] top-2 bottom-2 w-1 bg-blue-600 rounded-r-full z-10 shadow-[0_0_10px_rgba(37,99,235,0.2)]" />

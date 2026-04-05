@@ -1,9 +1,10 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { Input, Textarea, Button, H2, Subtext, ComboBox, Toast, ToastType } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { Company, AiSetting } from '@/lib/types';
-import { Loader2, Save, BrainCircuit, Check, AlertTriangle, Cpu } from 'lucide-react';
-// Removed legacy NotificationModal import
+import { Loader2, Save, BrainCircuit, Cpu } from 'lucide-react';
 
 interface Props {
   company: Company;
@@ -84,13 +85,13 @@ export const AiSettingsView: React.FC<Props> = ({ company }) => {
     }
   };
 
-  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-indigo-600 mb-4" /><Subtext className="text-[10px]  uppercase  text-gray-400">Memuat Konfigurasi AI...</Subtext></div>;
+  if (loading) return <div className="flex flex-col items-center justify-center py-24"><Loader2 className="animate-spin text-indigo-600 mb-4" /><Subtext className="text-[10px] uppercase text-gray-400">Memuat Konfigurasi AI...</Subtext></div>;
 
   return (
     <div className="max-w-3xl flex flex-col space-y-6">
       <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
         <div>
-          <H2 className="text-xl ">Konfigurasi Gemini AI</H2>
+          <H2 className="text-xl">Konfigurasi Gemini AI</H2>
           <Subtext className="text-[10px] uppercase font-semibold text-gray-400">Hubungkan workspace Anda dengan Google Gemini untuk fitur cerdas.</Subtext>
         </div>
         <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shadow-sm">
