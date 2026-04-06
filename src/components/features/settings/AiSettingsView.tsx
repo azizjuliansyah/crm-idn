@@ -106,9 +106,9 @@ export const AiSettingsView: React.FC<Props> = ({ company }) => {
             value={modelName}
             onChange={val => setModelName(val as string)}
             options={[
-              { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', sublabel: 'Terbaru, Tercepat & Pintar' },
-              { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', sublabel: 'Cepat & Efisien' },
-              { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', sublabel: 'Paling Canggih' },
+              { value: 'gemini-3.0-flash', label: 'Gemini 3.0 Flash (Experimental)', sublabel: 'Teknologi AI Terbaru & Tercepat' },
+              { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Stable)', sublabel: 'Cepat, Efisien & Sangat Stabil' },
+              { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (Stable)', sublabel: 'Performa Terbaik untuk Analisis Data' },
             ]}
             leftIcon={<Cpu size={16} />}
             hideSearch

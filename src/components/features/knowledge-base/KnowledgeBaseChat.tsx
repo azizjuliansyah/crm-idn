@@ -4,7 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 
 import { Input, Button, Subtext, Label } from '@/components/ui';
 
-import { AiSetting, KbArticle } from '@/lib/types';
+import { AiSetting, KbArticle, ChatMessage } from '@/lib/types';
+import { useAppStore } from '@/lib/store/useAppStore';
 import {
   Sparkles, Bot, X, Send, SearchCode, ShieldCheck,
   ArrowRight, Link as LinkIcon, BookOpen, User, Loader2
@@ -19,11 +20,6 @@ interface Props {
   onOpenArticle: (article: KbArticle) => void;
 }
 
-interface ChatMessage {
-  role: 'user' | 'bot';
-  text: string;
-  references?: KbArticle[];
-}
 
 // Helper component to format AI text beautifully
 const FormattedAiResponse: React.FC<{ text: string }> = ({ text }) => {
@@ -78,12 +74,19 @@ const FormattedAiResponse: React.FC<{ text: string }> = ({ text }) => {
 export const KnowledgeBaseChat: React.FC<Props> = ({
   isOpen, onClose, articles, aiSetting, onNavigate, onOpenArticle
 }) => {
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    { role: 'bot', text: 'Halo! Saya asisten cerdas pusat bantuan Anda. Saya akan mencari jawaban hanya dari artikel yang tersedia untuk membantu Anda.' }
-  ]);
+  const { kbChatMessages: chatMessages, setKbChatMessages: setChatMessages } = useAppStore();
   const [currentInput, setCurrentInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const [retrievalStatus, setRetrievalStatus] = useState<string | null>(null);
+
+  // Initialize with welcome message if empty
+  useEffect(() => {
+    if (chatMessages.length === 0) {
+      setChatMessages([
+        { role: 'bot', text: 'Halo! Saya asisten cerdas pusat bantuan Anda. Saya akan mencari jawaban hanya dari artikel yang tersedia untuk membantu Anda.' }
+      ]);
+    }
+  }, [chatMessages.length]);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const isApiKeyActive = !!aiSetting?.gemini_api_key && aiSetting.gemini_api_key.trim() !== '';
@@ -131,21 +134,32 @@ export const KnowledgeBaseChat: React.FC<Props> = ({
 
     try {
       const relevantArticles = retrieveRelevantArticles(userMsg, articles, 3);
-      if (relevantArticles.length === 0) {
-        setChatMessages(prev => [...prev, { role: 'bot', text: 'Maaf, saya tidak menemukan informasi yang relevan di basis pengetahuan perusahaan kami untuk menjawab pertanyaan tersebut.' }]);
-        setIsThinking(false);
-        setRetrievalStatus(null);
-        return;
-      }
+      
+      setRetrievalStatus(relevantArticles.length > 0 ? `Menganalisis ${relevantArticles.length} artikel relevan...` : 'Menganalisis pesan...');
 
-      setRetrievalStatus(`Menganalisis ${relevantArticles.length} artikel relevan...`);
+      const context = relevantArticles.length > 0 
+        ? relevantArticles.map(a => `JUDUL: ${a.title}\nKONTEN: ${a.content.substring(0, 1500)}`).join('\n\n---\n\n')
+        : '';
 
-      const context = relevantArticles.map(a => `JUDUL: ${a.title}\nKONTEN: ${a.content.substring(0, 1500)}`).join('\n\n---\n\n');
       const systemInstruction = aiSetting?.system_instruction || 'Anda adalah AI Customer Support yang cerdas dan efisien.';
-      const prompt = `BERIKUT ADALAH KONTEKS DARI BASIS PENGETAHUAN KAMI:\n${context}\n\nTUGAS ANDA:\n1. Jawab pertanyaan pengguna HANYA berdasarkan konteks di atas.\n2. Jika jawaban tidak ada di konteks, katakan dengan jujur bahwa info tersebut tidak tersedia.\n3. Jawab dengan format markdown sederhana (gunakan ** untuk menebalkan poin penting dan gunakan list * untuk rincian).\n4. Jawab dengan singkat dan padat.\n5. Gunakan bahasa Indonesia yang profesional.\n\nPERTANYAAN PENGGUNA: "${userMsg}"`;
+      const prompt = `
+        ${context ? `BERIKUT ADALAH KONTEKS DARI BASIS PENGETAHUAN KAMI:\n${context}` : 'TIDAK ADA KONTEKS RELEVAN DARI BASIS PENGETAHUAN.'}
 
-      const model = aiSetting?.model_name || 'gemini-1.5-flash';
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${effectiveApiKey}`, {
+        TUGAS ANDA:
+        1. Jika pesan pengguna adalah sapaan (halo, test, hi, selamat pagi, dll), balas dengan ramah dan tanyakan bantuan apa yang diperlukan.
+        2. Jika pesan pengguna adalah pertanyaan, jawab menggunakan KONTEKS di atas. JANGAN memberikan informasi di luar konteks tersebut.
+        3. Jika pertanyaan tidak ada di KONTEKS dan bukan sapaan, sampaikan dengan sopan bahwa informasi tersebut tidak ditemukan di basis pengetahuan kami.
+        4. Gunakan format markdown (**tebal**, bullet point) untuk kejelasan.
+        5. Jawablah secara singkat, padat, dan profesional dalam Bahasa Indonesia.
+
+        PERTANYAAN PENGGUNA: "${userMsg}"
+      `;
+
+      const model = aiSetting?.model_name || 'gemini-2.5-flash';
+      // Use v1 for stable 2.5 models, v1beta for experimental 3.0 models
+      const apiVersion = model.includes('3.0') ? 'v1beta' : 'v1';
+      
+      const response = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${effectiveApiKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -160,17 +174,21 @@ export const KnowledgeBaseChat: React.FC<Props> = ({
         })
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.error?.message || 'Failed to fetch AI response');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `HTTP Error ${response.status}: Silakan periksa validitas API Key.`);
       }
 
+      const data = await response.json();
       const botMsg = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Maaf, saya tidak dapat memproses jawaban saat ini.';
       setChatMessages(prev => [...prev, { role: 'bot', text: botMsg, references: relevantArticles }]);
     } catch (err: any) {
-      console.error("AI Error:", err);
-      setChatMessages(prev => [...prev, { role: 'bot', text: `Gagal melakukan request AI. Pastikan API Key di halaman Konfigurasi Gemini sudah benar dan valid.` }]);
+      console.error("AI Error Details:", err);
+      const errorMessage = err.message || "Gagal melakukan request AI.";
+      setChatMessages(prev => [...prev, { 
+        role: 'bot', 
+        text: `Error: ${errorMessage}\n\nPastikan API Key di halaman Konfigurasi Gemini sudah aktif dan memiliki kuota yang cukup.` 
+      }]);
     } finally {
       setIsThinking(false);
       setRetrievalStatus(null);
@@ -190,8 +208,13 @@ export const KnowledgeBaseChat: React.FC<Props> = ({
   }
 
   return (
-    <div className="fixed bottom-8 right-8 z-[60] w-[440px] bg-white border border-gray-100 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col h-[600px]">
-      <div className="bg-indigo-600 p-7 text-white flex items-center justify-between shadow-lg relative overflow-hidden shrink-0">
+    <>
+      <div 
+        className="fixed inset-0 z-[55] bg-transparent cursor-default" 
+        onClick={onClose}
+      />
+      <div className="fixed bottom-8 right-8 z-[60] w-[640px] bg-white border border-gray-100 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col h-[760px] animate-in fade-in slide-in-from-bottom-4 duration-300">
+      <div className="bg-indigo-600 p-5 text-white flex items-center justify-between shadow-lg relative overflow-hidden shrink-0">
         <div className="absolute top-0 right-0 p-4 opacity-10 rotate-12"><Sparkles size={120} /></div>
         <div className="flex items-center gap-4 relative z-10">
           <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30 shadow-xl">
@@ -201,19 +224,19 @@ export const KnowledgeBaseChat: React.FC<Props> = ({
             <h5 className=" text-sm uppercase  leading-none mb-1.5">Knowledge Assistant</h5>
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full animate-pulse shadow-sm ${isApiKeyActive ? 'bg-emerald-400 shadow-emerald-400' : 'bg-rose-400 shadow-rose-400'}`}></div>
-              <Subtext className="text-[10px] opacity-80  uppercase ">
-                {isApiKeyActive ? 'Active (Private Key)' : 'AI Not Configured'}
+              <Subtext className="text-[10px] opacity-80 text-white uppercase ">
+                {isApiKeyActive ? `${aiSetting?.model_name}` : 'AI Not Configured'}
               </Subtext>
             </div>
           </div>
         </div>
-        <Button onClick={onClose} className="p-2.5 hover:bg-white/10 rounded-2xl transition-colors relative z-10"><X size={22} /></Button>
+        <Button onClick={onClose} size='sm' className="p-2.5 hover:bg-white/10 rounded-2xl transition-colors relative z-10"><X size={22} /></Button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-7 space-y-7 custom-scrollbar bg-white">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-white">
         {chatMessages.map((msg, idx) => (
           <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[92%] p-5 rounded-[1.8rem] shadow-sm border ${msg.role === 'user'
+            <div className={`max-w-[88%] p-3.5 rounded-2xl shadow-sm border ${msg.role === 'user'
               ? 'bg-indigo-600 text-white border-transparent rounded-tr-none'
               : 'bg-gray-50/50 border-gray-100 rounded-tl-none'
               }`}>
@@ -248,11 +271,11 @@ export const KnowledgeBaseChat: React.FC<Props> = ({
         ))}
         {isThinking && (
           <div className="flex justify-start">
-            <div className="bg-gray-50 border border-gray-100 p-5 rounded-[1.5rem] rounded-tl-none flex flex-col gap-3 shadow-sm min-w-[140px]">
-              <div className="flex gap-1.5">
-                <div className="w-2 h-2 bg-indigo-300 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
-                <div className="w-2 h-2 bg-indigo-700 rounded-full animate-bounce [animation-delay:0.4s]"></div>
+            <div className="bg-gray-50 border border-gray-100 p-4 rounded-2xl rounded-tl-none flex flex-col gap-2.5 shadow-sm min-w-[120px]">
+              <div className="flex gap-1">
+                <div className="w-1.5 h-1.5 bg-indigo-300 rounded-full animate-bounce"></div>
+                <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                <div className="w-1.5 h-1.5 bg-indigo-700 rounded-full animate-bounce [animation-delay:0.4s]"></div>
               </div>
               {retrievalStatus && (
                 <Subtext className="text-[10px]  text-gray-400 uppercase  animate-pulse flex items-center gap-2">
@@ -265,7 +288,7 @@ export const KnowledgeBaseChat: React.FC<Props> = ({
         <div ref={chatEndRef} />
       </div>
 
-      <div className="p-6 bg-white border-t border-gray-50 shrink-0">
+      <div className="p-4 bg-white border-t border-gray-50 shrink-0">
         {!isApiKeyActive ? (
           <div className="bg-amber-50 p-5 rounded-3xl border border-amber-100 space-y-4">
             <div className="flex items-center gap-3">
@@ -285,23 +308,28 @@ export const KnowledgeBaseChat: React.FC<Props> = ({
             )}
           </div>
         ) : (
-          <form onSubmit={handleChatSubmit} className="flex gap-3 items-center">
-            <div className="flex-1">
-              <Input
+          <form onSubmit={handleChatSubmit} className="flex gap-2.5 items-stretch">
+            <div className="relative flex-1 group">
+              <input
                 type="text"
                 value={currentInput}
                 onChange={e => setCurrentInput(e.target.value)}
                 placeholder="Ketik pertanyaan Anda..."
                 disabled={isThinking}
-                className="w-full bg-gray-50 px-6 py-4 rounded-2xl text-sm outline-none focus:bg-white focus:border-indigo-300 transition-all border border-transparent shadow-inner"
+                className="w-full h-14 bg-gray-50/50 hover:bg-gray-50 px-6 rounded-2xl text-[13px] font-medium outline-none border border-transparent focus:border-indigo-200 focus:bg-white focus:ring-4 focus:ring-indigo-50/50 transition-all shadow-inner placeholder:text-gray-400 disabled:opacity-50"
               />
             </div>
             <button
               type="submit"
               disabled={isThinking || !currentInput.trim()}
-              className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shrink-0 hover:bg-indigo-700 active:scale-95 transition-all shadow-xl shadow-indigo-100 disabled:opacity-50 disabled:pointer-events-none p-0"
+              className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shrink-0 hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-200 active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none shadow-md shadow-indigo-100"
+              title="Kirim Pesan"
             >
-              {isThinking ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
+              {isThinking ? (
+                <Loader2 size={20} className="animate-spin" />
+              ) : (
+                <Send size={20} className={currentInput.trim() ? 'translate-x-0.5 -translate-y-0.5' : ''} />
+              )}
             </button>
           </form>
         )}
@@ -313,5 +341,6 @@ export const KnowledgeBaseChat: React.FC<Props> = ({
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
       `}</style>
     </div>
+    </>
   );
 };

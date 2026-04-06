@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Company, Profile, CompanyMember, PlatformSettings } from '@/lib/types';
+import { Company, Profile, CompanyMember, PlatformSettings, ChatMessage } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 
 interface AppState {
@@ -15,6 +15,7 @@ interface AppState {
     message: string;
     type: 'success' | 'error' | 'info';
   };
+  kbChatMessages: ChatMessage[];
   
   // Basic Actions
   setUser: (user: Profile | null) => void;
@@ -25,6 +26,7 @@ interface AppState {
   setLoading: (loading: boolean) => void;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   hideToast: () => void;
+  setKbChatMessages: (messages: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => void;
   
   // Complex Actions
   init: () => Promise<void>;
@@ -47,6 +49,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     message: '',
     type: 'success',
   },
+  kbChatMessages: [],
 
   setUser: (user) => set({ user }),
   setCompanies: (companies) => set({ companies }),
@@ -68,6 +71,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       ...state.toast, 
       isOpen: false 
     } 
+  })),
+  setKbChatMessages: (messages) => set((state) => ({ 
+    kbChatMessages: typeof messages === 'function' ? messages(state.kbChatMessages) : messages 
   })),
 
   init: async () => {
@@ -170,7 +176,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   logout: async () => {
     set({ isLoggingOut: true });
     localStorage.removeItem('crm_active_company_id');
-    set({ activeCompany: null, user: null, companies: [], activeCompanyMembers: [] });
+    set({ activeCompany: null, user: null, companies: [], activeCompanyMembers: [], kbChatMessages: [] });
     await supabase.auth.signOut();
     set({ isLoggingOut: false });
   },

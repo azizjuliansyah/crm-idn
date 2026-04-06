@@ -594,6 +594,12 @@ export interface AiSetting {
   updated_at: string;
 }
 
+export interface ChatMessage {
+  role: 'user' | 'bot';
+  text: string;
+  references?: KbArticle[];
+}
+
 export interface CompanyEmailSetting {
   id: number;
   company_id: number;

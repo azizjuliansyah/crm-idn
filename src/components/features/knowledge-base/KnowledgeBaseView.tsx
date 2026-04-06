@@ -43,7 +43,7 @@ export const KnowledgeBaseView: React.FC<Props> = ({ activeCompany: company }) =
   const filters = useKnowledgeBaseFilters();
 
   const [categories, setCategories] = useState<KnowledgeBaseCategory[]>([]);
-  const [viewMode, setViewMode] = useState<'list' | 'chat'>('list');
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [selectedArticle, setSelectedArticle] = useState<KnowledgeBaseArticle | null>(null);
   const [isArticleModalOpen, setIsArticleModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -211,25 +211,6 @@ export const KnowledgeBaseView: React.FC<Props> = ({ activeCompany: company }) =
     }
   ], []);
 
-  if (viewMode === 'chat') {
-    return (
-      <div className="h-[calc(100vh-140px)] flex flex-col">
-        <div className="flex items-center justify-between mb-4">
-          <Button variant="ghost" onClick={() => setViewMode('list')} leftIcon={<ChevronRight className="rotate-180" size={16} />}>
-            Kembali ke Daftar
-          </Button>
-          <H2 className="text-xl">Knowledge Assistant</H2>
-        </div>
-        <KnowledgeBaseChat 
-          isOpen={true}
-          onClose={() => setViewMode('list')}
-          articles={articles}
-          aiSetting={settings}
-          onOpenArticle={handleEditArticle}
-        />
-      </div>
-    );
-  }
 
   if (loadingArticles && articles.length === 0) return (
     <div className="flex flex-col items-center justify-center py-24 bg-white rounded-2xl border border-gray-100 min-h-[400px]">
@@ -253,15 +234,6 @@ export const KnowledgeBaseView: React.FC<Props> = ({ activeCompany: company }) =
         }}
         extraActions={
           <>
-            <Button
-              variant="secondary"
-              onClick={() => setViewMode('chat')}
-              leftIcon={<MessageSquare size={14} />}
-              className="text-[10px] uppercase font-bold"
-              size="sm"
-            >
-              Tanya AI
-            </Button>
             <Button
               variant="secondary"
               onClick={() => setIsCategoryModalOpen(true)}
@@ -345,6 +317,14 @@ export const KnowledgeBaseView: React.FC<Props> = ({ activeCompany: company }) =
         title="Hapus Artikel Masal"
         description={`Apakah Anda yakin ingin menghapus ${selectedIds.length} artikel yang dipilih? Tindakan ini permanen.`}
         isProcessing={bulkDeleteArticles.status === 'pending'}
+      />
+
+      <KnowledgeBaseChat
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(!isChatOpen)}
+        articles={articles}
+        aiSetting={settings}
+        onOpenArticle={handleEditArticle}
       />
     </div>
   );
