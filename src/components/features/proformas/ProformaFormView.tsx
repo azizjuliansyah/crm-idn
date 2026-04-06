@@ -558,8 +558,6 @@ export const ProformaFormView: React.FC<Props> = ({ company, editingId, initialC
             onChange={setItems}
             categories={categories}
             units={units}
-            onQuickAddCategory={handleQuickAddProdCat}
-            onQuickAddUnit={handleQuickAddUnit}
           />
         </Card>
 

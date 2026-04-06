@@ -770,8 +770,6 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
             initialSelectedProducts={initialProducts}
             categories={categories}
             units={units}
-            onQuickAddCategory={handleQuickAddProdCat}
-            onQuickAddUnit={handleQuickAddUnit}
           />
         </div>
 

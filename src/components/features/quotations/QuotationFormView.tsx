@@ -542,8 +542,6 @@ export const QuotationFormView: React.FC<Props> = ({ company, editingId, initial
           company={company}
           categories={categories}
           units={units}
-          onQuickAddCategory={handleQuickAddProdCat}
-          onQuickAddUnit={handleQuickAddUnit}
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">

@@ -186,9 +186,9 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
         companyId={company.id}
         categories={categories}
         units={units}
-        onSuccess={() => {
+        onSuccess={(product) => {
           setIsFormModalOpen(false);
-          setToast({ isOpen: true, message: 'Data produk berhasil disimpan', type: 'success' });
+          setToast({ isOpen: true, message: `Data produk ${product.name} berhasil disimpan`, type: 'success' });
         }}
       />
 

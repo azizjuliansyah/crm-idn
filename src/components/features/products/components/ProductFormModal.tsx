@@ -11,7 +11,7 @@ interface ProductFormModalProps {
     companyId: number;
     categories: ProductCategory[];
     units: ProductUnit[];
-    onSuccess: () => void;
+    onSuccess: (product: Product) => void;
 }
 
 export const ProductFormModal: React.FC<ProductFormModalProps> = ({
@@ -55,11 +55,11 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     const handleSave = async () => {
         if (!form.name || form.price === undefined) return;
         try {
-            await upsertProduct.mutateAsync({
+            const data = await upsertProduct.mutateAsync({
                 ...form,
                 company_id: companyId
             } as any);
-            onSuccess();
+            onSuccess(data);
         } catch (err) {
             console.error(err);
         }

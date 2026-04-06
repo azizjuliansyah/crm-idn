@@ -26,20 +26,16 @@ interface Props {
   initialSelectedProducts?: Product[];
   categories: ProductCategory[];
   units: ProductUnit[];
-  onQuickAddCategory: (name: string) => Promise<any>;
-  onQuickAddUnit: (name: string) => Promise<any>;
 }
 
 export const DocumentItemsTable: React.FC<Props> = ({ 
-  company, items, onChange, initialSelectedProducts = [], categories, units, onQuickAddCategory, onQuickAddUnit 
+  company, items, onChange, initialSelectedProducts = [], categories, units 
 }) => {
   const { showToast } = useAppStore();
   const [productSearch, setProductSearch] = useState('');
   const [selectedProducts, setSelectedProducts] = useState<Product[]>(initialSelectedProducts);
 
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
-  const [productForm, setProductForm] = useState<Partial<Product>>({ name: '', category_id: null, unit_id: null, price: 0, description: '' });
-  const [isProcessingQuick, setIsProcessingQuick] = useState(false);
 
   // Infinite scroll for products
   const fetchProductsPaginated = useCallback(async ({ from, to }: { from: number, to: number }) => {
@@ -105,29 +101,16 @@ export const DocumentItemsTable: React.FC<Props> = ({
 
   const handleAddItem = () => onChange([...items, { productId: '', description: '', qty: 1, unit: 'pcs', price: 0, total: 0 }]);
 
-  const handleSaveProduct = async (formData: Partial<Product>) => {
-    if (!formData.name?.trim() || !formData.price) return;
-    setIsProcessingQuick(true);
-    try {
-      const { data, error } = await supabase.from('products').insert({
-        company_id: company.id,
-        name: formData.name.trim(),
-        category_id: formData.category_id,
-        unit_id: formData.unit_id,
-        price: formData.price,
-        description: formData.description
-      }).select().single();
-      if (error) throw error;
-      await refreshProducts();
-      const freshSelect = await supabase.from('products').select('*, product_units(*)').eq('id', data.id).single();
-      if (freshSelect.data) setSelectedProducts(prev => [...prev, freshSelect.data]);
-      
-      setIsProductModalOpen(false);
-    } catch (err: any) { 
-      showToast(err.message, 'error'); 
-    } finally { 
-      setIsProcessingQuick(false); 
+  const handleCreatedProduct = async (newProd: Product) => {
+    await refreshProducts();
+    // Ensure we have the full product with unit details for the selection
+    const { data: freshSelect } = await supabase.from('products').select('*, product_units(*)').eq('id', newProd.id).single();
+    if (freshSelect) {
+      setSelectedProducts(prev => [...prev, freshSelect]);
+      // Small delay to ensure the products list is updated before we try to find it in the ComboBox
+      // Though refreshProducts is awaited, the unshift in products useMemo depends on selectedProducts update
     }
+    setIsProductModalOpen(false);
   };
 
   return (
@@ -218,14 +201,11 @@ export const DocumentItemsTable: React.FC<Props> = ({
       <ProductFormModal
         isOpen={isProductModalOpen}
         onClose={() => setIsProductModalOpen(false)}
-        onSave={handleSaveProduct}
-        form={productForm}
-        setForm={setProductForm}
-        isProcessing={isProcessingQuick}
+        product={null}
+        companyId={company.id}
         categories={categories}
         units={units}
-        onQuickAddCategory={onQuickAddCategory}
-        onQuickAddUnit={onQuickAddUnit}
+        onSuccess={handleCreatedProduct}
       />
     </>
   );
