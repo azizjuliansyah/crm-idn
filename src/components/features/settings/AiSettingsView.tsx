@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Input, Textarea, Button, H2, Subtext, ComboBox, Toast, ToastType } from '@/components/ui';
+import { Input, Textarea, Button, H2, Subtext, ComboBox } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { Company, AiSetting } from '@/lib/types';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { Loader2, Save, BrainCircuit, Cpu } from 'lucide-react';
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export const AiSettingsView: React.FC<Props> = ({ company }) => {
+  const { showToast } = useAppStore();
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [settings, setSettings] = useState<AiSetting | null>(null);
@@ -19,15 +21,6 @@ export const AiSettingsView: React.FC<Props> = ({ company }) => {
   const [modelName, setModelName] = useState('gemini-2.0-flash');
   const [instruction, setInstruction] = useState('');
 
-  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
-    isOpen: false,
-    message: '',
-    type: 'success',
-  });
-
-  const showToast = (message: string, type: ToastType = 'success') => {
-    setToast({ isOpen: true, message, type });
-  };
 
   useEffect(() => {
     fetchSettings(true);
@@ -146,12 +139,6 @@ export const AiSettingsView: React.FC<Props> = ({ company }) => {
         </form>
       </div>
 
-      <Toast
-        isOpen={toast.isOpen}
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
-      />
     </div>
   );
 };

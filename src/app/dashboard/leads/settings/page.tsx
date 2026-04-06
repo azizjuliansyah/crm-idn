@@ -2,13 +2,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useDashboard } from '../../DashboardContext';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { LeadSourcesSettingsView } from '@/components/features/leads/LeadSourcesSettingsView';
 import { LeadStagesSettingsView } from '@/components/features/leads/LeadStagesSettingsView';
 import { Settings, Globe, GripVertical } from 'lucide-react';
 
 export default function LeadSettingsPage() {
-  const { activeCompany } = useDashboard();
+  const { activeCompany } = useAppStore();
   const [activeTab, setActiveTab] = useState<'stages' | 'sources'>('stages');
 
   if (!activeCompany) {

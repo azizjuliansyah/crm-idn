@@ -1,12 +1,12 @@
 'use client';
 
 import React from 'react';
-import { useDashboard } from '@/app/dashboard/DashboardContext';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { ProformaFormView } from '@/components/features/proformas/ProformaFormView';
 import { useRouter } from 'next/navigation';
 
 export default function EditProformaPage({ params }: { params: Promise<{ id: string }> }) {
-  const { activeCompany: company } = useDashboard();
+  const { activeCompany: company } = useAppStore();
   const router = useRouter();
   const { id: idParam } = React.use(params);
   const id = parseInt(idParam);

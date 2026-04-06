@@ -1,11 +1,11 @@
 'use client';
 
 import React from 'react';
-import { useDashboard } from '@/app/dashboard/DashboardContext';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { ProductsView } from '@/components/features/products/ProductsView';
 
 export default function ProductsPage() {
-  const { activeCompany } = useDashboard();
+  const { activeCompany } = useAppStore();
   if (!activeCompany) return null;
   return <ProductsView company={activeCompany} />;
 }

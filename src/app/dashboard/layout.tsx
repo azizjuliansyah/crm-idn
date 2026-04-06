@@ -1,5 +1,4 @@
 import React from 'react';
-import { DashboardProvider } from './DashboardContext';
 import { DashboardLayoutClient } from '@/components/layout/DashboardLayoutClient';
 import { createClient } from '@/lib/supabase-server';
 
@@ -19,12 +18,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <QueryProvider>
       <AppInitializer>
-        <DashboardProvider>
-          <DashboardLayoutClient>
-            {children}
-          </DashboardLayoutClient>
-          <GlobalToast />
-        </DashboardProvider>
+        <DashboardLayoutClient>
+          {children}
+        </DashboardLayoutClient>
+        <GlobalToast />
       </AppInitializer>
     </QueryProvider>
   );

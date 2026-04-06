@@ -1,12 +1,12 @@
 'use client';
 
 import React from 'react';
-import { useDashboard } from '../../../DashboardContext';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { InvoiceFormView } from '@/components/features/invoices/InvoiceFormView';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function CreateInvoicePage() {
-  const { activeCompany } = useDashboard();
+  const { activeCompany } = useAppStore();
   const router = useRouter();
   const searchParams = useSearchParams();
 

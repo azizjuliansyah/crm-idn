@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { H2, Subtext, Label, Badge, Toast, ToastType, Button } from '@/components/ui';
+import { H2, Subtext, Label, Badge, Button } from '@/components/ui';
 
 import { supabase } from '@/lib/supabase';
 import { Company, KwitansiRequest } from '@/lib/types';
@@ -18,7 +18,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { generateTemplate1, generateTemplate5, generateTemplate6 } from '@/lib/pdf-templates';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useDashboard } from '@/app/dashboard/DashboardContext';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { useKwitansiRequestsQuery } from '@/lib/hooks/useKwitansiRequestsQuery';
 import { useKwitansiRequestFilters } from '@/lib/hooks/useKwitansiRequestFilters';
 import { KwitansiRequestFilterBar } from './KwitansiRequestFilterBar';
@@ -32,7 +32,7 @@ interface Props {
 export const KwitansiRequestsView: React.FC<Props> = ({ company }) => {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { activeCompanyMembers, user } = useDashboard();
+    const { activeCompanyMembers, user, showToast } = useAppStore();
     
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(20);
@@ -44,11 +44,6 @@ export const KwitansiRequestsView: React.FC<Props> = ({ company }) => {
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [isConfirmBulkDeleteOpen, setIsConfirmBulkDeleteOpen] = useState(false);
     const [isConfirmBulkStatusOpen, setIsConfirmBulkStatusOpen] = useState(false);
-    const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
-        isOpen: false,
-        message: '',
-        type: 'success',
-    });
 
     const {
         data: requestsData,
@@ -69,11 +64,11 @@ export const KwitansiRequestsView: React.FC<Props> = ({ company }) => {
     useEffect(() => {
         const success = searchParams.get('success');
         if (success) {
-            setToast({ isOpen: true, message: 'Request baru berhasil diajukan', type: 'success' });
+            showToast('Request baru berhasil diajukan', 'success');
             const newUrl = window.location.pathname;
             window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
         }
-    }, [searchParams]);
+    }, [searchParams, showToast]);
 
     // Reset page to 1 on filter changes
     useEffect(() => {
@@ -89,10 +84,10 @@ export const KwitansiRequestsView: React.FC<Props> = ({ company }) => {
                 .eq('id', id);
 
             if (error) throw error;
-            setToast({ isOpen: true, message: `Request telah di-${newStatus.toLowerCase()}.`, type: 'success' });
+            showToast(`Request telah di-${newStatus.toLowerCase()}.`, 'success');
             refetchRequests();
         } catch (err: any) {
-            setToast({ isOpen: true, message: err.message, type: 'error' });
+            showToast(err.message, 'error');
         } finally {
             setIsProcessing(false);
         }
@@ -155,10 +150,10 @@ export const KwitansiRequestsView: React.FC<Props> = ({ company }) => {
                 .eq('id', reqId);
 
             if (updErr) throw updErr;
-            setToast({ isOpen: true, message: `Kwitansi berhasil dibuat.`, type: 'success' });
+            showToast(`Kwitansi berhasil dibuat.`, 'success');
             refetchRequests();
         } catch (err: any) {
-            setToast({ isOpen: true, message: err.message, type: 'error' });
+            showToast(err.message, 'error');
         } finally {
             setIsProcessing(false);
         }
@@ -224,7 +219,7 @@ export const KwitansiRequestsView: React.FC<Props> = ({ company }) => {
 
             doc.save(`${kwt.number}.pdf`);
         } catch (err: any) {
-            setToast({ isOpen: true, message: err.message, type: 'error' });
+            showToast(err.message, 'error');
         } finally {
             setIsProcessing(false);
         }
@@ -235,11 +230,11 @@ export const KwitansiRequestsView: React.FC<Props> = ({ company }) => {
         try {
             const { error } = await supabase.from('kwitansi_requests').delete().in('id', selectedIds);
             if (error) throw error;
-            setToast({ isOpen: true, message: `${selectedIds.length} request berhasil dihapus.`, type: 'success' });
+            showToast(`${selectedIds.length} request berhasil dihapus.`, 'success');
             setSelectedIds([]);
             refetchRequests();
         } catch (err: any) {
-            setToast({ isOpen: true, message: err.message, type: 'error' });
+            showToast(err.message, 'error');
         } finally {
             setIsProcessing(false);
             setIsConfirmBulkDeleteOpen(false);
@@ -251,11 +246,11 @@ export const KwitansiRequestsView: React.FC<Props> = ({ company }) => {
         try {
             const { error } = await supabase.from('kwitansi_requests').update({ status: newStatus }).in('id', selectedIds);
             if (error) throw error;
-            setToast({ isOpen: true, message: `${selectedIds.length} request berhasil diupdate ke ${newStatus}.`, type: 'success' });
+            showToast(`${selectedIds.length} request berhasil diupdate ke ${newStatus}.`, 'success');
             setSelectedIds([]);
             refetchRequests();
         } catch (err: any) {
-            setToast({ isOpen: true, message: err.message, type: 'error' });
+            showToast(err.message, 'error');
         } finally {
             setIsProcessing(false);
             setIsConfirmBulkStatusOpen(false);
@@ -480,7 +475,7 @@ export const KwitansiRequestsView: React.FC<Props> = ({ company }) => {
                             setConfirmDelete({ isOpen: false, id: null });
                             refetchRequests();
                         } catch (err: any) {
-                            setToast({ isOpen: true, message: err.message, type: 'error' });
+                            showToast(err.message, 'error');
                         } finally {
                             setIsProcessing(false);
                         }
@@ -515,12 +510,6 @@ export const KwitansiRequestsView: React.FC<Props> = ({ company }) => {
                 isProcessing={isProcessing}
             />
 
-            <Toast
-                isOpen={toast.isOpen}
-                message={toast.message}
-                type={toast.type}
-                onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
-            />
         </div>
     );
 };

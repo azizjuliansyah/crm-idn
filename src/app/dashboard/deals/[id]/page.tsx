@@ -1,14 +1,14 @@
 'use client';
 
 import React from 'react';
-import { useDashboard } from '@/app/dashboard/DashboardContext';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { DealsView } from '@/components/features/deals/DealsView';
 
 import { useParams } from 'next/navigation';
 
 export default function DealPipelinePage() {
   const params = useParams();
-  const { user, activeCompany } = useDashboard();
+  const { user, activeCompany } = useAppStore();
   const pipelineId = params?.id ? parseInt(params.id as string) : NaN;
 
   if (!user || !activeCompany) return null;

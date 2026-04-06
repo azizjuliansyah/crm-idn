@@ -4,8 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 
 import { 
-    Button, H2, Subtext, Label, Badge, 
-    Toast, ToastType
+    Button, H2, Subtext, Label, Badge
 } from '@/components/ui';
 
 import { supabase } from '@/lib/supabase';
@@ -22,7 +21,7 @@ import { StandardFilterBar } from '@/components/shared/filters/StandardFilterBar
 import { BulkActionGroup } from '@/components/shared/filters/BulkActionGroup';
 import { useSalesRequestMutations } from '@/lib/hooks/useSalesRequestsQuery';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useDashboard } from '@/app/dashboard/DashboardContext';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { useSalesRequestsQuery } from '@/lib/hooks/useSalesRequestsQuery';
 import { useSalesRequestFilters, SortKey } from '@/lib/hooks/useSalesRequestFilters';
 import { SalesRequestFilterBar } from './SalesRequestFilterBar';
@@ -36,7 +35,7 @@ interface Props {
 export const SalesRequestsView: React.FC<Props> = ({ company, categoryId }) => {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { activeCompanyMembers, user } = useDashboard();
+    const { activeCompanyMembers, user, showToast } = useAppStore();
     
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(20);
@@ -49,11 +48,6 @@ export const SalesRequestsView: React.FC<Props> = ({ company, categoryId }) => {
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [isConfirmBulkDeleteOpen, setIsConfirmBulkDeleteOpen] = useState(false);
     const [isConfirmBulkStatusOpen, setIsConfirmBulkStatusOpen] = useState(false);
-    const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
-        isOpen: false,
-        message: '',
-        type: 'success',
-    });
 
     const {
         data: requestsData,
@@ -95,12 +89,12 @@ export const SalesRequestsView: React.FC<Props> = ({ company, categoryId }) => {
             const message = success === 'created'
                 ? 'Request baru berhasil dibuat'
                 : 'Request berhasil diperbarui';
-            setToast({ isOpen: true, message, type: 'success' });
+            showToast(message, 'success');
 
             const newUrl = window.location.pathname;
             window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
         }
-    }, [searchParams]);
+    }, [searchParams, showToast]);
 
     // Reset page to 1 on filter changes
     useEffect(() => {
@@ -113,10 +107,10 @@ export const SalesRequestsView: React.FC<Props> = ({ company, categoryId }) => {
         setIsProcessing(true);
         try {
             await bulkDeleteSalesRequests.mutateAsync(selectedIds);
-            setToast({ isOpen: true, message: `${selectedIds.length} request berhasil dihapus.`, type: 'success' });
+            showToast(`${selectedIds.length} request berhasil dihapus.`, 'success');
             setSelectedIds([]);
         } catch (err: any) {
-            setToast({ isOpen: true, message: err.message, type: 'error' });
+            showToast(err.message, 'error');
         } finally {
             setIsProcessing(false);
             setIsConfirmBulkDeleteOpen(false);
@@ -127,10 +121,10 @@ export const SalesRequestsView: React.FC<Props> = ({ company, categoryId }) => {
         setIsProcessing(true);
         try {
             await bulkUpdateSalesRequestsStatus.mutateAsync({ ids: selectedIds, status });
-            setToast({ isOpen: true, message: `${selectedIds.length} request berhasil diperbarui.`, type: 'success' });
+            showToast(`${selectedIds.length} request berhasil diperbarui.`, 'success');
             setSelectedIds([]);
         } catch (err: any) {
-            setToast({ isOpen: true, message: err.message, type: 'error' });
+            showToast(err.message, 'error');
         } finally {
             setIsProcessing(false);
             setIsConfirmBulkStatusOpen(false);
@@ -146,7 +140,7 @@ export const SalesRequestsView: React.FC<Props> = ({ company, categoryId }) => {
             setConfirmDelete({ isOpen: false, id: null });
             refetchRequests();
         } catch (err: any) {
-            setToast({ isOpen: true, message: err.message, type: 'error' });
+            showToast(err.message, 'error');
         } finally {
             setIsProcessing(false);
         }
@@ -285,10 +279,10 @@ export const SalesRequestsView: React.FC<Props> = ({ company, categoryId }) => {
                                             .eq('id', r.id);
                             
                                         if (error) throw error;
-                                        setToast({ isOpen: true, message: `Request telah di-approved.`, type: 'success' });
+                                        showToast(`Request telah di-approved.`, 'success');
                                         refetchRequests();
                                     } catch (err: any) {
-                                        setToast({ isOpen: true, message: err.message, type: 'error' });
+                                        showToast(err.message, 'error');
                                     } finally {
                                         setIsProcessing(false);
                                     }
@@ -307,10 +301,10 @@ export const SalesRequestsView: React.FC<Props> = ({ company, categoryId }) => {
                                             .eq('id', r.id);
                             
                                         if (error) throw error;
-                                        setToast({ isOpen: true, message: `Request telah di-rejected.`, type: 'success' });
+                                        showToast(`Request telah di-rejected.`, 'success');
                                         refetchRequests();
                                     } catch (err: any) {
-                                        setToast({ isOpen: true, message: err.message, type: 'error' });
+                                        showToast(err.message, 'error');
                                     } finally {
                                         setIsProcessing(false);
                                     }
@@ -397,12 +391,12 @@ export const SalesRequestsView: React.FC<Props> = ({ company, categoryId }) => {
                        setIsProcessing(true);
                        try {
                            const { error } = await supabase.from('sales_requests').delete().eq('id', confirmDelete.id);
-                           if (error) throw error;
-                           setConfirmDelete({ isOpen: false, id: null });
-                           refetchRequests();
-                       } catch (err: any) {
-                           setToast({ isOpen: true, message: err.message, type: 'error' });
-                       } finally {
+                            if (error) throw error;
+                            setConfirmDelete({ isOpen: false, id: null });
+                            refetchRequests();
+                        } catch (err: any) {
+                            showToast(err.message, 'error');
+                        } finally {
                            setIsProcessing(false);
                        }
                    }
@@ -438,12 +432,6 @@ export const SalesRequestsView: React.FC<Props> = ({ company, categoryId }) => {
                 isProcessing={isProcessing}
             />
 
-            <Toast
-                isOpen={toast.isOpen}
-                message={toast.message}
-                type={toast.type}
-                onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
-            />
         </div>
     );
 };

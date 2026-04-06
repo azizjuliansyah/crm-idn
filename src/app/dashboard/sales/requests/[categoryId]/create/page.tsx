@@ -1,12 +1,12 @@
 'use client';
 
 import React from 'react';
-import { useDashboard } from '@/app/dashboard/DashboardContext';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { SalesRequestFormView } from '@/components/features/sales-requests/SalesRequestFormView';
 import { useParams } from 'next/navigation';
 
 export default function CreateSalesRequestPage() {
-    const { activeCompany: company, user } = useDashboard();
+    const { activeCompany: company, user } = useAppStore();
     const params = useParams();
 
     const categoryId = parseInt(params.categoryId as string);

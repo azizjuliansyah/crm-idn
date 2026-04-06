@@ -1,12 +1,12 @@
 'use client';
 
 import React, { Suspense } from 'react';
-import { useDashboard } from '@/app/dashboard/DashboardContext';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { ProformaFormView } from '@/components/features/proformas/ProformaFormView';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 function CreateProformaContent() {
-  const { activeCompany: company } = useDashboard();
+  const { activeCompany: company } = useAppStore();
   const router = useRouter();
   const searchParams = useSearchParams();
   const quotationId = searchParams.get('quotationId');

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Textarea, Button, H1, Subtext, Label, ComboBox, Toast, ToastType } from '@/components/ui';
+import { Textarea, Button, H1, Subtext, Label, ComboBox } from '@/components/ui';
 
 import { supabase } from '@/lib/supabase';
 import { Company, Profile, Client, SalesRequestCategory, Quotation, ProformaInvoice, UrgencyLevel } from '@/lib/types';
@@ -11,6 +11,7 @@ import {
     FileQuestion, AlertCircle, Info, ChevronRight, CheckCircle2, Zap
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useAppStore } from '@/lib/store/useAppStore';
 
 interface Props {
     company: Company;
@@ -24,6 +25,7 @@ export const SalesRequestFormView: React.FC<Props> = ({ company, user, categoryI
     const initialQuotationId = searchParams.get('quotationId');
     const initialProformaId = searchParams.get('proformaId');
 
+    const { showToast } = useAppStore();
     const [loading, setLoading] = useState(false);
     const [clients, setClients] = useState<Client[]>([]);
     const [category, setCategory] = useState<SalesRequestCategory | null>(null);
@@ -38,11 +40,6 @@ export const SalesRequestFormView: React.FC<Props> = ({ company, user, categoryI
     const [urgencyLevels, setUrgencyLevels] = useState<UrgencyLevel[]>([]);
     const [urgencyId, setUrgencyId] = useState<number | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
-        isOpen: false,
-        message: '',
-        type: 'success',
-    });
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -122,7 +119,7 @@ export const SalesRequestFormView: React.FC<Props> = ({ company, user, categoryI
             if (error) throw error;
             router.push(`/dashboard/sales/requests/${categoryId}?success=created`);
         } catch (err: any) {
-            setToast({ isOpen: true, message: err.message, type: 'error' });
+            showToast(err.message, 'error');
         } finally {
             setIsProcessing(false);
         }
@@ -248,12 +245,6 @@ export const SalesRequestFormView: React.FC<Props> = ({ company, user, categoryI
                 </form>
             </div>
 
-            <Toast
-                isOpen={toast.isOpen}
-                message={toast.message}
-                type={toast.type}
-                onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
-            />
         </div>
     );
 };

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { 
-  H2, Subtext, Label, Badge, Toast, ToastType, Button,
+  H2, Subtext, Label, Badge, Button,
 } from '@/components/ui';
 
 import { supabase } from '@/lib/supabase';
@@ -19,7 +19,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { generateTemplate1, generateTemplate5, generateTemplate6 } from '@/lib/pdf-templates';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useDashboard } from '@/app/dashboard/DashboardContext';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { useInvoiceRequestsQuery, useInvoiceRequestMutations } from '@/lib/hooks/useInvoiceRequestsQuery';
 import { useInvoiceRequestFilters } from '@/lib/hooks/useInvoiceRequestFilters';
 import { InvoiceRequestFilterBar } from './InvoiceRequestFilterBar';
@@ -36,7 +36,7 @@ interface Props {
 export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { activeCompanyMembers, user } = useDashboard();
+  const { activeCompanyMembers, user, showToast } = useAppStore();
   
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -49,11 +49,6 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
   const [isConfirmBulkStatusOpen, setIsConfirmBulkStatusOpen] = useState(false);
 
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null }>({ isOpen: false, id: null });
-  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
-    isOpen: false,
-    message: '',
-    type: 'success',
-  });
 
   const {
     data: requestsData,
@@ -76,13 +71,13 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
   useEffect(() => {
     const success = searchParams.get('success');
     if (success) {
-      setToast({ isOpen: true, message: 'Request baru berhasil diajukan', type: 'success' });
+      showToast('Request baru berhasil diajukan', 'success');
 
       // Clean up the URL
       const newUrl = window.location.pathname;
       window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
     }
-  }, [searchParams]);
+  }, [searchParams, showToast]);
 
   // Reset page to 1 on filter changes
   useEffect(() => {
@@ -103,11 +98,11 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
         .eq('id', id);
 
       if (error) throw error;
-      setToast({ isOpen: true, message: `Request berhasil di-${newStatus.toLowerCase()}`, type: 'success' });
+      showToast(`Request berhasil di-${newStatus.toLowerCase()}`, 'success');
       refetchRequests();
     } catch (err: any) {
       console.error(err);
-      setToast({ isOpen: true, message: 'Gagal memperbarui status', type: 'error' });
+      showToast('Gagal memperbarui status', 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -173,7 +168,7 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
 
       doc.save(`${inv.number}.pdf`);
     } catch (err: any) {
-      setToast({ isOpen: true, message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -189,11 +184,11 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
         .eq('id', confirmDelete.id);
 
       if (error) throw error;
-      setToast({ isOpen: true, message: 'Request berhasil dihapus', type: 'success' });
+      showToast('Request berhasil dihapus', 'success');
       refetchRequests();
     } catch (err: any) {
       console.error(err);
-      setToast({ isOpen: true, message: 'Gagal menghapus request', type: 'error' });
+      showToast('Gagal menghapus request', 'error');
     } finally {
       setIsProcessing(false);
       setConfirmDelete({ isOpen: false, id: null });
@@ -203,11 +198,11 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
     setIsProcessing(true);
     try {
       await bulkDeleteRequests.mutateAsync(selectedIds);
-      setToast({ isOpen: true, message: `${selectedIds.length} request berhasil dihapus`, type: 'success' });
+      showToast(`${selectedIds.length} request berhasil dihapus`, 'success');
       setSelectedIds([]);
       setIsConfirmBulkDeleteOpen(false);
     } catch (err: any) {
-      setToast({ isOpen: true, message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -217,11 +212,11 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
     setIsProcessing(true);
     try {
       await bulkStatusMutation.mutateAsync({ ids: selectedIds, status });
-      setToast({ isOpen: true, message: `${selectedIds.length} status request berhasil diperbarui`, type: 'success' });
+      showToast(`${selectedIds.length} status request berhasil diperbarui`, 'success');
       setSelectedIds([]);
       setIsConfirmBulkStatusOpen(false);
     } catch (err: any) {
-      setToast({ isOpen: true, message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -233,7 +228,7 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
       : requests;
 
     if (dataToExport.length === 0) {
-      setToast({ isOpen: true, message: 'Tidak ada data untuk diekspor', type: 'info' });
+      showToast('Tidak ada data untuk diekspor', 'info' as any);
       return;
     }
 
@@ -262,7 +257,7 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
     }));
 
     exportToExcel(formattedData, columns, 'CRM_Invoice_Requests_Report');
-    setToast({ isOpen: true, message: 'Data Request berhasil diekspor ke Excel', type: 'success' });
+    showToast('Data Request berhasil diekspor ke Excel', 'success');
   };
 
   const hasApprovalPermission = useMemo(() => {
@@ -534,12 +529,6 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
         isProcessing={isProcessing}
       />
 
-      <Toast
-        isOpen={toast.isOpen}
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
-      />
     </div>
   );
 };

@@ -179,5 +179,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ activeCompany: null, user: null, companies: [], activeCompanyMembers: [], kbChatMessages: [] });
     await supabase.auth.signOut();
     set({ isLoggingOut: false });
+    window.location.replace('/login');
   },
 }));

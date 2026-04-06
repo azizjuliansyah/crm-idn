@@ -2,7 +2,7 @@
 
 import React from 'react';
 import dynamic from 'next/dynamic';
-import { useDashboard } from './DashboardContext';
+import { useAppStore } from '@/lib/store/useAppStore';
 import { Loader2 } from 'lucide-react';
 
 const DashboardOverview = dynamic(
@@ -18,7 +18,7 @@ const DashboardOverview = dynamic(
 );
 
 export default function DashboardPage() {
-  const { activeCompany } = useDashboard();
+  const { activeCompany } = useAppStore();
   if (!activeCompany) return null;
   return <DashboardOverview company={activeCompany} />;
 }

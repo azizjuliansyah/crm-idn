@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Textarea, Button, H1, Subtext, Label, ComboBox, Toast, ToastType } from '@/components/ui';
+import { Textarea, Button, H1, Subtext, Label, ComboBox } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -12,6 +12,7 @@ import {
   FileQuestion, AlertCircle, Info, ChevronRight, CheckCircle2, Zap
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useAppStore } from '@/lib/store/useAppStore';
 
 interface Props {
   company: Company;
@@ -29,6 +30,7 @@ export const InvoiceRequestFormView: React.FC<Props> = ({ company, user, onNavig
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [proformas, setProformas] = useState<ProformaInvoice[]>([]);
 
+  const { showToast } = useAppStore();
   const [clientId, setClientId] = useState('');
   const [refType, setRefType] = useState<'quotation' | 'proforma'>('quotation');
   const [docId, setDocId] = useState('');
@@ -36,11 +38,6 @@ export const InvoiceRequestFormView: React.FC<Props> = ({ company, user, onNavig
   const [urgencyLevels, setUrgencyLevels] = useState<UrgencyLevel[]>([]);
   const [urgencyId, setUrgencyId] = useState<number | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [toast, setToast] = useState<{ isOpen: boolean; message: string; type: ToastType }>({
-    isOpen: false,
-    message: '',
-    type: 'success',
-  });
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -121,7 +118,7 @@ export const InvoiceRequestFormView: React.FC<Props> = ({ company, user, onNavig
         router.push('/dashboard/sales/invoice-requests?success=created');
       }
     } catch (err: any) {
-      setToast({ isOpen: true, message: err.message, type: 'error' });
+      showToast(err.message, 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -247,12 +244,6 @@ export const InvoiceRequestFormView: React.FC<Props> = ({ company, user, onNavig
         </form>
       </div>
 
-      <Toast
-        isOpen={toast.isOpen}
-        message={toast.message}
-        type={toast.type}
-        onClose={() => setToast(prev => ({ ...prev, isOpen: false }))}
-      />
     </div>
   );
 };
