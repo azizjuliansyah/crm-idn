@@ -1,4 +1,5 @@
 import React from 'react';
+import { redirect } from 'next/navigation';
 import { DashboardLayoutClient } from '@/components/layout/DashboardLayoutClient';
 import { createClient } from '@/lib/supabase-server';
 
@@ -9,10 +10,16 @@ import { GlobalToast } from '@/components/shared/notifications/GlobalToast';
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   
-  const { data: { user } } = await supabase.auth.getUser();
+  let user = null;
+  try {
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+  } catch (error) {
+    console.error('Supabase auth error:', error);
+  }
   
   if (!user) {
-    return null;
+    return redirect('/login');
   }
 
   return (
