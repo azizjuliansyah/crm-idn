@@ -7,7 +7,8 @@ import { Input, Button, H1, H3, Subtext, Label } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
-import { ArrowRight, Mail, Lock, Loader2, ChevronLeft, CheckCircle2, AlertTriangle, Info, RefreshCw } from 'lucide-react';
+import { ArrowRight, Mail, Lock, Loader2, ChevronLeft, CheckCircle2, AlertTriangle, Info, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import Link from 'next/link';
 import { PlatformSettings } from '@/lib/types';
 import HCaptcha from '@hcaptcha/react-hcaptcha';
 import { useRouter } from 'next/navigation';
@@ -28,6 +29,7 @@ export const LoginView: React.FC<Props> = ({ platformSettings }) => {
   const [success, setSuccess] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | undefined>();
   const [technicalError, setTechnicalError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const captchaRef = useRef<HCaptcha>(null);
 
@@ -89,7 +91,7 @@ export const LoginView: React.FC<Props> = ({ platformSettings }) => {
         });
 
         if (resetError) throw resetError;
-        setSuccess("Link reset password telah dikirim ke email Anda.");
+        setSuccess("Link pemulihan telah dikirim! Silakan periksa kotak masuk email Anda (dan folder spam jika tidak ditemukan). Tautan akan aktif selama 24 jam.");
         setLoading(false);
       }
     } catch (err: any) {
@@ -151,8 +153,12 @@ export const LoginView: React.FC<Props> = ({ platformSettings }) => {
 
           {mode === 'login' ? (
             <>
+              <Link href="/" className="inline-flex items-center gap-1.5 text-[10px] font-bold text-gray-400 hover:text-blue-600 mb-4 transition-colors group uppercase tracking-wider">
+                <ChevronLeft size={14} className="transition-transform group-hover:-translate-x-1" />
+                Back to Home
+              </Link>
               <h2 className="text-[32px] font-bold text-[#0F172A] mb-1">Akses Portal</h2>
-              <Subtext className="mb-10 text-[15px] text-gray-400 font-medium">Masuk untuk melanjutkan ke dashboard Anda.</Subtext>
+              <Subtext className="mb-6 text-[15px] text-gray-400 font-medium">Masuk untuk melanjutkan ke dashboard Anda.</Subtext>
             </>
           ) : (
             <>
@@ -163,18 +169,31 @@ export const LoginView: React.FC<Props> = ({ platformSettings }) => {
                 <ChevronLeft size={14} /> Kembali Login
               </Button>
               <H3 className="text-3xl !font-bold mb-2">Lupa Kata Sandi?</H3>
-              <Subtext className="mb-10 font-medium">Masukkan email untuk mendapatkan tautan pemulihan.</Subtext>
+              <Subtext className="mb-6 font-medium">Masukkan email untuk mendapatkan tautan pemulihan.</Subtext>
             </>
           )}
 
           {success && (
-            <div className="mb-8 p-5 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-start gap-3">
-              <CheckCircle2 className="text-emerald-500 shrink-0 mt-0.5" size={18} />
-              <Subtext className="text-emerald-700  leading-relaxed">{success}</Subtext>
+            <div className="mb-8 p-6 bg-blue-50/50 border border-blue-100 rounded-[24px] flex flex-col items-center text-center gap-4">
+              <div className="w-12 h-12 bg-blue-600/10 text-blue-600 rounded-full flex items-center justify-center">
+                <Mail size={24} />
+              </div>
+              <div className="space-y-1">
+                <h4 className="font-bold text-gray-900">Periksa Email Anda</h4>
+                <Subtext className="text-blue-800 text-[13px] leading-relaxed px-2">{success}</Subtext>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setSuccess(null)}
+                className="text-blue-600 font-bold hover:bg-blue-100/50"
+              >
+                Kirim Ulang?
+              </Button>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.1em] ml-1">ALAMAT EMAIL</label>
               <Input
@@ -192,20 +211,34 @@ export const LoginView: React.FC<Props> = ({ platformSettings }) => {
               <div className="">
                 <div className="flex items-center justify-between px-1">
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.1em]">PASSWORD</label>
-                  <Button
-                    type="button"
-                    onClick={() => { setMode('forgot'); setError(null); setSuccess(null); }}
-                    className="text-[10px] font-bold !text-blue-600 uppercase  hover:underline"
+                  <Link
+                    href="#"
+                    onClick={(e) => { 
+                      e.preventDefault();
+                      setMode('forgot'); 
+                      setError(null); 
+                      setSuccess(null); 
+                    }}
+                    className="text-[10px] font-semibold text-blue-600 uppercase hover:underline"
                   >
                     Lupa Password?
-                  </Button>
+                  </Link>
                 </div>
                 <Input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   leftIcon={<Lock size={18} className="text-gray-300" />}
+                  rightIcon={
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="text-gray-400 hover:text-blue-600 transition-colors focus:outline-none flex items-center justify-center"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  }
                   className="rounded-xl border-gray-100 bg-white"
                   required={mode === 'login'}
                 />

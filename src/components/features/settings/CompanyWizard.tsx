@@ -143,7 +143,7 @@ export const CompanyWizard: React.FC<Props> = ({ userId, onSuccess }) => {
           <H1 className="text-4xl   leading-[1.1] mb-6">
             Satu Langkah Lagi Menuju Bisnis Pintar.
           </H1>
-          <Subtext className="text-blue-100 font-medium leading-relaxed opacity-90">
+          <Subtext className="!text-white font-medium leading-relaxed opacity-90">
             Daftarkan identitas bisnis Anda untuk mengaktifkan seluruh fitur manajemen CRM Pintar.
           </Subtext>
         </div>
@@ -231,6 +231,7 @@ export const CompanyWizard: React.FC<Props> = ({ userId, onSuccess }) => {
               isLoading={loading}
               disabled={uploading}
               rightIcon={!loading && <ArrowRight size={18} />}
+              variant="primary"
               className="w-full !py-4 shadow-xl shadow-blue-100"
             >
               {loading ? 'Memproses...' : 'Aktifkan Dashboard'}
