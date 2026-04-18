@@ -30,13 +30,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const router = useRouter();
   const pathname = usePathname();
   const activeView = getViewIdFromPath(pathname);
-  const { 
-    user, 
-    companies, 
-    activeCompany, 
-    switchCompany: onCompanyChange, 
-    platformSettings, 
-    logout: onLogout 
+  const {
+    user,
+    companies,
+    activeCompany,
+    switchCompany: onCompanyChange,
+    platformSettings,
+    logout: onLogout
   } = useAppStore();
 
   if (!user) return null;
@@ -54,6 +54,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isClientOpen, setIsClientOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   // Auto-expand menus based on activeView
@@ -238,7 +239,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const renderMenuItem = (id: string, label: string, icon: React.ReactNode, bgColorClass: string, iconColorClass: string = 'text-white') => {
     const path = getPathFromViewId(id);
     const isActive = activeView === id;
-    
+
     return (
       <div className="relative group">
         {isActive && (
@@ -261,14 +262,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const renderSubMenuLevel1 = (id: string, label: string, icon: React.ReactNode, active: boolean) => {
     const path = getPathFromViewId(id);
-    
+
     return (
       <div className="relative group">
         <Link
           href={path}
           prefetch={true}
           onClick={() => setIsSidebarOpen(false)}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer ${active ? 'text-blue-600 font-bold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50 font-medium'}`}
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 cursor-pointer ${active ? 'text-blue-600 font-bold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50 font-medium'}`}
         >
           <div className="flex items-center gap-3">
             <div className="w-1 h-1 flex items-center justify-center">
@@ -288,7 +289,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const renderSubMenuLevel2 = (id: string, label: string, active: boolean) => {
     const path = getPathFromViewId(id);
-    
+
     return (
       <Link
         key={id}
@@ -320,9 +321,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       )}
 
       <aside className={`
-        fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-100 flex flex-col z-40 shrink-0
-        transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static
-        ${isSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}
+        fixed inset-y-0 left-0 bg-white border-r border-gray-100 flex flex-col z-40 shrink-0
+        transition-all duration-300 ease-in-out
+        ${isSidebarVisible ? 'w-64 lg:translate-x-0 lg:static' : 'w-0 lg:w-0 lg:-translate-x-full lg:static lg:border-none overflow-hidden'}
+        ${isSidebarOpen ? 'translate-x-0 shadow-2xl w-64' : '-translate-x-full'}
       `}>
         {/* Workspace Selector */}
         <div className="p-4" ref={dropdownRef}>
@@ -358,16 +360,16 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <div className="max-h-[60vh] flex flex-col">
                   {isAdmin && (
                     <div className="px-2 pb-2 mb-2 border-b border-gray-50">
-                      <Button onClick={() => { onCompanyChange(null); setIsDropdownOpen(false); }} align="left" size='sm' className={`w-full px-3 py-2 flex items-center gap-3 rounded-xl transition-all cursor-pointer !normal-case ! ${!activeCompany ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50 text-gray-500'}`}>
+                      <Button onClick={() => { onCompanyChange(null); setIsDropdownOpen(false); }} align="left" className={`w-full !px-3 !py-2 flex items-center gap-3 rounded-xl transition-all cursor-pointer !normal-case !h-auto ${!activeCompany ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50 text-gray-500'}`}>
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${!activeCompany ? 'bg-blue-600 text-white shadow-lg' : 'bg-gray-100 text-gray-400'}`}><Monitor size={14} /></div>
                         <Label className="text-[11px] !capitalize !">Platform Central</Label>
                       </Button>
                     </div>
                   )}
-                  <div className="px-3 pb-2"><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" size={12} /><Input type="text" placeholder="Cari tim..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-9 pr-3 py-2 bg-gray-50/50 border border-transparent focus:border-blue-100 focus:bg-white rounded-xl text-[10px] font-medium outline-none transition-all" /></div></div>
+                  <div className="px-3 pb-2"><div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" size={12} /><Input type="text" placeholder="Cari tim..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-9 pr-3 py-2 bg-gray-50/50 border border-gray-200 focus:border-blue-100 focus:bg-white rounded-xl text-[10px] font-medium outline-none transition-all" /></div></div>
                   <div className="px-2 space-y-1 overflow-y-auto custom-scrollbar">
                     {filteredCompanies.map(co => (
-                      <Button key={co.id} onClick={() => { onCompanyChange(co); setIsDropdownOpen(false); }} align="left" size='sm' className={`w-full px-3 py-2 flex items-center gap-3 rounded-xl transition-all !capitalize !normal-case ! cursor-pointer ${activeCompany?.id === co.id ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-50 text-gray-500'}`}>
+                      <Button key={co.id} onClick={() => { onCompanyChange(co); setIsDropdownOpen(false); }} align="left" className={`w-full !px-3 !py-2 flex items-center gap-3 rounded-xl transition-all !capitalize !normal-case !h-auto cursor-pointer ${activeCompany?.id === co.id ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-gray-50 text-gray-500'}`}>
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${activeCompany?.id === co.id ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-400'}`}>{co.logo_url ? <img src={co.logo_url} className="w-full h-full object-cover rounded-lg" alt="Logo" /> : co.name.charAt(0)}</div>
                         <Label className="text-[11px] truncate !capitalize ! ">{co.name}</Label>
                       </Button>
@@ -378,7 +380,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                       <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-white transition-colors"><User size={14} /></div>
                       <Label className="text-[10px] !capitalize ! cursor-pointer">Profil Saya</Label>
                     </Link>
-                    <Button onClick={() => { onLogout(); setIsDropdownOpen(false); }} align="left" size='sm' className="w-full px-3 py-2 flex items-center gap-3 rounded-xl text-rose-500 hover:bg-rose-50 transition-all cursor-pointer !normal-case !">
+                    <Button onClick={() => { onLogout(); setIsDropdownOpen(false); }} align="left" className="w-full !px-3 !py-2 flex items-center gap-3 rounded-xl text-rose-500 hover:bg-rose-50 transition-all cursor-pointer !normal-case !h-auto">
                       <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center text-rose-500"><LogOut size={14} /></div>
                       <Label className="text-[10px] !capitalize !">Logout Sesi</Label>
                     </Button>
@@ -400,7 +402,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   {activeStates.isCrmActive && (
                     <div className="absolute left-[-12px] top-2 bottom-2 w-1 bg-blue-600 rounded-r-full z-10" />
                   )}
-                  <Button onClick={() => setIsCrmOpen(!isCrmOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case ! ${activeStates.isCrmActive ? 'text-blue-600' : isCrmOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
+                  <Button onClick={() => setIsCrmOpen(!isCrmOpen)} align="left" className={`w-full flex items-center justify-between !px-3 !py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case !h-auto ${activeStates.isCrmActive ? 'text-blue-600' : isCrmOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
                     <div className="flex-1 flex items-center gap-4">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-md ${activeStates.isCrmActive ? 'bg-indigo-600 text-white' : 'bg-indigo-500 text-white'}`}><Target size={14} /></div>
                       <Label className={`text-[13px] !capitalize ! ${activeStates.isCrmActive ? 'text-blue-600 font-bold' : isCrmOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>CRM</Label>
@@ -408,14 +410,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <ChevronRight size={14} className={`transition-transform duration-300 ${isCrmOpen ? 'rotate-90 text-indigo-500' : activeStates.isCrmActive ? 'text-indigo-400' : 'text-gray-300'}`} />
                   </Button>
                   {isCrmOpen && (
-                    <div className="pl-4 space-y-0.5 mt-0.5 ml-6">
-                       {canShow('Leads') && renderSubMenuLevel1('leads', 'Leads', <Target />, activeView === 'leads')}
+                    <div className="space-y-0.5 mt-0.5 ml-8">
+                      {canShow('Leads') && renderSubMenuLevel1('leads', 'Leads', <Target />, activeView === 'leads')}
                       {canShow('Deals') && (
                         <div className="space-y-0.5">
                           <Button
                             onClick={() => setIsDealsExpanded(!isDealsExpanded)}
-                            align="left" size='sm'
-                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case ! ${(activeView === 'deals' || activeView.startsWith('deals_')) ? 'text-blue-600 font-bold' : isDealsExpanded ? 'text-gray-900 font-semibold bg-gray-50/50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}
+                            align="left"
+                            className={`w-full flex items-center gap-3 !px-3 !py-2 rounded-xl transition-all font-medium cursor-pointer !normal-case !h-auto ${(activeView === 'deals' || activeView.startsWith('deals_')) ? 'text-blue-600 font-bold' : isDealsExpanded ? 'text-gray-900 font-semibold bg-gray-50/50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}
                           >
                             <div className="flex items-center gap-3">
                               <div className="w-1 h-1 flex items-center justify-center">
@@ -429,7 +431,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                             <ChevronRight size={10} className={`transition-transform duration-300 ml-auto ${isDealsExpanded ? 'rotate-90 text-indigo-500' : 'text-gray-300'}`} />
                           </Button>
                           {isDealsExpanded && (
-                            <div className="ml-[12px] !border-l !border-blue-100 pl-[14px] mt-1 space-y-0.5">
+                            <div className="ml-[26px] mt-1 space-y-0.5">
                               {isLoadingData ? (
                                 <div className="space-y-2 py-2">
                                   <Skeleton className="h-4 w-20" />
@@ -454,7 +456,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   {activeStates.isProjectActive && (
                     <div className="absolute left-[-12px] top-2 bottom-2 w-1 bg-blue-600 rounded-r-full z-10 shadow-[0_0_10px_rgba(37,99,235,0.2)]" />
                   )}
-                  <Button onClick={() => setIsProjectOpen(!isProjectOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case ! ${activeStates.isProjectActive ? 'text-blue-600' : isProjectOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
+                  <Button onClick={() => setIsProjectOpen(!isProjectOpen)} align="left" className={`w-full flex items-center justify-between !px-3 !py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case !h-auto ${activeStates.isProjectActive ? 'text-blue-600' : isProjectOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
                     <div className="flex-1 flex items-center gap-4">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-md ${activeStates.isProjectActive ? 'bg-blue-600 text-white' : 'bg-blue-600 text-white'}`}><Briefcase size={14} /></div>
                       <Label className={`text-[13px] !capitalize ! ${activeStates.isProjectActive ? 'text-blue-600 font-bold' : isProjectOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>Projects</Label>
@@ -462,7 +464,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <ChevronRight size={14} className={`transition-transform duration-300 ${isProjectOpen ? 'rotate-90 text-blue-600' : activeStates.isProjectActive ? 'text-blue-400' : 'text-gray-300'}`} />
                   </Button>
                   {isProjectOpen && (
-                    <div className="ml-[34px] border-l border-blue-100 pl-[14px] mt-1 space-y-0.5">
+                    <div className="ml-[58px] mt-1 space-y-0.5">
                       {isLoadingData ? (
                         <div className="space-y-2 py-2">
                           <Skeleton className="h-4 w-20" />
@@ -482,7 +484,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   {activeStates.isSupportActive && (
                     <div className="absolute left-[-12px] top-2 bottom-2 w-1 bg-blue-600 rounded-r-full z-10 shadow-[0_0_10px_rgba(37,99,235,0.2)]" />
                   )}
-                  <Button onClick={() => setIsSupportOpen(!isSupportOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case ! ${activeStates.isSupportActive ? 'text-blue-600' : isSupportOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
+                  <Button onClick={() => setIsSupportOpen(!isSupportOpen)} align="left" className={`w-full flex items-center justify-between !px-3 !py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case !h-auto ${activeStates.isSupportActive ? 'text-blue-600' : isSupportOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
                     <div className="flex-1 flex items-center gap-4">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-md ${activeStates.isSupportActive ? 'bg-rose-600 text-white' : 'bg-rose-500 text-white'}`}><Headset size={14} /></div>
                       <Label className={`text-[13px] !capitalize ! ${activeStates.isSupportActive ? 'text-blue-600 font-bold' : isSupportOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>Support</Label>
@@ -490,7 +492,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <ChevronRight size={14} className={`transition-transform duration-300 ${isSupportOpen ? 'rotate-90 text-rose-500' : activeStates.isSupportActive ? 'text-rose-400' : 'text-gray-300'}`} />
                   </Button>
                   {isSupportOpen && (
-                    <div className="pl-4 space-y-0.5 mt-0.5 ml-6">
+                    <div className="space-y-0.5 mt-0.5 ml-8">
                       {canShow('Customer Support') && renderSubMenuLevel1('customer_support', 'Ticket', <Ticket />, activeView === 'customer_support')}
                       {canShow('Customer Support') && renderSubMenuLevel1('complaints', 'Complaint', <ShieldAlert />, activeView === 'complaints')}
                       {canShow('Knowledge Base') && renderSubMenuLevel1('knowledge_base', 'Knowledge Base', <BookOpen />, activeView === 'knowledge_base')}
@@ -505,7 +507,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   {activeStates.isSalesActive && (
                     <div className="absolute left-[-12px] top-2 bottom-2 w-1 bg-blue-600 rounded-r-full z-10 shadow-[0_0_10px_rgba(37,99,235,0.2)]" />
                   )}
-                  <Button onClick={() => setIsSalesOpen(!isSalesOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case ! ${activeStates.isSalesActive ? 'text-blue-600' : isSalesOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
+                  <Button onClick={() => setIsSalesOpen(!isSalesOpen)} align="left" className={`w-full flex items-center justify-between !px-3 !py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case !h-auto ${activeStates.isSalesActive ? 'text-blue-600' : isSalesOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
                     <div className="flex-1 flex items-center gap-4">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-md ${activeStates.isSalesActive ? 'bg-sky-600 text-white' : 'bg-sky-500 text-white'}`}><ReceiptCent size={14} /></div>
                       <Label className={`text-[13px] !capitalize ! ${activeStates.isSalesActive ? 'text-blue-600 font-bold' : isSalesOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>Penjualan</Label>
@@ -513,7 +515,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <ChevronRight size={14} className={`transition-transform duration-300 ${isSalesOpen ? 'rotate-90 text-sky-500' : activeStates.isSalesActive ? 'text-sky-400' : 'text-gray-300'}`} />
                   </Button>
                   {isSalesOpen && (
-                    <div className="pl-4 space-y-0.5 mt-0.5 ml-6">
+                    <div className="space-y-0.5 mt-0.5 ml-8">
                       {canShow('Penawaran') && renderSubMenuLevel1('daftar_penawaran', 'Penawaran', <FileText />, activeView === 'daftar_penawaran' || activeView === 'buat_penawaran' || activeView === 'edit_penawaran')}
                       {canShow('Proforma Invoice') && renderSubMenuLevel1('daftar_proforma', 'Proforma', <FileCheck />, activeView === 'daftar_proforma' || activeView === 'buat_proforma' || activeView === 'edit_proforma')}
                       {canShow('Invoice') && renderSubMenuLevel1('daftar_invoice', 'Invoice', <FileBadge />, activeView === 'daftar_invoice' || activeView === 'buat_invoice' || activeView === 'edit_invoice')}
@@ -521,8 +523,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                         <div className="space-y-0.5">
                           <Button
                             onClick={() => setIsRequestsExpanded(!isRequestsExpanded)}
-                            align="left" size='sm'
-                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case ! ${(activeView.includes('request_invoice') || activeView.includes('request_kwitansi')) ? 'text-blue-600 font-bold' : isRequestsExpanded ? 'text-gray-900 font-semibold bg-gray-50/50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}
+                            align="left"
+                            className={`w-full flex items-center gap-3 !px-3 !py-2 rounded-xl transition-all font-medium cursor-pointer !normal-case !h-auto ${(activeView.includes('request_invoice') || activeView.includes('request_kwitansi')) ? 'text-blue-600 font-bold' : isRequestsExpanded ? 'text-gray-900 font-semibold bg-gray-50/50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}
                           >
                             <div className="flex items-center gap-3">
                               <div className="w-1 h-1 flex items-center justify-center">
@@ -536,7 +538,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                             <ChevronRight size={10} className={`transition-transform duration-300 ml-auto ${isRequestsExpanded ? 'rotate-90 text-indigo-500' : 'text-gray-300'}`} />
                           </Button>
                           {isRequestsExpanded && (
-                            <div className="ml-[12px] !border-l !border-blue-100 pl-[14px] mt-1 space-y-0.5">
+                            <div className="ml-[26px] mt-1 space-y-0.5">
                               {canShow('Request Invoice') && renderSubMenuLevel2('request_invoice', 'Request Invoice', activeView === 'request_invoice' || activeView === 'buat_request_invoice' || activeView === 'edit_request_invoice')}
                               {canShow('Request Kwitansi') && renderSubMenuLevel2('request_kwitansi', 'Request Kwitansi', activeView === 'request_kwitansi' || activeView === 'buat_request_kwitansi' || activeView === 'edit_request_kwitansi')}
                               {isLoadingData ? (
@@ -564,7 +566,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   {activeStates.isClientActive && (
                     <div className="absolute left-[-12px] top-2 bottom-2 w-1 bg-blue-600 rounded-r-full z-10 shadow-[0_0_10px_rgba(37,99,235,0.2)]" />
                   )}
-                  <Button onClick={() => setIsClientOpen(!isClientOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case ! ${activeStates.isClientActive ? 'text-blue-600' : isClientOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
+                  <Button onClick={() => setIsClientOpen(!isClientOpen)} align="left" className={`w-full flex items-center justify-between !px-3 !py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case !h-auto ${activeStates.isClientActive ? 'text-blue-600' : isClientOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
                     <div className="flex-1 flex items-center gap-4">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-md ${activeStates.isClientActive ? 'bg-violet-600 text-white' : 'bg-violet-500 text-white'}`}><Users2 size={14} /></div>
                       <Label className={`text-[13px] !capitalize ! ${activeStates.isClientActive ? 'text-blue-600 font-bold' : isClientOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>Client</Label>
@@ -572,7 +574,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <ChevronRight size={14} className={`transition-transform duration-300 ${isClientOpen ? 'rotate-90 text-violet-500' : activeStates.isClientActive ? 'text-violet-400' : 'text-gray-300'}`} />
                   </Button>
                   {isClientOpen && (
-                    <div className="pl-4 space-y-0.5 mt-0.5 ml-6">
+                    <div className="space-y-0.5 mt-0.5 ml-8">
                       {canShow('Data Client') && renderSubMenuLevel1('data_client', 'Data Client', <Contact />, activeView === 'data_client')}
                       {canShow('Perusahaan Client') && renderSubMenuLevel1('perusahaan_client', 'Perusahaan Client', <Factory />, activeView === 'perusahaan_client')}
                     </div>
@@ -589,7 +591,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     {activeStates.isSettingsActive && (
                       <div className="absolute left-[-12px] top-2 bottom-2 w-1 bg-blue-600 rounded-r-full z-10 shadow-[0_0_10px_rgba(37,99,235,0.2)]" />
                     )}
-                    <Button onClick={() => setIsSettingsOpen(!isSettingsOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case ! ${activeStates.isSettingsActive ? 'text-blue-600' : isSettingsOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
+                    <Button onClick={() => setIsSettingsOpen(!isSettingsOpen)} align="left" className={`w-full flex items-center justify-between !px-3 !py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case !h-auto ${activeStates.isSettingsActive ? 'text-blue-600' : isSettingsOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
                       <div className="flex-1 flex items-center gap-4">
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-md ${activeStates.isSettingsActive ? 'bg-amber-100 text-amber-600' : 'bg-amber-50 text-amber-500'}`}><Settings size={14} /></div>
                         <Label className={`text-[13px] !capitalize ! ${activeStates.isSettingsActive ? 'text-blue-600 font-bold' : isSettingsOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>Workspace Setup</Label>
@@ -597,7 +599,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                       <ChevronRight size={14} className={`transition-transform duration-300 ${isSettingsOpen ? 'rotate-90 text-amber-500' : activeStates.isSettingsActive ? 'text-amber-400' : 'text-gray-300'}`} />
                     </Button>
                     {isSettingsOpen && (
-                      <div className="pl-4 space-y-0.5 mt-0.5 ml-6 pb-4">
+                      <div className="space-y-0.5 mt-0.5 ml-8 pb-4">
                         {/* UMUM & TIM */}
                         {(canShow('Perusahaan') || canShow('Konfigurasi Email') || canShow('Anggota Tim') || canShow('Manajemen Role')) && (
                           <div className="px-3 pb-1 pt-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Umum & Tim</div>
@@ -675,10 +677,18 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       <main className="flex-1 flex flex-col bg-white overflow-hidden relative w-full">
         <header className={`sticky top-0 z-10 bg-white/80 backdrop-blur-md px-6 lg:px-10 h-20 flex items-center border-b border-gray-100 ${['buat_penawaran', 'edit_penawaran', 'buat_proforma', 'edit_proforma', 'buat_invoice', 'edit_invoice', 'buat_kwitansi', 'edit_kwitansi', 'buat_request_invoice', 'edit_request_invoice'].includes(activeView) ? 'hidden' : ''}`}>
           <Button
-            onClick={() => setIsSidebarOpen(true)}
-            className="lg:hidden p-2.5 mr-3 text-gray-400 hover:text-gray-900 hover:bg-gray-50 rounded-xl border border-gray-100 transition-all flex items-center justify-center"
+            onClick={() => {
+              if (window.innerWidth < 1024) {
+                setIsSidebarOpen(true);
+              } else {
+                setIsSidebarVisible(!isSidebarVisible);
+              }
+            }}
+            variant="ghost"
+            size="sm"
+            className="p-2.5 mr-4 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-gray-100 transition-all flex items-center justify-center shadow-sm"
           >
-            <Menu size={18} />
+            <Menu size={20} />
           </Button>
           <H2 className="text-xl font-medium text-gray-900  capitalize truncate">{getDisplayHeader()}</H2>
         </header>
