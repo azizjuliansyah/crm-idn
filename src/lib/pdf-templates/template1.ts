@@ -168,7 +168,7 @@ export const generateTemplate1 = async (
   doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
   safeText(doc, 'Payment via Bank Transfer:', padX, notesY);
   doc.setFont('helvetica', 'normal');
-  safeText(doc, config.payment_info || '- BCA 5435033030 an PT Integrasi Data Nusantara', padX, notesY + 5, { maxWidth: pageWidth / 2 + 10 });
+  safeText(doc, config.payment_info || '- BCA 5435033030 an PT Integrasi Data Nusantara', padX, notesY + 5, { maxWidth: pageWidth / 2 - 15 });
   
   doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
   safeText(doc, 'Mohon kirimkan bukti pembayaran ke: ', padX, notesY + 15);
@@ -180,7 +180,7 @@ export const generateTemplate1 = async (
   safeText(doc, 'Catatan:', padX, notesY + 23);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  safeText(doc, config.note_footer || '- Info jadwal training yang tersedia, silakan cek di www.jadwal.idn.id\n- Pendaftaran training akan diproses setelah pembayaran kami terima\n- Maksimal pembayaran H-4 dari tanggal pelaksanaan training.', padX, notesY + 28, { maxWidth: pageWidth / 2 + 10 });
+  safeText(doc, qData.notes || '', padX, notesY + 28, { maxWidth: pageWidth / 2 - 15 });
 
   const sigY = notesY + 30;
   if (config.signature_url) {

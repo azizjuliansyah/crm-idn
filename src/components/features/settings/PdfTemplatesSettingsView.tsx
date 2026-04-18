@@ -64,7 +64,6 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
   const [configForm, setConfigForm] = useState<any>({
     top_contact: '',
     payment_info: '',
-    note_footer: '',
     signature_name: '',
     signature_title: '',
     signature_company: '',
@@ -140,7 +139,6 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
       setConfigForm({
         top_contact: s.config?.top_contact || '',
         payment_info: s.config?.payment_info || '',
-        note_footer: s.config?.note_footer || '',
         signature_name: s.config?.signature_name || '',
         signature_title: s.config?.signature_title || '',
         signature_company: s.config?.signature_company || '',
@@ -158,7 +156,6 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
       setConfigForm({
         top_contact: '',
         payment_info: '',
-        note_footer: '',
         signature_name: '',
         signature_title: '',
         signature_company: '',
@@ -275,6 +272,7 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
         email: 'john.sample@example.com',
         client_company: { name: 'PT Sampel Teknologi Indonesia' }
       },
+      notes: '- Info jadwal training yang tersedia, silakan cek di www.jadwal.idn.id\n- Pendaftaran training akan diproses setelah pembayaran kami terima\n- Maksimal pembayaran H-4 dari tanggal pelaksanaan training.\n- Harap konfirmasi ke admin terlebih dahulu...\n- Jika sudah fix dan ingin keep jadwal...',
       quotation_items: [
         { products: { name: 'Profesional support' }, description: 'Mikrotik BGP + Server - Juli 2025', qty: 1, unit_name: 'pax', price: 3800000, total: 3800000 },
         { products: { name: 'Cloud Infrastructure' }, description: 'Dedicated resources storage enterprise', qty: 1, unit_name: 'unit', price: 6200000, total: 6200000 },
@@ -302,7 +300,6 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
       company_website: 'www.idn.id',
       finance_email: 'finance@idn.id',
       payment_info: 'Bank MANDIRI 1650003926038 a.n. SPIZNET',
-      note_footer: '- Please send payment confirmation\n- Terms & conditions apply',
       signature_name: 'Administrator',
       signature_title: 'Sales Administrative Assistant',
       signature_company: company.name,
@@ -473,13 +470,9 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
                 <label className="text-[10px] font-medium text-gray-400 uppercase tracking-widest ml-1">Instruksi Pembayaran</label>
                 <textarea value={configForm.payment_info} onChange={e => setConfigForm({ ...configForm, payment_info: e.target.value })} className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-xl font-bold text-xs h-24 resize-none" placeholder="Bank Mandiri No. Rek ..." />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 md:col-span-2">
                 <label className="text-[10px] font-medium text-gray-400 uppercase tracking-widest ml-1">Email Finance (Bukti Pembayaran)</label>
                 <input type="text" value={configForm.finance_email} onChange={e => setConfigForm({ ...configForm, finance_email: e.target.value })} className="w-full px-5 py-3.5 bg-gray-50 border border-gray-100 rounded-xl font-bold text-xs" placeholder="finance@idn.id" />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-[10px] font-medium text-gray-400 uppercase tracking-widest ml-1">Catatan Kaki (Note)</label>
-                <textarea value={configForm.note_footer} onChange={e => setConfigForm({ ...configForm, note_footer: e.target.value })} className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-xl font-bold text-xs h-24 resize-none" placeholder="- Berlaku 7 hari..." />
               </div>
             </div>
           </div>
