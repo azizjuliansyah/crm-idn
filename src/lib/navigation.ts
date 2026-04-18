@@ -18,10 +18,6 @@ export function getPathFromViewId(viewId: string): string {
     case 'daftar_produk': return '/dashboard/products';
     case 'kategori_produk': return '/dashboard/products/categories';
     case 'satuan_produk': return '/dashboard/products/units';
-    case 'sop_all': return '/dashboard/sops';
-    case 'sop_category_settings': return '/dashboard/sops/categories';
-    case 'sop_archive': return '/dashboard/sops/archive';
-    case 'sop_editor': return '/dashboard/sops/create';
     case 'perusahaan_client': return '/dashboard/clients/companies';
     case 'data_client': return '/dashboard/clients/contacts';
     case 'pengaturan_kategori_client': return '/dashboard/clients/categories';
@@ -63,9 +59,6 @@ export function getPathFromViewId(viewId: string): string {
       }
       if (viewId.startsWith('projects_')) {
         return `/dashboard/projects/${viewId.split('_')[1]}`;
-      }
-      if (viewId.startsWith('sop_cat_')) {
-        return `/dashboard/sops/category/${viewId.split('_')[2]}`;
       }
       return '/dashboard';
   }
@@ -117,20 +110,6 @@ export function getViewIdFromPath(pathname: string): string {
   if (pathname === '/dashboard/products' || pathname.startsWith('/dashboard/products/list')) return 'daftar_produk';
   if (pathname.startsWith('/dashboard/products/categories')) return 'kategori_produk';
   if (pathname.startsWith('/dashboard/products/units')) return 'satuan_produk';
-
-  // SOPs
-  if (pathname === '/dashboard/sops') return 'sop_all';
-  if (pathname.startsWith('/dashboard/sops/categories')) return 'sop_category_settings';
-  if (pathname.startsWith('/dashboard/sops/archive')) return 'sop_archive';
-  if (pathname.startsWith('/dashboard/sops/category/')) {
-    const parts = pathname.split('/');
-    const id = parts[4];
-    return `sop_cat_${id}`;
-  }
-  if (pathname.startsWith('/dashboard/sops/')) {
-    if (pathname.includes('/edit')) return 'sop_editor';
-    return 'sop_detail';
-  }
 
   // Clients
   if (pathname.startsWith('/dashboard/clients/companies')) return 'perusahaan_client';

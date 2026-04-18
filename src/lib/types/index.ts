@@ -1,4 +1,3 @@
-export * from './sop';
 export * from './auth';
 export * from './company';
 export * from './client';

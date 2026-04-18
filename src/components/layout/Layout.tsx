@@ -14,7 +14,7 @@ import {
   BrainCircuit, Headset, LifeBuoy, Ticket, ShieldAlert, Globe, FileBadge, Mail,
   Briefcase, Workflow, CheckSquare, FileQuestion, BookMarked, Archive, Sparkles, Menu, MessageSquare
 } from 'lucide-react';
-import { Profile, Company, PlatformSettings, Pipeline, ProjectPipeline, SopCategory, SalesRequestCategory } from '@/lib/types';
+import { Profile, Company, PlatformSettings, Pipeline, ProjectPipeline, SalesRequestCategory } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 
 import { useAppStore } from '@/lib/store/useAppStore';
@@ -52,9 +52,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isSalesOpen, setIsSalesOpen] = useState(false);
   const [isRequestsExpanded, setIsRequestsExpanded] = useState(false);
   const [isClientOpen, setIsClientOpen] = useState(false);
-  const [isSopOpen, setIsSopOpen] = useState(false);
-  const [isSopCategoriesExpanded, setIsSopCategoriesExpanded] = useState(false);
-  const [expandedSopCats, setExpandedSopCats] = useState<Record<number, boolean>>({});
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -82,28 +79,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (['data_client', 'perusahaan_client', 'pengaturan_kategori_client'].includes(activeView)) {
       setIsClientOpen(true);
     }
-    if (['sop_all', 'sop_archive', 'sop_editor', 'sop_detail'].includes(activeView) || activeView.startsWith('sop_cat_')) {
-      setIsSopOpen(true);
-      if (activeView.startsWith('sop_cat_')) {
-        setIsSopCategoriesExpanded(true);
-        const catId = parseInt(activeView.split('_')[2]);
-        if (!isNaN(catId)) {
-          setExpandedSopCats(prev => ({ ...prev, [catId]: true }));
-          // Also try to find if it's a subcategory and expand its parent
-          const cat = sopCategories.find(c => c.id === catId);
-          if (cat?.parent_id) {
-            setExpandedSopCats(prev => ({ ...prev, [cat.parent_id!]: true }));
-          }
-        }
-      }
-    }
     if ([
       'pengaturan_perusahaan', 'workspace_email_config', 'anggota_tim', 'manajemen_role',
       'pengaturan_leads', 'pengaturan_sumber_leads', 'pengaturan_deals_pipeline',
       'pengaturan_project_pipeline', 'pengaturan_task_pipeline', 'support_pipeline',
       'pengaturan_kategori_client', 'penomoran_otomatis', 'pengaturan_pajak',
       'pengaturan_template_pdf', 'kategori_produk', 'satuan_produk', 'pengaturan_ai',
-      'pengaturan_ticket_topic', 'request_category_settings', 'sop_category_settings'
+      'pengaturan_ticket_topic', 'request_category_settings'
     ].includes(activeView)) {
       setIsSettingsOpen(true);
     }
@@ -113,7 +95,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [projectPipelines, setProjectPipelines] = useState<ProjectPipeline[]>([]);
-  const [sopCategories, setSopCategories] = useState<SopCategory[]>([]);
   const [salesRequestCategories, setSalesRequestCategories] = useState<SalesRequestCategory[]>([]);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -131,15 +112,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const fetchPipelines = useCallback(async () => {
     if (!activeCompany) return;
     try {
-      const [dealsRes, projectsRes, sopRes, salesReqRes] = await Promise.all([
+      const [dealsRes, projectsRes, salesReqRes] = await Promise.all([
         supabase.from('pipelines').select('*').eq('company_id', activeCompany.id).order('id'),
         supabase.from('project_pipelines').select('*').eq('company_id', activeCompany.id).order('id'),
-        supabase.from('sop_categories').select('*').eq('company_id', activeCompany.id).order('sort_order', { ascending: true }),
         supabase.from('sales_request_categories').select('*').eq('company_id', activeCompany.id).order('sort_order', { ascending: true })
       ]);
       if (dealsRes.data) setPipelines(dealsRes.data as any);
       if (projectsRes.data) setProjectPipelines(projectsRes.data as any);
-      if (sopRes.data) setSopCategories(sopRes.data as any);
       if (salesReqRes.data) setSalesRequestCategories(salesReqRes.data as any);
     } catch (error) {
       console.error('Error fetching layout data:', error);
@@ -154,25 +133,22 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     isSupportActive: ['customer_support', 'complaints', 'knowledge_base', 'support_pipeline'].includes(activeView),
     isSalesActive: ['daftar_penawaran', 'buat_penawaran', 'edit_penawaran', 'daftar_proforma', 'buat_proforma', 'edit_proforma', 'daftar_invoice', 'buat_invoice', 'edit_invoice', 'daftar_kwitansi', 'buat_kwitansi', 'edit_kwitansi', 'request_invoice', 'buat_request_invoice', 'edit_request_invoice', 'request_kwitansi', 'buat_request_kwitansi', 'edit_request_kwitansi'].includes(activeView),
     isClientActive: ['data_client', 'perusahaan_client', 'pengaturan_kategori_client'].includes(activeView),
-    isSopActive: ['sop_all', 'sop_archive', 'sop_editor', 'sop_detail'].includes(activeView) || activeView.startsWith('sop_cat_'),
     isSettingsActive: [
       'pengaturan_perusahaan', 'workspace_email_config', 'anggota_tim', 'manajemen_role',
       'pengaturan_leads', 'pengaturan_sumber_leads', 'pengaturan_deals_pipeline',
       'pengaturan_project_pipeline', 'pengaturan_task_pipeline', 'support_pipeline',
       'pengaturan_kategori_client', 'penomoran_otomatis', 'pengaturan_pajak',
       'pengaturan_template_pdf', 'kategori_produk', 'satuan_produk', 'pengaturan_ai',
-      'pengaturan_ticket_topic', 'request_category_settings', 'sop_category_settings', 'pengaturan_urgensi_request'
+      'pengaturan_ticket_topic', 'request_category_settings', 'pengaturan_urgensi_request'
     ].includes(activeView)
   }), [activeView]);
 
   useEffect(() => {
     const handlePipelinesUpdated = () => fetchPipelines();
     window.addEventListener('pipelinesUpdated', handlePipelinesUpdated);
-    window.addEventListener('sopCategoriesUpdated', handlePipelinesUpdated);
     window.addEventListener('salesRequestCategoriesUpdated', handlePipelinesUpdated);
     return () => {
       window.removeEventListener('pipelinesUpdated', handlePipelinesUpdated);
-      window.removeEventListener('sopCategoriesUpdated', handlePipelinesUpdated);
       window.removeEventListener('salesRequestCategoriesUpdated', handlePipelinesUpdated);
     };
   }, [fetchPipelines]);
@@ -199,7 +175,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           const perms = [...(roleData.permissions || [])];
 
           if (perms.includes('Dashboard')) {
-            const autoDashboard = ['Data Client', 'Perusahaan Client', 'Produk', 'Projects', 'Penjualan', 'Penawaran', 'Proforma Invoice', 'Invoice', 'Kwitansi', 'Knowledge Base', 'Customer Support', 'Request Invoice', 'Request Kwitansi', 'SOP'];
+            const autoDashboard = ['Data Client', 'Perusahaan Client', 'Produk', 'Projects', 'Penjualan', 'Penawaran', 'Proforma Invoice', 'Invoice', 'Kwitansi', 'Knowledge Base', 'Customer Support', 'Request Invoice', 'Request Kwitansi'];
             autoDashboard.forEach(p => { if (!perms.includes(p)) perms.push(p); });
           }
           setUserPermissions(perms);
@@ -207,7 +183,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           setUserPermissions(ALL_POSSIBLE_MENU_LABELS);
           setCurrentRoleName('Super Admin');
         } else {
-          setUserPermissions(['Dashboard', 'Data Client', 'Perusahaan Client', 'Produk', 'Penjualan', 'Knowledge Base', 'Customer Support', 'SOP']);
+          setUserPermissions(['Dashboard', 'Data Client', 'Perusahaan Client', 'Produk', 'Penjualan', 'Knowledge Base', 'Customer Support']);
           setCurrentRoleName('Member');
         }
       }
@@ -244,10 +220,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       const id = parseInt(activeView.split('_')[1]);
       return `Project: ${projectPipelines.find(p => p.id === id)?.name || 'Loading...'}`;
     }
-    if (activeView.startsWith('sop_cat_')) {
-      const id = parseInt(activeView.split('_')[2]);
-      return `SOP: ${sopCategories.find(c => c.id === id)?.name || 'Manual'}`;
-    }
     if (activeView.startsWith('request_cat_')) {
       const id = parseInt(activeView.split('_')[2]);
       return `${salesRequestCategories.find(c => c.id === id)?.name || 'Sales Request'}`;
@@ -260,13 +232,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       const id = parseInt(activeView.split('_')[3]);
       return `Edit ${salesRequestCategories.find(c => c.id === id)?.name || 'Sales Request'}`;
     }
-    if (activeView === 'sop_all') return 'Semua Dokumen SOP';
-    if (activeView === 'sop_category_settings') return 'Manajemen Kategori SOP';
-    if (activeView === 'sop_archive') return 'Arsip SOP (Non-Aktif)';
-    if (activeView === 'sop_editor') return 'SOP Editor';
-    if (activeView === 'sop_detail') return 'Standard Operating Procedure';
-    if (activeView === 'sop_detail') return 'Standard Operating Procedure';
-
     return activeView.replace(/_/g, ' ');
   };
 
@@ -615,74 +580,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 </div>
               )}
 
-              {/* SOP Group */}
-              {canShow('SOP') && (
-                <div className="space-y-0.5 relative group">
-                  {activeStates.isSopActive && (
-                    <div className="absolute left-[-12px] top-2 bottom-2 w-1 bg-blue-600 rounded-r-full z-10 shadow-[0_0_10px_rgba(37,99,235,0.2)]" />
-                  )}
-                  <Button onClick={() => setIsSopOpen(!isSopOpen)} align="left" size='sm' className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case ! ${activeStates.isSopActive ? 'text-blue-600' : isSopOpen ? 'text-gray-900 bg-gray-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
-                    <div className="flex-1 flex items-center gap-4">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-md ${activeStates.isSopActive ? 'bg-emerald-700 text-white' : 'bg-emerald-600 text-white'}`}><BookMarked size={14} /></div>
-                      <Label className={`text-[13px] !capitalize ! ${activeStates.isSopActive ? 'text-blue-600 font-bold' : isSopOpen ? 'text-gray-900 font-semibold' : 'text-inherit'}`}>SOP</Label>
-                    </div>
-                    <ChevronRight size={14} className={`transition-transform duration-300 ${isSopOpen ? 'rotate-90 text-emerald-600' : activeStates.isSopActive ? 'text-emerald-400' : 'text-gray-300'}`} />
-                  </Button>
-                  {isSopOpen && (
-                    <div className="pl-4 space-y-0.5 mt-0.5 ml-6">
-                      {renderSubMenuLevel1('sop_all', 'All SOP', <Layers />, activeView === 'sop_all')}
-
-                      <div className="space-y-0.5">
-                        <Button
-                          onClick={() => setIsSopCategoriesExpanded(!isSopCategoriesExpanded)}
-                          align="left" size='sm'
-                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all font-medium cursor-pointer !normal-case ! ${activeView.startsWith('sop_cat_') ? 'text-blue-600 font-bold' : isSopCategoriesExpanded ? 'text-gray-900 font-semibold bg-gray-50/50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-1 h-1 flex items-center justify-center">
-                              {activeView.startsWith('sop_cat_') && (
-                                <div className="w-1 h-1 bg-blue-600 rounded-full shadow-[0_0_8px_rgba(37,99,235,0.4)]" />
-                              )}
-                            </div>
-                            <div className={`${activeView.startsWith('sop_cat_') ? 'text-blue-600' : isSopCategoriesExpanded ? 'text-emerald-600' : 'text-gray-300'}`}><Tags size={14} /></div>
-                            <Label className="text-[12px] !capitalize !">Kategori SOP</Label>
-                          </div>
-                          <ChevronRight size={10} className={`transition-transform duration-300 ml-auto ${isSopCategoriesExpanded ? 'rotate-90 text-emerald-500' : 'text-gray-300'}`} />
-                        </Button>
-                        {isSopCategoriesExpanded && (
-                          <div className="ml-[12px] !border-l !border-emerald-100 pl-[14px] mt-1 space-y-0.5">
-                            {isLoadingData ? (
-                                <div className="space-y-2 py-2">
-                                  <Skeleton className="h-4 w-20" />
-                                  <Skeleton className="h-4 w-24" />
-                                </div>
-                            ) : (
-                              sopCategories
-                                .filter(cat => !cat.parent_id)
-                                .map(cat => {
-                                  const subCategories = sopCategories.filter(sub => sub.parent_id === cat.id);
-                                  return (
-                                    <React.Fragment key={cat.id}>
-                                      {renderSubMenuLevel2(`sop_cat_${cat.id}`, cat.name, activeView === `sop_cat_${cat.id}`)}
-                                      {subCategories.length > 0 && (
-                                        <div className="pl-3 border-l border-emerald-50 ml-1.5 space-y-0.5 py-0.5">
-                                          {subCategories.map(sub => renderSubMenuLevel2(`sop_cat_${sub.id}`, sub.name, activeView === `sop_cat_${sub.id}`))}
-                                        </div>
-                                      )}
-                                    </React.Fragment>
-                                  );
-                                })
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {renderSubMenuLevel1('sop_archive', 'Archive', <Archive />, activeView === 'sop_archive')}
-                    </div>
-                  )}
-                </div>
-              )}
-
               {(canShow('Perusahaan') || canShow('Konfigurasi Email') || canShow('Anggota Tim') || canShow('Manajemen Role') ||
                 canShow('Pengaturan Leads') || canShow('Pengaturan Sumber Leads') || canShow('Pengaturan Deals Pipeline') ||
                 canShow('Project Pipeline') || canShow('Task Pipeline') || canShow('Support Pipeline') || canShow('Pengaturan Kategori Client') ||
@@ -721,7 +618,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                         {canShow('Support Pipeline') && renderSubMenuLevel1('support_pipeline', 'Support Pipeline', <LifeBuoy />, activeView === 'support_pipeline')}
 
                         {/* MASTER DATA */}
-                        {(canShow('Pengaturan Kategori Client') || canShow('Pengaturan Sumber Leads') || canShow('Kategori Produk') || canShow('Satuan') || canShow('Pengaturan Kategori Request') || canShow('Tingkat Urgensi') || canShow('SOP') || canShow('Ticket Topic')) && (
+                        {(canShow('Pengaturan Kategori Client') || canShow('Pengaturan Sumber Leads') || canShow('Kategori Produk') || canShow('Satuan') || canShow('Pengaturan Kategori Request') || canShow('Tingkat Urgensi') || canShow('Ticket Topic')) && (
                           <div className="px-3 pb-1 pt-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Master Data</div>
                         )}
                         {canShow('Pengaturan Kategori Client') && renderSubMenuLevel1('pengaturan_kategori_client', 'Kategori Client', <Tags />, activeView === 'pengaturan_kategori_client')}
@@ -730,7 +627,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                         {canShow('Satuan') && renderSubMenuLevel1('satuan_produk', 'Satuan Produk', <Weight />, activeView === 'satuan_produk')}
                         {canShow('Pengaturan Kategori Request') && renderSubMenuLevel1('request_category_settings', 'Kategori Request', <FileQuestion />, activeView === 'request_category_settings')}
                         {canShow('Tingkat Urgensi') && renderSubMenuLevel1('pengaturan_urgensi_request', 'Tingkat Urgensi', <ShieldAlert />, activeView === 'pengaturan_urgensi_request')}
-                        {canShow('SOP') && renderSubMenuLevel1('sop_category_settings', 'Kategori SOP', <BookMarked />, activeView === 'sop_category_settings')}
                         {canShow('Ticket Topic') && renderSubMenuLevel1('pengaturan_ticket_topic', 'Ticket Topic', <Ticket />, activeView === 'pengaturan_ticket_topic')}
 
                         {/* FINANCE & DOCS */}
@@ -777,7 +673,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       </aside>
 
       <main className="flex-1 flex flex-col bg-white overflow-hidden relative w-full">
-        <header className={`sticky top-0 z-10 bg-white/80 backdrop-blur-md px-6 lg:px-10 h-20 flex items-center border-b border-gray-100 ${['buat_penawaran', 'edit_penawaran', 'buat_proforma', 'edit_proforma', 'buat_invoice', 'edit_invoice', 'buat_kwitansi', 'edit_kwitansi', 'buat_request_invoice', 'edit_request_invoice', 'sop_editor', 'sop_detail'].includes(activeView) ? 'hidden' : ''}`}>
+        <header className={`sticky top-0 z-10 bg-white/80 backdrop-blur-md px-6 lg:px-10 h-20 flex items-center border-b border-gray-100 ${['buat_penawaran', 'edit_penawaran', 'buat_proforma', 'edit_proforma', 'buat_invoice', 'edit_invoice', 'buat_kwitansi', 'edit_kwitansi', 'buat_request_invoice', 'edit_request_invoice'].includes(activeView) ? 'hidden' : ''}`}>
           <Button
             onClick={() => setIsSidebarOpen(true)}
             className="lg:hidden p-2.5 mr-3 text-gray-400 hover:text-gray-900 hover:bg-gray-50 rounded-xl border border-gray-100 transition-all flex items-center justify-center"
@@ -786,7 +682,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           </Button>
           <H2 className="text-xl font-medium text-gray-900  capitalize truncate">{getDisplayHeader()}</H2>
         </header>
-        <div className={`flex-1 overflow-y-auto custom-scrollbar ${['buat_penawaran', 'edit_penawaran', 'buat_proforma', 'edit_proforma', 'buat_invoice', 'edit_invoice', 'buat_kwitansi', 'edit_kwitansi', 'buat_request_invoice', 'edit_request_invoice', 'sop_editor', 'sop_detail'].includes(activeView) ? 'p-0' : 'p-6 lg:p-10'}`}>{children}</div>
+        <div className={`flex-1 overflow-y-auto custom-scrollbar ${['buat_penawaran', 'edit_penawaran', 'buat_proforma', 'edit_proforma', 'buat_invoice', 'edit_invoice', 'buat_kwitansi', 'edit_kwitansi', 'buat_request_invoice', 'edit_request_invoice'].includes(activeView) ? 'p-0' : 'p-6 lg:p-10'}`}>{children}</div>
       </main>
     </div>
   );
