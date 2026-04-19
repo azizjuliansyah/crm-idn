@@ -235,7 +235,7 @@ export const ClientFormModal: React.FC<ClientFormModalProps> = ({
                 value={form.client_company_id?.toString() || ''}
                 onChange={(val: string | number) => setForm({ ...form, client_company_id: val ? Number(val) : null })}
                 options={[
-                  { value: '', label: '-- Personal / Tanpa Perusahaan --' },
+                  { value: '', label: 'Personal / Tanpa Perusahaan' },
                   ...clientCompanies.map(co => ({ value: co.id.toString(), label: co.name }))
                 ]}
                 onAddNew={() => setIsAddingCo(true)}

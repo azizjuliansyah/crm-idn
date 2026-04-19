@@ -130,7 +130,7 @@ export const StandardFilterBar: React.FC<StandardFilterBarProps> = ({
       {(children || searchTerm !== undefined) && (
         <div className="flex items-center gap-3 pt-3 border-t border-gray-50 overflow-x-auto custom-scrollbar pb-2 md:pb-1">
           {onSearchChange && searchTerm !== undefined && (
-            <div className="w-[300px] md:w-[400px] shrink-0">
+            <div className="w-[300px] md:w-[300px] shrink-0">
               <SearchInput
                 placeholder={searchPlaceholder}
                 value={searchTerm}

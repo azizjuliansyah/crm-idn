@@ -459,7 +459,6 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                     value={selectedClientId}
                     onChange={(val: string | number) => handleClientSelect(val.toString())}
                     options={[
-                      { value: '', label: '-- Input Manual / Pilih Client --' },
                       ...clients.map(c => ({
                         value: c.id.toString(),
                         label: c.name,

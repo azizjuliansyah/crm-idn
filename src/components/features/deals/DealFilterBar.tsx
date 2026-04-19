@@ -54,7 +54,7 @@ export const DealFilterBar: React.FC<DealFilterBarProps> = ({
           { value: 'all', label: 'SEMUA PERUSAHAAN' },
           ...clientCompanies.map(c => ({ value: c.id.toString(), label: c.name.toUpperCase() }))
         ]}
-        className="w-48"
+        className="w-38"
         placeholderSize="text-[10px] font-bold text-gray-900 uppercase "
       />
       <ComboBox
@@ -82,18 +82,19 @@ export const DealFilterBar: React.FC<DealFilterBarProps> = ({
             label: `FU ${fu} KALI`
           }))
         ]}
-        className="w-40"
+        className="w-32"
         hideSearch
         placeholderSize="text-[10px] font-bold text-gray-900 uppercase "
       />
       <ComboBox
+        hideSearch
         value={statusFilter}
         onChange={(val: string | number) => setStatusFilter(val.toString())}
         options={[
           { value: 'all', label: 'SEMUA STATUS' },
           ...(pipeline?.stages?.map(s => ({ value: s.id, label: s.name.toUpperCase() })) || [])
         ]}
-        className="w-40"
+        className="w-30"
         placeholderSize="text-[10px] font-bold text-gray-900 uppercase "
       />
       <ComboBox
@@ -106,7 +107,7 @@ export const DealFilterBar: React.FC<DealFilterBarProps> = ({
             label: (m.profile?.full_name || m.user_id).toUpperCase()
           }))
         ]}
-        className="w-40"
+        className="w-32"
         placeholderSize="text-[10px] font-bold text-gray-900 uppercase "
       />
     </div>
