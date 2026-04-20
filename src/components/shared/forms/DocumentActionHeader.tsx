@@ -34,9 +34,19 @@ export const DocumentActionHeader: React.FC<Props> = ({
           <Button variant="ghost" onClick={onBack} className="!p-2 text-gray-400 border border-gray-100 h-10 w-10">
             <ArrowLeft size={20} />
           </Button>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">{title}</h1>
-            <Subtext className="text-indigo-600 font-bold uppercase mt-0.5">{subtitle}</Subtext>
+          <div className="flex flex-col gap-0.5">
+            {typeof title === 'string' ? (
+              <h1 className="text-xl font-bold text-gray-900 tracking-tight">{title}</h1>
+            ) : (
+              title
+            )}
+            {subtitle && (
+              typeof subtitle === 'string' ? (
+                <Subtext className="text-indigo-600 font-bold uppercase text-[11px] tracking-wider">{subtitle}</Subtext>
+              ) : (
+                subtitle
+              )
+            )}
           </div>
         </div>
         <div className="flex items-center gap-3">

@@ -454,9 +454,7 @@ export const ProformaFormView: React.FC<Props> = ({ company, editingId, initialC
             ]}
           />
         }
-        subtitle={
-          <Subtext className="text-[11px] font-bold text-blue-600 uppercase mt-0.5">{proformaNumber}</Subtext>
-        }
+        subtitle={proformaNumber}
         onBack={() => onNavigate ? onNavigate('daftar_proforma') : router.push('/dashboard/sales/proformas')}
         onSave={handleSave}
         isSaving={loading}
@@ -536,7 +534,7 @@ export const ProformaFormView: React.FC<Props> = ({ company, editingId, initialC
               value={quotationId?.toString() || ''}
               onChange={(val: string | number) => setQuotationId(val ? Number(val) : null)}
               options={[
-                { value: '', label: '-- Tanpa Referensi --' },
+                { value: '', label: 'Tanpa Referensi' },
                 ...quotations.map(q => ({
                   value: q.id.toString(),
                   label: q.number

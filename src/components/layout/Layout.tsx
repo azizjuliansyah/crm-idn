@@ -107,7 +107,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     'Produk', 'Kategori Produk', 'Satuan', 'Penjualan', 'Penawaran', 'Proforma Invoice',
     'Invoice', 'Kwitansi', 'Pengaturan Penjualan', 'Penomoran Otomatis', 'Pengaturan Pajak',
     'Template Dokumen', 'Knowledge Base', 'Pengaturan AI', 'Customer Support',
-    'Support Pipeline', 'Konfigurasi Email', 'Request Invoice', 'SOP', 'Ticket Topic', 'Tingkat Urgensi'
+    'Support Pipeline', 'Konfigurasi Email', 'Request Invoice', 'Ticket Topic', 'Tingkat Urgensi'
   ];
 
   const fetchPipelines = useCallback(async () => {
@@ -686,7 +686,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             }}
             variant="ghost"
             size="sm"
-            className="p-2.5 mr-4 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-gray-100 transition-all flex items-center justify-center shadow-sm"
+            className="p-2.5 mr-4 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all flex items-center justify-center"
           >
             <Menu size={20} />
           </Button>

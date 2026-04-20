@@ -332,8 +332,12 @@ export const QuotationFormView: React.FC<Props> = ({ company, editingId, initial
       if (qId) {
         onSaveSuccess?.(qId);
       }
+      showToast(editingId ? 'Penawaran berhasil diperbarui' : 'Penawaran baru berhasil disimpan', 'success');
       setLoading(false);
-    } catch (err: any) { showToast(err.message, 'error'); setLoading(false); }
+    } catch (err: any) { 
+      showToast(err.message, 'error'); 
+      setLoading(false); 
+    }
   };
 
   const handleDownloadPDF = async () => {
@@ -526,7 +530,7 @@ export const QuotationFormView: React.FC<Props> = ({ company, editingId, initial
               value={dealId?.toString() || ''}
               onChange={(val: string | number) => setDealId(val ? Number(val) : null)}
               options={[
-                { value: '', label: '-- Tidak Terhubung Deal --' },
+                { value: '', label: 'Tidak Terhubung Deal' },
                 ...deals.map(d => ({
                   value: d.id.toString(),
                   label: `#${String(d.id).padStart(4, '0')} - ${d.name}`
@@ -536,13 +540,20 @@ export const QuotationFormView: React.FC<Props> = ({ company, editingId, initial
           </div>
         </Card>
 
-        <DocumentItemsTable
-          items={items}
-          onChange={setItems}
-          company={company}
-          categories={categories}
-          units={units}
-        />
+        <Card className="p-8">
+          <SectionHeader
+            icon={<Package size={18} />}
+            title="Daftar Item Penawaran"
+            className="mb-8"
+          />
+          <DocumentItemsTable
+            items={items}
+            onChange={setItems}
+            company={company}
+            categories={categories}
+            units={units}
+          />
+        </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
           <Card className="p-8 space-y-4">

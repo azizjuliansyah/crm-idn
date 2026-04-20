@@ -17,7 +17,7 @@ export default function EditQuotationPage() {
     <QuotationFormView
       company={activeCompany}
       editingId={id}
-      onSaveSuccess={() => router.push('/dashboard/sales/quotations?success=updated')}
+      onSaveSuccess={() => {}}
     />
   );
 }

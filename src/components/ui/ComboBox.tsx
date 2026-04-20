@@ -64,7 +64,7 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0, placement: 'bottom' as 'top' | 'bottom' });
 
   const selectedOption = useMemo(() =>
-    options.find(opt => opt.value === value),
+    options.find(opt => String(opt.value) === String(value)),
     [options, value]
   );
 
@@ -81,7 +81,12 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        containerRef.current && 
+        !containerRef.current.contains(target) &&
+        !(target as HTMLElement).closest('.combobox-dropdown')
+      ) {
         setIsOpen(false);
       }
     };
@@ -203,7 +208,7 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
 
       {isOpen && (
         <div
-          className={`fixed bg-white border border-gray-100 rounded-md shadow-2xl z-[9999] py-3 animate-in fade-in zoom-in-95 duration-200 ${dropdownPosition.placement === 'top' ? 'origin-bottom' : 'origin-top'
+          className={`combobox-dropdown fixed bg-white border border-gray-100 rounded-md shadow-2xl z-[9999] py-3 animate-in fade-in zoom-in-95 duration-200 ${dropdownPosition.placement === 'top' ? 'origin-bottom' : 'origin-top'
             }`}
           style={{
             top: dropdownPosition.placement === 'top' ? 'auto' : `${dropdownPosition.top}px`,
@@ -239,7 +244,7 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
                   onClick={() => handleSelect(opt.value)}
                   className={`
                     w-full px-4 py-3 rounded-md flex items-center justify-between cursor-pointer transition-all
-                    ${opt.value === value ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50 text-gray-700'}
+                    ${String(opt.value) === String(value) ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50 text-gray-700'}
                   `}
                 >
                   <div className="flex flex-col min-w-0">
@@ -248,7 +253,7 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
                       <span className="text-[9px] uppercase  text-gray-400 truncate">{opt.sublabel}</span>
                     )}
                   </div>
-                  {opt.value === value && <Check size={14} className="text-blue-600 shrink-0" />}
+                  {String(opt.value) === String(value) && <Check size={14} className="text-blue-600 shrink-0" />}
                 </div>
               ))
             ) : (

@@ -741,7 +741,7 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
               value={proformaId || ''}
               onChange={(val: string | number) => setProformaId(val ? Number(val) : null)}
               options={[
-                { value: '', label: '-- Tanpa Referensi --' },
+                { value: '', label: 'Tanpa Referensi' },
                 ...proformas.map(pf => ({ value: pf.id.toString(), label: pf.number }))
               ]}
             />
@@ -750,7 +750,7 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
               value={quotationId || ''}
               onChange={(val: string | number) => setQuotationId(val ? Number(val) : null)}
               options={[
-                { value: '', label: '-- Tanpa Referensi --' },
+                { value: '', label: 'Tanpa Referensi' },
                 ...quotations.map(q => ({ value: q.id.toString(), label: q.number }))
               ]}
             />

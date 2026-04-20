@@ -27,6 +27,7 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
   const queryClient = useQueryClient();
   const { showToast } = useAppStore();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'baru' | 'lama'>('baru');
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [clientSearchTerm, setClientSearchTerm] = useState('');
 
@@ -127,6 +128,11 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
     } catch (err: any) { showToast(err.message, 'error'); } finally { setIsProcessingQuick(false); }
   };
 
+  const handleClose = () => {
+    setActiveTab('baru');
+    onClose();
+  };
+
   const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setIsProcessing(true);
@@ -134,7 +140,7 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
     const leadData = {
       ...form,
       sales_id: form.sales_id || null,
-      client_company_id: form.client_company_id || null,
+      client_company_id: activeTab === 'baru' ? (form.client_company_id || null) : (form.client_company_id || null),
       whatsapp: fullWa,
       company_id: company.id
     };
@@ -143,7 +149,7 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
       const { error } = await supabase.from('leads').insert(leadData);
       if (error) throw error;
       onSuccess();
-      onClose();
+      handleClose();
     } catch (error: any) {
       showToast('Gagal Menyimpan: ' + error.message, 'error');
     } finally {
@@ -154,12 +160,12 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       title="Registrasi Prospek Baru"
       size="lg"
       footer={
         <div className="flex items-center gap-3">
-          <Button variant="secondary" onClick={onClose} className="text-gray-400">Batal</Button>
+          <Button variant="secondary" onClick={handleClose} className="text-gray-400">Batal</Button>
           <Button
             onClick={handleSave}
             isLoading={isProcessing}
@@ -171,8 +177,33 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
         </div>
       }
     >
-      <div className="space-y-10 py-2">
-        <div className="space-y-5">
+      <div className="space-y-6 py-2">
+        {/* Tabs */}
+        <div className="flex p-1 bg-gray-50/50 rounded-xl w-full max-w-sm">
+          <button
+            onClick={() => setActiveTab('baru')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded-lg transition-all ${
+              activeTab === 'baru'
+                ? 'bg-white text-blue-600 shadow-sm border border-gray-100'
+                : 'text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            <Plus size={14} />
+            Client Baru
+          </button>
+          <button
+            onClick={() => setActiveTab('lama')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-semibold rounded-lg transition-all ${
+              activeTab === 'lama'
+                ? 'bg-white text-blue-600 shadow-sm border border-gray-100'
+                : 'text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            <User size={14} />
+            Client Lama
+          </button>
+        </div>
+        <div className="space-y-2">
           <div className="flex items-center gap-2 pb-2 border-b border-gray-50">
             <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
               <Contact2 size={16} />
@@ -213,79 +244,85 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
               />
             </div>
 
-            <div className="space-y-2 md:col-span-2">
-              <div className="grid grid-cols-4 gap-3">
-                <div className="col-span-1">
-                  <ComboBox
-                    label="Sapaan*"
-                    value={form.salutation || ''}
-                    onChange={(val: string | number) => setForm({ ...form, salutation: val.toString() })}
-                    options={[
-                      { value: '-', label: '-' },
-                      { value: 'Bapak', label: 'Bapak' },
-                      { value: 'Ibu', label: 'Ibu' },
-                    ]}
-                    hideSearch
-                  />
+            {activeTab === 'baru' && (
+              <>
+                <div className="space-y-2 md:col-span-2">
+                  <div className="grid grid-cols-4 gap-3">
+                    <div className="col-span-1">
+                      <ComboBox
+                        label="Sapaan*"
+                        value={form.salutation || ''}
+                        onChange={(val: string | number) => setForm({ ...form, salutation: val.toString() })}
+                        options={[
+                          { value: '-', label: '-' },
+                          { value: 'Bapak', label: 'Bapak' },
+                          { value: 'Ibu', label: 'Ibu' },
+                        ]}
+                        hideSearch
+                      />
+                    </div>
+                    <div className="col-span-3">
+                      <Input
+                        label="Nama Lengkap*"
+                        value={form.name}
+                        onChange={e => setForm({ ...form, name: e.target.value })}
+                        placeholder="Ketik nama lengkap client..."
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="col-span-3">
+
+                <div className="space-y-2">
                   <Input
-                    label="Nama Lengkap*"
-                    value={form.name}
-                    onChange={e => setForm({ ...form, name: e.target.value })}
-                    placeholder="Ketik nama lengkap client..."
+                    label="Email Aktif"
+                    type="email"
+                    value={form.email}
+                    onChange={e => setForm({ ...form, email: e.target.value })}
+                    leftIcon={<Mail size={16} />}
+                    placeholder="nama@perusahaan.com"
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[10px]  text-gray-400 font-bold uppercase  ml-1">WhatsApp</Label>
+                  <div className="flex border border-gray-100 rounded-md overflow-hidden focus-within:border-blue-500 focus-within:bg-white transition-all">
+                    <div className="px-4 py-2.5 bg-gray-100/50 text-[11px]  text-gray-400 border-r border-gray-100 flex items-center font-bold">+62</div>
+                    <input
+                      type="tel"
+                      value={waNumber}
+                      onChange={e => handleWaNumberChange(e.target.value)}
+                      className="flex-1 text-xs px-3 py-2 border-none bg-transparent outline-none shadow-none rounded-none font-bold"
+                      placeholder="812345678..."
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {activeTab === 'baru' && (
+          <div className="space-y-5">
+            <div className="flex items-center gap-2 pb-2 border-b border-gray-50">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <Building size={16} />
               </div>
+              <H4>Perusahaan / Instansi Client</H4>
             </div>
 
-            <div className="space-y-2">
-              <Input
-                label="Email Aktif"
-                type="email"
-                value={form.email}
-                onChange={e => setForm({ ...form, email: e.target.value })}
-                leftIcon={<Mail size={16} />}
-                placeholder="nama@perusahaan.com"
+            <div className="space-y-3">
+              <ComboBox
+                value={form.client_company_id?.toString() || ''}
+                label="Pilih Perusahaan"
+                onChange={(val: string | number) => setForm({ ...form, client_company_id: val ? Number(val) : null })}
+                options={[
+                  { value: '', label: 'Personal / Individual' },
+                  ...clientCompanies.map(co => ({ value: co.id.toString(), label: co.name }))
+                ]}
               />
             </div>
-
-            <div className="space-y-2">
-              <Label className="text-[10px]  text-gray-400 font-bold uppercase  ml-1">WhatsApp</Label>
-              <div className="flex border border-gray-100 rounded-md overflow-hidden focus-within:border-blue-500 focus-within:bg-white transition-all">
-                <div className="px-4 py-2.5 bg-gray-100/50 text-[11px]  text-gray-400 border-r border-gray-100 flex items-center font-bold">+62</div>
-                <input
-                  type="tel"
-                  value={waNumber}
-                  onChange={e => handleWaNumberChange(e.target.value)}
-                  className="flex-1 text-xs px-3 py-2 border-none bg-transparent outline-none shadow-none rounded-none font-bold"
-                  placeholder="812345678..."
-                />
-              </div>
-            </div>
           </div>
-        </div>
-
-        <div className="space-y-5">
-          <div className="flex items-center gap-2 pb-2 border-b border-gray-50">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <Building size={16} />
-            </div>
-            <H4>Perusahaan / Instansi Client</H4>
-          </div>
-
-          <div className="space-y-3">
-            <ComboBox
-              value={form.client_company_id?.toString() || ''}
-              label="Pilih Perusahaan"
-              onChange={(val: string | number) => setForm({ ...form, client_company_id: val ? Number(val) : null })}
-              options={[
-                { value: '', label: 'Personal / Individual' },
-                ...clientCompanies.map(co => ({ value: co.id.toString(), label: co.name }))
-              ]}
-            />
-          </div>
-        </div>
+        )}
 
         <div className="space-y-5">
           <div className="flex items-center gap-2 pb-2 border-b border-gray-50">
