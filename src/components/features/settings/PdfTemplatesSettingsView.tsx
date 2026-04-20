@@ -238,19 +238,6 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
     return settings.find(s => s.document_type === docType)?.template_id || 'template1';
   };
 
-  const formatIDR = (num: number = 0) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num).replace('Rp', 'Rp');
-  };
-
-  const formatDateString = (dateStr: string | null) => {
-    if (!dateStr) return '-';
-    const parts = dateStr.split('-');
-    if (parts.length === 3) {
-      return `${parts[2]}-${parts[1]}-${parts[0]}`;
-    }
-    return dateStr;
-  };
-
   const handlePreview = async (templateId: string, templateName: string, docType: string) => {
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -275,8 +262,8 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
       notes: '- Info jadwal training yang tersedia, silakan cek di www.jadwal.idn.id\n- Pendaftaran training akan diproses setelah pembayaran kami terima\n- Maksimal pembayaran H-4 dari tanggal pelaksanaan training.\n- Harap konfirmasi ke admin terlebih dahulu...\n- Jika sudah fix dan ingin keep jadwal...',
       quotation_items: [
         { products: { name: 'Profesional support' }, description: 'Mikrotik BGP + Server - Juli 2025', qty: 1, unit_name: 'pax', price: 3800000, total: 3800000 },
-        { products: { name: 'Cloud Infrastructure' }, description: 'Dedicated resources storage enterprise', qty: 1, unit_name: 'unit', price: 6200000, total: 6200000 },
-        { products: { name: 'Cloud Infrastructure 2' }, description: 'Dedicated resources storage enterprise', qty: 1, unit_name: 'unit', price: 6200000, total: 6200000 },
+        // { products: { name: 'Cloud Infrastructure' }, description: 'Dedicated resources storage enterprise', qty: 1, unit_name: 'unit', price: 6200000, total: 6200000 },
+        // { products: { name: 'Cloud Infrastructure 2' }, description: 'Dedicated resources storage enterprise', qty: 1, unit_name: 'unit', price: 6200000, total: 6200000 },
         // { products: { name: 'Cloud Infrastructure 3' }, description: 'Dedicated resources storage enterprise', qty: 1, unit_name: 'unit', price: 6200000, total: 6200000 },
         // { products: { name: 'Cloud Infrastructure 4' }, description: 'Dedicated resources storage enterprise', qty: 1, unit_name: 'unit', price: 6200000, total: 6200000 },
         // { products: { name: 'Cloud Infrastructure 5' }, description: 'Dedicated resources storage enterprise', qty: 1, unit_name: 'unit', price: 6200000, total: 6200000 },
