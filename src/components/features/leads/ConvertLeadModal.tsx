@@ -1,9 +1,9 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Lead, Pipeline } from '@/lib/types';
+import { Lead, Pipeline, CompanyMember } from '@/lib/types';
 import { Modal, Button, ComboBox, Label, H4, Subtext } from '@/components/ui';
-import { LayoutGrid, Layers, CheckCircle2 } from 'lucide-react';
+import { LayoutGrid, Layers, CheckCircle2, User } from 'lucide-react';
 import { useAppStore } from '@/lib/store/useAppStore';
 
 interface ConvertLeadModalProps {
@@ -13,6 +13,7 @@ interface ConvertLeadModalProps {
     companyId: number;
     userId: string;
     onSuccess: () => void;
+    members?: CompanyMember[];
 }
 
 export const ConvertLeadModal: React.FC<ConvertLeadModalProps> = ({
@@ -21,20 +22,23 @@ export const ConvertLeadModal: React.FC<ConvertLeadModalProps> = ({
     lead,
     companyId,
     userId,
-    onSuccess
+    onSuccess,
+    members = []
 }) => {
     const { showToast } = useAppStore();
     const [pipelines, setPipelines] = useState<Pipeline[]>([]);
     const [selectedPipelineId, setSelectedPipelineId] = useState<string>('');
     const [selectedStageId, setSelectedStageId] = useState<string>('');
+    const [selectedSalesId, setSelectedSalesId] = useState<string>('');
     const [isProcessing, setIsProcessing] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
             fetchPipelines();
+            setSelectedSalesId(lead.sales_id || '');
         }
-    }, [isOpen]);
+    }, [isOpen, lead]);
 
     const fetchPipelines = async () => {
         setIsLoading(true);
@@ -110,7 +114,7 @@ export const ConvertLeadModal: React.FC<ConvertLeadModalProps> = ({
                 stage_id: selectedStageId,
                 name: `Deal: ${lead.name}`,
                 expected_value: lead.expected_value || 0,
-                sales_id: lead.sales_id,
+                sales_id: selectedSalesId || null,
                 client_id: clientId,
                 contact_name: lead.name,
                 customer_company: lead.client_company?.name || 'Perorangan',
@@ -131,7 +135,7 @@ export const ConvertLeadModal: React.FC<ConvertLeadModalProps> = ({
             });
 
             // 4. Update the lead status instead of deleting
-            await supabase.from('leads').update({ status: 'qualified' }).eq('id', lead.id);
+            await supabase.from('leads').update({ status: 'qualified', sales_id: selectedSalesId || null }).eq('id', lead.id);
 
             showToast('Berhasil mengonversi Lead menjadi Deal!', 'success');
             onSuccess();
@@ -190,6 +194,14 @@ export const ConvertLeadModal: React.FC<ConvertLeadModalProps> = ({
                     {selectedPipelineId && currentStages.length === 0 && !isLoading && (
                         <p className="text-xs text-rose-500 font-medium">Pipeline ini tidak memiliki tahapan. Silakan pilih pipeline lain.</p>
                     )}
+
+                    <ComboBox
+                        label="PIC Sales"
+                        value={selectedSalesId}
+                        onChange={(val) => setSelectedSalesId(val.toString())}
+                        options={members.map(m => ({ value: m.user_id, label: m.profile?.full_name || 'Tanpa Nama' }))}
+                        leftIcon={<User size={16} />}
+                    />
                 </div>
 
                 <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 mt-6 font-bold">

@@ -212,28 +212,30 @@ export const LeadAddModal: React.FC<LeadAddModalProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4 md:col-span-2">
-              <ComboBox
-                label="Pilih Client (Atau Tambah Baru)"
-                placeholder="Pilih Pelanggan"
-                value={selectedClientId}
-                onChange={(val: string | number) => handleClientSelect(val.toString())}
-                options={[
-                  ...clients.map(c => ({
-                    value: c.id.toString(),
-                    label: c.name,
-                    sublabel: c.client_company?.name || 'PERSONAL'
-                  }))
-                ]}
-                onAddNew={() => setIsClientModalOpen(true)}
-                addNewLabel="Tambah Pelanggan Baru"
-                leftIcon={<User size={16} />}
-                onLoadMore={loadMoreClients}
-                hasMore={clientsHasMore}
-                isLoadingMore={clientsLoadingMore}
-                onSearchChange={setClientSearchTerm}
-              />
-            </div>
+            {activeTab === 'lama' && (
+              <div className="space-y-4 md:col-span-2">
+                <ComboBox
+                  label="Pilih Client (Atau Tambah Baru)"
+                  placeholder="Pilih Pelanggan"
+                  value={selectedClientId}
+                  onChange={(val: string | number) => handleClientSelect(val.toString())}
+                  options={[
+                    ...clients.map(c => ({
+                      value: c.id.toString(),
+                      label: c.name,
+                      sublabel: c.client_company?.name || 'PERSONAL'
+                    }))
+                  ]}
+                  onAddNew={() => setIsClientModalOpen(true)}
+                  addNewLabel="Tambah Pelanggan Baru"
+                  leftIcon={<User size={16} />}
+                  onLoadMore={loadMoreClients}
+                  hasMore={clientsHasMore}
+                  isLoadingMore={clientsLoadingMore}
+                  onSearchChange={setClientSearchTerm}
+                />
+              </div>
+            )}
 
             <div className="space-y-2 md:col-span-2">
               <Input

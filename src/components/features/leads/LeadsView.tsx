@@ -33,8 +33,8 @@ interface Props {
 export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) => {
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>('table');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [leadToConvert, setLeadToConvert] = useState<Lead | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean, id: number | null }>({ isOpen: false, id: null });
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [isConfirmBulkDeleteOpen, setIsConfirmBulkDeleteOpen] = useState(false);
@@ -132,6 +132,11 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
     try {
       await updateLeadStatus.mutateAsync({ leadId, status: newStatus });
       showToast('Status lead berhasil diperbarui!', 'success');
+      
+      if (newStatus.toLowerCase() === 'qualified') {
+        const lead = leads.find(l => l.id === leadId);
+        if (lead) setLeadToConvert(lead);
+      }
     } catch (error: any) {
       showToast('Gagal mengubah status: ' + error.message, 'error');
     }
@@ -240,6 +245,10 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
     try {
       await handleReorder(leads, () => {}, leadId, newStatus, index, draggedCard.status);
       refresh();
+      
+      if (newStatus.toLowerCase() === 'qualified') {
+        setLeadToConvert(draggedCard);
+      }
     } catch (err) {
       refresh();
     }
@@ -360,17 +369,22 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
           isOpen={!!selectedLead} lead={selectedLead} company={activeCompany}
           members={members} stages={stages} onClose={() => setSelectedLead(null)}
           onUpdate={handleUpdate} onDelete={() => handleDelete(selectedLead.id)}
-          onConvertToDeal={() => setIsConvertModalOpen(true)}
+          onConvertToDeal={() => setLeadToConvert(selectedLead)}
           user={members.find(m => m.user_id === selectedLead.sales_id)?.profile as any}
           sources={sources} clientCompanies={clientCompanies} categories={categories}
         />
       )}
 
-      {isConvertModalOpen && selectedLead && activeCompany && (
+      {leadToConvert && activeCompany && (
         <ConvertLeadModal
-          isOpen={isConvertModalOpen} onClose={() => setIsConvertModalOpen(false)}
-          lead={selectedLead} companyId={activeCompany.id} userId={user.id}
-          onSuccess={() => { setIsConvertModalOpen(false); setSelectedLead(null); refresh(); }}
+          isOpen={!!leadToConvert} onClose={() => setLeadToConvert(null)}
+          lead={leadToConvert} companyId={activeCompany.id} userId={user.id}
+          members={members}
+          onSuccess={() => { 
+            setLeadToConvert(null); 
+            if (selectedLead?.id === leadToConvert.id) setSelectedLead(null); 
+            refresh(); 
+          }}
         />
       )}
 
