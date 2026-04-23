@@ -109,8 +109,17 @@ export function useProductMutations() {
             queryClient.invalidateQueries({ queryKey: ['products'] });
         }
     });
+    const deleteProduct = useMutation({
+        mutationFn: async ({ id }: { id: number }) => {
+            const { error } = await supabase.from('products').delete().eq('id', id);
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['products'] });
+        }
+    });
 
-    return { upsertProduct, addCategory, addUnit, bulkDeleteProducts, deleteProduct: upsertProduct };
+    return { upsertProduct, addCategory, addUnit, bulkDeleteProducts, deleteProduct };
 }
 
 export function useProductMetadata(companyId: number) {

@@ -53,6 +53,7 @@ export function useClientsQuery({
       };
     },
     enabled: !!companyId,
+    placeholderData: (previousData) => previousData,
   });
 }
 
@@ -79,7 +80,27 @@ export function useClientMutations() {
     },
   });
 
-  return { deleteClient, bulkDeleteClients };
+  const upsertClient = useMutation({
+    mutationFn: async (client: Partial<Client>) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { client_company, count, ...payload } = client as any;
+      
+      if (payload.id) {
+        const { data, error } = await supabase.from('clients').update(payload).eq('id', payload.id).select().single();
+        if (error) throw error;
+        return data;
+      } else {
+        const { data, error } = await supabase.from('clients').insert([payload]).select().single();
+        if (error) throw error;
+        return data;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients-list'] });
+    },
+  });
+
+  return { deleteClient, bulkDeleteClients, upsertClient };
 }
 
 export function useClientMetadata(companyId: number) {

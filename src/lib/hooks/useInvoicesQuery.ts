@@ -30,7 +30,14 @@ export function useInvoicesQuery({
         .eq('company_id', companyId);
 
       if (searchTerm) {
-        query = query.or(`number.ilike.%${searchTerm}%,client_name.ilike.%${searchTerm}%`);
+        const { data: clientsData } = await supabase.from('clients').select('id').ilike('name', `%${searchTerm}%`);
+        const clientIds = clientsData?.map(c => c.id).join(',') || '';
+        
+        if (clientIds) {
+          query = query.or(`number.ilike.%${searchTerm}%,client_id.in.(${clientIds})`);
+        } else {
+          query = query.ilike('number', `%${searchTerm}%`);
+        }
       }
 
       if (filterStatus && filterStatus !== 'all') {

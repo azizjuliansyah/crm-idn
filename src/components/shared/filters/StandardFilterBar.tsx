@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Button,
   H2,
@@ -18,8 +18,8 @@ export interface ViewModeOption {
 interface StandardFilterBarProps {
   title: string;
   subtitle?: string;
-  searchTerm: string;
-  onSearchChange: (value: string) => void;
+  searchTerm?: string;
+  onSearchChange?: (value: string) => void;
   searchPlaceholder?: string;
   primaryAction?: {
     label: string;
@@ -56,6 +56,30 @@ export const StandardFilterBar: React.FC<StandardFilterBarProps> = ({
   children,
   className = ''
 }) => {
+  const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm || '');
+  const onSearchChangeRef = useRef(onSearchChange);
+
+  useEffect(() => {
+    onSearchChangeRef.current = onSearchChange;
+  }, [onSearchChange]);
+
+  useEffect(() => {
+    if (searchTerm !== undefined && searchTerm !== localSearchTerm) {
+      setLocalSearchTerm(searchTerm);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm]);
+
+  useEffect(() => {
+    if (searchTerm === undefined) return;
+    const handler = setTimeout(() => {
+      if (localSearchTerm !== searchTerm && onSearchChangeRef.current) {
+        onSearchChangeRef.current(localSearchTerm);
+      }
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [localSearchTerm, searchTerm]);
+
   return (
     <div className={`flex flex-col gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0 ${className}`}>
       <div className="flex items-center justify-between gap-4 overflow-x-auto custom-scrollbar pb-1 md:pb-0">
@@ -129,12 +153,12 @@ export const StandardFilterBar: React.FC<StandardFilterBarProps> = ({
 
       {(children || searchTerm !== undefined) && (
         <div className="flex items-center gap-3 pt-3 border-t border-gray-50 overflow-x-auto custom-scrollbar pb-2 md:pb-1">
-          {onSearchChange && searchTerm !== undefined && (
+          {searchTerm !== undefined && (
             <div className="w-[300px] md:w-[300px] shrink-0">
               <SearchInput
                 placeholder={searchPlaceholder}
-                value={searchTerm}
-                onChange={e => onSearchChange(e.target.value)}
+                value={localSearchTerm}
+                onChange={e => setLocalSearchTerm(e.target.value)}
                 className="!rounded-md !border-gray-200 transition-all !shadow-none !text-[10px] !font-bold !uppercase placeholder:uppercase placeholder:text-[10px] placeholder:font-bold placeholder:text-gray-400 !py-3.5"
               />
             </div>

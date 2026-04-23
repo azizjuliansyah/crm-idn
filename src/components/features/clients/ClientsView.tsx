@@ -72,7 +72,7 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
   const loadingMetadata = metadataCompanies.isLoading || metadataCategories.isLoading;
 
   // Mutations
-  const { deleteClient, bulkDeleteClients } = useClientMutations();
+  const { deleteClient, bulkDeleteClients, upsertClient } = useClientMutations();
 
   // Computed Data
   const clientCompaniesList = useMemo(() => {
@@ -191,14 +191,18 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
       <ClientFormModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSave={async () => {
-          // Re-fetching is handled by Query Invalidation in Modal
-          setIsModalOpen(false);
-          showToast('Data Berhasil Disimpan', 'success');
+        onSave={async (formData) => {
+          try {
+            await upsertClient.mutateAsync({ ...formData, company_id: company.id } as Partial<Client>);
+            setIsModalOpen(false);
+            showToast('Data Berhasil Disimpan', 'success');
+          } catch (err: any) {
+            showToast(err.message, 'error');
+          }
         }}
         form={selectedClient}
         setForm={setSelectedClient as any}
-        isProcessing={false} // Managed internally in Modal now
+        isProcessing={upsertClient.status === 'pending'}
         clientCompanies={rawCompanies}
         categories={categories}
         companyId={company.id}

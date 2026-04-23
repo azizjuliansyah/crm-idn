@@ -71,6 +71,7 @@ export function useProjectsQuery({
       };
     },
     enabled: !!companyId && !!pipelineId,
+    placeholderData: (previousData) => previousData,
   });
 }
 

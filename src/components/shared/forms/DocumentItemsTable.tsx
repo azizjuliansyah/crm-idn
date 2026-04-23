@@ -150,11 +150,11 @@ export const DocumentItemsTable: React.FC<Props> = ({
                   />
                 </TableCell>
                 <TableCell className="px-4 py-3">
-                  <input
-                    type="text"
+                  <textarea
+                    rows={1}
                     value={item.description}
                     onChange={e => { const n = [...items]; n[idx].description = e.target.value; onChange(n); }}
-                    className="w-full text-xs px-3 py-2 bg-white border border-gray-200 rounded-md outline-none focus:border-blue-500 transition-all font-medium"
+                    className="w-full text-xs px-3 py-2 bg-white border border-gray-200 rounded-md outline-none focus:border-blue-500 transition-all font-medium resize-y"
                     placeholder="Detail spesifikasi..."
                   />
                 </TableCell>

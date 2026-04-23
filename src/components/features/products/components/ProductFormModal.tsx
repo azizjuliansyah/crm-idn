@@ -55,10 +55,12 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     const handleSave = async () => {
         if (!form.name || form.price === undefined) return;
         try {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { product_categories, product_units, count, ...updateData } = form as any;
             const data = await upsertProduct.mutateAsync({
-                ...form,
+                ...updateData,
                 company_id: companyId
-            } as any);
+            });
             onSuccess(data);
         } catch (err) {
             console.error(err);
