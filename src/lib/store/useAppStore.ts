@@ -113,9 +113,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ activeCompany: company });
     if (company) {
       localStorage.setItem('crm_active_company_id', String(company.id));
+      document.cookie = `crm_active_company_id=${company.id}; path=/; max-age=31536000`;
       get().fetchActiveCompanyMembers(company.id);
     } else {
       localStorage.removeItem('crm_active_company_id');
+      document.cookie = 'crm_active_company_id=; path=/; max-age=0';
       set({ activeCompanyMembers: [] });
     }
   },
@@ -176,6 +178,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   logout: async () => {
     set({ isLoggingOut: true });
     localStorage.removeItem('crm_active_company_id');
+    document.cookie = 'crm_active_company_id=; path=/; max-age=0';
     set({ activeCompany: null, user: null, companies: [], activeCompanyMembers: [], kbChatMessages: [] });
     await supabase.auth.signOut();
     set({ isLoggingOut: false });

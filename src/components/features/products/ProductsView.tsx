@@ -21,9 +21,15 @@ import { ProductFilterBar } from './ProductFilterBar';
 
 interface Props {
   company: Company;
+  initialProducts?: { data: Product[], totalCount: number };
+  metadata?: any;
 }
 
-export const ProductsView: React.FC<Props> = ({ company }) => {
+export const ProductsView: React.FC<Props> = ({ 
+  company,
+  initialProducts,
+  metadata
+}) => {
   const searchParams = useSearchParams();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -56,9 +62,9 @@ export const ProductsView: React.FC<Props> = ({ company }) => {
     sortConfig: filters.sortConfig,
     page,
     pageSize,
-  });
+  }, initialProducts);
 
-  const { categories: metadataCategories, units: metadataUnits } = useProductMetadata(company.id);
+  const { categories: metadataCategories, units: metadataUnits } = useProductMetadata(company.id, metadata);
   const categories = metadataCategories.data || [];
   const units = metadataUnits.data || [];
   const loadingMetadata = metadataCategories.isLoading || metadataUnits.isLoading;

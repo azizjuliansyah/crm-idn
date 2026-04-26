@@ -1,6 +1,6 @@
 import React from 'react';
-import { Input, Button, Subtext, Modal, ComboBox } from '@/components/ui';
-import { Search, Save, Check } from 'lucide-react';
+import { Input, Button, Subtext, Modal, ComboBox, Toggle } from '@/components/ui';
+import { Search, Save } from 'lucide-react';
 import { CompanyRole } from '@/lib/types';
 
 interface PlatformAccessModalProps {
@@ -54,12 +54,11 @@ export const PlatformAccessModal: React.FC<PlatformAccessModalProps> = ({
                   return (
                      <div key={item.id} className={`p-4 rounded-2xl border transition-all flex items-center justify-between ${isSelected ? 'bg-blue-50/50 border-blue-200' : 'bg-white border-gray-100'}`}>
                         <div className="flex items-center gap-4">
-                           <Button
-                              onClick={() => isSelected ? onToggleAccessWithRole(item.id) : onToggleAccessWithRole(item.id, roles[0]?.id || '')}
-                              className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${isSelected ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-white border-gray-200 text-transparent'}`}
-                           >
-                              <Check size={14} strokeWidth={4} />
-                           </Button>
+                           <Toggle
+                              checked={isSelected}
+                              onChange={() => isSelected ? onToggleAccessWithRole(item.id) : onToggleAccessWithRole(item.id, roles[0]?.id || '')}
+                              variant="blue"
+                           />
                            <div>
                               <Subtext className="text-[13px]  text-gray-900">{accessMode.type === 'user_to_companies' ? item.name : item.full_name}</Subtext>
                               <Subtext className="text-[10px] text-gray-400  uppercase">{accessMode.type === 'user_to_companies' ? `ID: ${item.id}` : item.email}</Subtext>

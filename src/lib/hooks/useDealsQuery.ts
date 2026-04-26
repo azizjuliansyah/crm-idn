@@ -34,7 +34,7 @@ export function useDealsQuery({
   sortConfig,
   page = 1,
   pageSize = 20,
-}: FetchDealsParams) {
+}: FetchDealsParams, initialData?: { data: Deal[], totalCount: number }) {
   return useQuery({
     queryKey: ['deals', { companyId, pipelineId, searchTerm, statusFilter, assigneeFilter, companyFilter, probabilityFilter, dateFilterType, startDate, endDate, followUpFilter, sortConfig, page, pageSize }],
     queryFn: async () => {
@@ -108,6 +108,7 @@ export function useDealsQuery({
         totalCount: count || 0,
       };
     },
+    initialData: initialData,
     enabled: !!companyId && !!pipelineId,
   });
 }
@@ -161,7 +162,7 @@ export function useDealMutations() {
   return { deleteDeal, updateDealStatus, bulkDeleteDeals, bulkUpdateDealsStage };
 }
 
-export function useDealMetadata(companyId: number, pipelineId?: number) {
+export function useDealMetadata(companyId: number, pipelineId?: number, initialData?: any) {
   return {
     pipeline: useQuery({
       queryKey: ['pipeline', companyId, pipelineId],
@@ -178,6 +179,7 @@ export function useDealMetadata(companyId: number, pipelineId?: number) {
         }
         return data as Pipeline;
       },
+      initialData: initialData?.pipeline,
       enabled: !!companyId,
     }),
     members: useQuery({
@@ -191,6 +193,7 @@ export function useDealMetadata(companyId: number, pipelineId?: number) {
         if (error) throw error;
         return data as CompanyMember[];
       },
+      initialData: initialData?.members,
       enabled: !!companyId,
     }),
     clients: useQuery({
@@ -200,6 +203,7 @@ export function useDealMetadata(companyId: number, pipelineId?: number) {
         if (error) throw error;
         return data as Client[];
       },
+      initialData: initialData?.clients,
       enabled: !!companyId,
     }),
     clientCompanies: useQuery({
@@ -209,6 +213,7 @@ export function useDealMetadata(companyId: number, pipelineId?: number) {
         if (error) throw error;
         return data as ClientCompany[];
       },
+      initialData: initialData?.clientCompanies,
       enabled: !!companyId,
     }),
     categories: useQuery({
@@ -218,6 +223,7 @@ export function useDealMetadata(companyId: number, pipelineId?: number) {
         if (error) throw error;
         return data as ClientCompanyCategory[];
       },
+      initialData: initialData?.categories,
       enabled: !!companyId,
     }),
   };

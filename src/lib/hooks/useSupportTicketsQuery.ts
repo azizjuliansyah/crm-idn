@@ -24,7 +24,7 @@ export function useSupportTicketsQuery({
   sortConfig,
   page = 1,
   pageSize = 20,
-}: UseSupportTicketsQueryParams) {
+}: UseSupportTicketsQueryParams, initialData?: { data: SupportTicket[], totalCount: number }) {
   return useQuery({
     queryKey: ['support_tickets', companyId, searchTerm, filterStatus, filterClientId, filterTopicId, filterType, sortConfig, page, pageSize],
     queryFn: async () => {
@@ -71,6 +71,7 @@ export function useSupportTicketsQuery({
         totalCount: count || 0,
       };
     },
+    initialData: initialData,
     placeholderData: (previousData) => previousData,
   });
 }

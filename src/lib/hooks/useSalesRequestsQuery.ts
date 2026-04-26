@@ -20,7 +20,7 @@ export function useSalesRequestsQuery({
   sortConfig,
   page = 1,
   pageSize = 20,
-}: UseSalesRequestsQueryParams) {
+}: UseSalesRequestsQueryParams, initialData?: { data: any[], totalCount: number }) {
   return useQuery({
     queryKey: ['sales_requests', companyId, categoryIdIndex, searchTerm, filterStatus, sortConfig, page, pageSize],
     queryFn: async () => {
@@ -58,6 +58,7 @@ export function useSalesRequestsQuery({
         totalCount: count || 0,
       };
     },
+    initialData: initialData,
     placeholderData: (previousData) => previousData,
   });
 }

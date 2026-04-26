@@ -27,16 +27,22 @@ import { useAppStore } from '@/lib/store/useAppStore';
 
 interface Props {
   company: Company;
+  initialCompanies?: { data: any[], totalCount: number };
+  metadata?: any;
 }
 
 // No local types needed, using from hooks
 
-export const ClientCompaniesView: React.FC<Props> = ({ company }) => {
+export const ClientCompaniesView: React.FC<Props> = ({ 
+  company,
+  initialCompanies,
+  metadata
+}) => {
   const searchParams = useSearchParams();
   
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [categories, setCategories] = useState<ClientCompanyCategory[]>([]);
+  const [categories, setCategories] = useState<ClientCompanyCategory[]>(metadata?.categories || []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -70,7 +76,7 @@ export const ClientCompaniesView: React.FC<Props> = ({ company }) => {
     sortConfig,
     page,
     pageSize,
-  });
+  }, initialCompanies);
 
   const items = queryData?.data || [];
 
@@ -85,8 +91,10 @@ export const ClientCompaniesView: React.FC<Props> = ({ company }) => {
   }, [company?.id]);
 
   useEffect(() => {
-    fetchMetadata();
-  }, [fetchMetadata]);
+    if (!metadata) {
+      fetchMetadata();
+    }
+  }, [fetchMetadata, metadata]);
 
   useEffect(() => {
     const success = searchParams.get('success');

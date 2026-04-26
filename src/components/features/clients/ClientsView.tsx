@@ -25,9 +25,15 @@ import { BulkActionGroup } from '@/components/shared/filters/BulkActionGroup';
 
 interface Props {
   company: Company;
+  initialClients?: { data: Client[], totalCount: number };
+  metadata?: any;
 }
 
-export const ClientsView: React.FC<Props> = ({ company }) => {
+export const ClientsView: React.FC<Props> = ({ 
+  company,
+  initialClients,
+  metadata
+}) => {
   const searchParams = useSearchParams();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -63,10 +69,10 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
     sortConfig,
     page,
     pageSize
-  });
+  }, initialClients);
 
   // Metadata
-  const { clientCompanies: metadataCompanies, categories: metadataCategories } = useClientMetadata(company.id);
+  const { clientCompanies: metadataCompanies, categories: metadataCategories } = useClientMetadata(company.id, metadata);
   const rawCompanies = metadataCompanies.data || [];
   const categories = metadataCategories.data || [];
   const loadingMetadata = metadataCompanies.isLoading || metadataCategories.isLoading;
@@ -76,9 +82,9 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
 
   // Computed Data
   const clientCompaniesList = useMemo(() => {
-    return rawCompanies.map(co => ({
+    return rawCompanies.map((co: any) => ({
       ...co,
-      client_company_categories: categories.find(cat => cat.id === co.category_id)
+      client_company_categories: categories.find((cat: any) => cat.id === co.category_id)
     }));
   }, [rawCompanies, categories]);
 
@@ -86,7 +92,7 @@ export const ClientsView: React.FC<Props> = ({ company }) => {
     const rawData = queryData?.data || [];
     return rawData.map(item => ({
       ...item,
-      client_company: clientCompaniesList.find(co => co.id === item.client_company_id)
+      client_company: clientCompaniesList.find((co: any) => co.id === item.client_company_id)
     })) as ClientWithCompany[];
   }, [queryData, clientCompaniesList]);
 

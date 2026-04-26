@@ -28,7 +28,7 @@ export function useLeadsQuery({
   sortConfig,
   page = 1,
   pageSize = 20,
-}: FetchLeadsParams) {
+}: FetchLeadsParams, initialData?: { data: Lead[], totalCount: number }) {
   return useQuery({
     queryKey: ['leads', { companyId, searchTerm, statusFilter, assigneeFilter, companyFilter, dateFilterType, startDate, endDate, sortConfig, page, pageSize }],
     queryFn: async () => {
@@ -88,6 +88,7 @@ export function useLeadsQuery({
         totalCount: count || 0,
       };
     },
+    initialData: initialData,
     enabled: !!companyId,
   });
 }
@@ -141,7 +142,7 @@ export function useLeadMutations() {
   return { deleteLead, updateLeadStatus, bulkDeleteLeads, bulkUpdateLeadsStatus };
 }
 
-export function useLeadMetadata(companyId: number) {
+export function useLeadMetadata(companyId: number, initialData?: any) {
   return {
     stages: useQuery({
       queryKey: ['lead-stages', companyId],
@@ -150,6 +151,7 @@ export function useLeadMetadata(companyId: number) {
         if (error) throw error;
         return data as LeadStage[];
       },
+      initialData: initialData?.stages,
       enabled: !!companyId,
     }),
     sources: useQuery({
@@ -159,6 +161,7 @@ export function useLeadMetadata(companyId: number) {
         if (error) throw error;
         return data as LeadSource[];
       },
+      initialData: initialData?.sources,
       enabled: !!companyId,
     }),
     members: useQuery({
@@ -172,6 +175,7 @@ export function useLeadMetadata(companyId: number) {
         if (error) throw error;
         return data as CompanyMember[];
       },
+      initialData: initialData?.members,
       enabled: !!companyId,
     }),
     clientCompanies: useQuery({
@@ -181,6 +185,7 @@ export function useLeadMetadata(companyId: number) {
         if (error) throw error;
         return data as ClientCompany[];
       },
+      initialData: initialData?.clientCompanies,
       enabled: !!companyId,
     }),
     categories: useQuery({
@@ -190,6 +195,7 @@ export function useLeadMetadata(companyId: number) {
         if (error) throw error;
         return data as ClientCompanyCategory[];
       },
+      initialData: initialData?.categories,
       enabled: !!companyId,
     }),
   };

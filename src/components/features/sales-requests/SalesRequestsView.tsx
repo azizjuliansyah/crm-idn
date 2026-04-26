@@ -30,9 +30,16 @@ import { BaseDataTable, ColumnConfig } from '@/components/shared/tables/BaseData
 interface Props {
     company: Company;
     categoryId: number;
+    initialRequests?: { data: any[], totalCount: number };
+    initialCategory?: SalesRequestCategory;
 }
 
-export const SalesRequestsView: React.FC<Props> = ({ company, categoryId }) => {
+export const SalesRequestsView: React.FC<Props> = ({ 
+    company, 
+    categoryId,
+    initialRequests,
+    initialCategory
+}) => {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { activeCompanyMembers, user, showToast } = useAppStore();
@@ -41,7 +48,7 @@ export const SalesRequestsView: React.FC<Props> = ({ company, categoryId }) => {
     const [pageSize, setPageSize] = useState(20);
     const filters = useSalesRequestFilters();
 
-    const [category, setCategory] = useState<SalesRequestCategory | null>(null);
+    const [category, setCategory] = useState<SalesRequestCategory | null>(initialCategory || null);
     const [isProcessing, setIsProcessing] = useState(false);
 
     const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null }>({ isOpen: false, id: null });
@@ -61,7 +68,7 @@ export const SalesRequestsView: React.FC<Props> = ({ company, categoryId }) => {
         sortConfig: filters.sortConfig,
         page,
         pageSize,
-    });
+    }, initialRequests);
 
     const requests = requestsData?.data || [];
 
@@ -80,8 +87,10 @@ export const SalesRequestsView: React.FC<Props> = ({ company, categoryId }) => {
     }, [categoryId]);
 
     useEffect(() => {
-        fetchCategory();
-    }, [fetchCategory]);
+        if (!initialCategory) {
+            fetchCategory();
+        }
+    }, [fetchCategory, initialCategory]);
 
     useEffect(() => {
         const success = searchParams.get('success');
@@ -379,7 +388,7 @@ export const SalesRequestsView: React.FC<Props> = ({ company, categoryId }) => {
                     // Selection Props
                     selectedIds={selectedIds}
                     onToggleSelect={(id) => setSelectedIds(prev => prev.includes(id as number) ? prev.filter(i => i !== id) : [...prev, id as number])}
-                    onToggleSelectAll={() => setSelectedIds(selectedIds.length === requests.length ? [] : requests.map(r => r.id))}
+                    onToggleSelectAll={() => setSelectedIds(selectedIds.length === requests.length ? [] : requests.map((r: any) => r.id))}
                 />
             </div>
 

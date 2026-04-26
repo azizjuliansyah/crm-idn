@@ -2,7 +2,7 @@
 
 import { Profile, Project } from '@/lib/types';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import { Button, H2, Subtext } from '@/components/ui';
 
@@ -12,7 +12,6 @@ import { useAppStore } from '@/lib/store/useAppStore';
 import { Layout } from './Layout';
 import { Loader2 } from 'lucide-react';
 import { getPathFromViewId, getViewIdFromPath } from '@/lib/navigation';
-import { PlatformAdminView } from '../features/admin/PlatformAdminView';
 import { CompanyWizard } from '../features/settings/CompanyWizard';
 
 export function DashboardLayoutClient({ children }: { children: React.ReactNode }) {
@@ -29,6 +28,13 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
   const [showWizard, setShowWizard] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+
+  // Redirect Admin to Admin Dashboard if they land on general dashboard without a company
+  useEffect(() => {
+    if (user?.platform_role === 'ADMIN' && !activeCompany && pathname === '/dashboard') {
+      router.replace('/dashboard/admin');
+    }
+  }, [user, activeCompany, pathname, router]);
 
   if (loading || isLoggingOut) {
     return (
@@ -58,7 +64,7 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
         }
 
         if (user.platform_role === 'ADMIN' && !activeCompany) {
-          return <PlatformAdminView activeView={activeView} onSettingsUpdate={() => { }} onRefresh={() => window.location.reload()} />;
+          return children;
         }
 
         if (user.platform_role === 'USER' && (companies?.length || 0) === 0) {

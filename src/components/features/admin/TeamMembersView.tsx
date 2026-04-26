@@ -1,3 +1,4 @@
+'use client';
 import React, { useState } from 'react';
 import { Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Badge, H2, Label } from '@/components/ui';
 import { useAppStore } from '@/lib/store/useAppStore';

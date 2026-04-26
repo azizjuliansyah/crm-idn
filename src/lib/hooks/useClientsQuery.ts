@@ -18,7 +18,7 @@ export function useClientsQuery({
   sortConfig,
   page = 1,
   pageSize = 20,
-}: FetchClientsParams) {
+}: FetchClientsParams, initialData?: { data: Client[], totalCount: number }) {
   return useQuery({
     queryKey: ['clients-list', { companyId, searchTerm, companyFilter, sortConfig, page, pageSize }],
     queryFn: async () => {
@@ -52,6 +52,7 @@ export function useClientsQuery({
         totalCount: count || 0,
       };
     },
+    initialData: initialData,
     enabled: !!companyId,
     placeholderData: (previousData) => previousData,
   });
@@ -103,7 +104,7 @@ export function useClientMutations() {
   return { deleteClient, bulkDeleteClients, upsertClient };
 }
 
-export function useClientMetadata(companyId: number) {
+export function useClientMetadata(companyId: number, initialData?: any) {
   return {
     clientCompanies: useQuery({
       queryKey: ['client-companies', companyId],
@@ -116,6 +117,7 @@ export function useClientMetadata(companyId: number) {
         if (error) throw error;
         return data as ClientCompany[];
       },
+      initialData: initialData?.clientCompanies,
       enabled: !!companyId,
     }),
     categories: useQuery({
@@ -129,6 +131,7 @@ export function useClientMetadata(companyId: number) {
         if (error) throw error;
         return data as ClientCompanyCategory[];
       },
+      initialData: initialData?.categories,
       enabled: !!companyId,
     }),
   };

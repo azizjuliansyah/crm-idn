@@ -31,9 +31,18 @@ interface Props {
   activeView: string;
   user: Profile;
   pipelineId?: number;
+  initialDeals?: { data: Deal[], totalCount: number };
+  metadata?: any;
 }
 
-export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pipelineId }) => {
+export const DealsView: React.FC<Props> = ({ 
+  activeCompany, 
+  activeView, 
+  user, 
+  pipelineId,
+  initialDeals,
+  metadata
+}) => {
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>('table');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
@@ -55,7 +64,7 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
     clients: clientsQuery, 
     clientCompanies: clientCompaniesQuery, 
     categories: categoriesQuery 
-  } = useDealMetadata(activeCompany?.id || 0, pipelineId);
+  } = useDealMetadata(activeCompany?.id || 0, pipelineId, metadata);
 
   const pipeline = pipelineQuery.data || null;
   const members = membersQuery.data || [];
@@ -99,7 +108,7 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
     sortConfig,
     page,
     pageSize
-  });
+  }, initialDeals);
 
   const deals = dealsData?.data || [];
 
@@ -191,10 +200,10 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
       { header: 'Tanggal Dibuat', key: 'created_at_label', width: 20 },
     ];
 
-    const formattedData = dataToExport.map(d => ({
+    const formattedData = dataToExport.map((d: any) => ({
       ...d,
       company_name: d.customer_company || 'Perorangan',
-      stage_label: pipeline?.stages?.find(s => s.id === d.stage_id)?.name || d.stage_id,
+      stage_label: pipeline?.stages?.find((s: any) => s.id === d.stage_id)?.name || d.stage_id,
       formatted_probability: `${d.probability || 0}%`,
       formatted_value: new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(d.expected_value || 0),
       sales_name: d.sales_profile?.full_name || '-',
@@ -215,13 +224,13 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
     if (isNaN(numId)) return;
     setSelectedIds(prev => prev.includes(numId) ? prev.filter(i => i !== numId) : [...prev, numId]);
   };
-  const handleToggleSelectAll = () => { if (selectedIds.length === deals.length) setSelectedIds([]); else setSelectedIds(deals.map(l => l.id)); };
+  const handleToggleSelectAll = () => { if (selectedIds.length === deals.length) setSelectedIds([]); else setSelectedIds(deals.map((l: any) => l.id)); };
 
   const dealsByStage = useMemo(() => {
-    return (pipeline?.stages || []).reduce((acc, stage) => {
+    return (pipeline?.stages || []).reduce((acc: any, stage: any) => {
       acc[stage.id] = deals
-        .filter(l => l.stage_id === stage.id)
-        .sort((a, b) => {
+        .filter((l: any) => l.stage_id === stage.id)
+        .sort((a: any, b: any) => {
           const orderA = a.kanban_order || 0;
           const orderB = b.kanban_order || 0;
           if (orderA !== orderB) return orderA - orderB;
@@ -382,7 +391,7 @@ export const DealsView: React.FC<Props> = ({ activeCompany, activeView, user, pi
         onClose={() => setIsConfirmBulkStatusOpen(false)}
         onConfirm={handleBulkUpdateStage}
         count={selectedIds.length}
-        options={pipeline?.stages?.map(s => ({ id: s.id, name: s.name })) || []}
+        options={pipeline?.stages?.map((s: any) => ({ id: s.id, name: s.name })) || []}
         title="Ubah Tahapan Deal"
         label="Pilih Tahapan Baru"
         isProcessing={bulkUpdateDealsStage.status === 'pending'}

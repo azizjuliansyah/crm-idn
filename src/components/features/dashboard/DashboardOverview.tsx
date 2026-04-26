@@ -1,3 +1,4 @@
+'use client';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -17,12 +18,13 @@ import {
 
 interface DashboardProps {
   company: Company;
+  initialStats?: any;
 }
 
-export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
+export const DashboardOverview: React.FC<DashboardProps> = ({ company, initialStats }) => {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
+  const [loading, setLoading] = useState(!initialStats);
+  const [stats, setStats] = useState(initialStats || {
     totalLeads: 0,
     totalDeals: 0,
     totalRevenue: 0,
@@ -31,7 +33,8 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
     revenueMonthly: [] as any[],
     dealsFunnel: [] as any[],
     ticketsPriority: [] as any[],
-    recentLeads: [] as any[]
+    recentLeads: [] as any[],
+    companyId: null as number | null
   });
 
   const fetchData = async () => {
@@ -63,7 +66,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
 
       // 2. Process Monthly Revenue
       const monthly: Record<string, number> = {};
-      const last6Months = Array.from({ length: 6 }, (_, i) => {
+      const last6Months = Array.from({ length: 6 }, (_: any, i: number) => {
         const d = new Date();
         d.setMonth(d.getMonth() - i);
         return d.toLocaleString('id-ID', { month: 'short' });
@@ -100,13 +103,14 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
       setStats({
         totalLeads: allLeadsRes.data?.length || 0,
         totalDeals: dealsRes.data?.length || 0,
-        totalRevenue: quotesRes.data?.reduce((sum, q) => sum + Number(q.total), 0) || 0,
+        totalRevenue: quotesRes.data?.reduce((sum: number, q: any) => sum + Number(q.total), 0) || 0,
         activeTickets: ticketsRes.data?.filter(t => t.status !== 'closed').length || 0,
         leadsBySource,
         revenueMonthly,
         dealsFunnel,
         ticketsPriority,
-        recentLeads: leadsRecentRes.data || []
+        recentLeads: leadsRecentRes.data || [],
+        companyId: company.id
       });
     } catch (err) {
       console.error("Dashboard Fetch Error:", err);
@@ -116,7 +120,9 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
   };
 
   useEffect(() => {
-    fetchData();
+    if (stats.companyId !== company.id) {
+      fetchData();
+    }
   }, [company.id]);
 
   const COLORS = ['#4F46E5', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
@@ -286,7 +292,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
                   paddingAngle={5}
                   dataKey="value"
                 >
-                  {stats.leadsBySource.map((_, index) => (
+                  {stats.leadsBySource.map((_: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />
                   ))}
                 </Pie>
@@ -299,7 +305,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
             </div>
           </div>
           <div className="mt-6 space-y-3">
-            {stats.leadsBySource.slice(0, 3).map((item, idx) => (
+            {stats.leadsBySource.slice(0, 3).map((item: any, idx: number) => (
               <div key={item.name} className="flex items-center justify-between text-[11px] ">
                 <div className="flex items-center gap-2.5">
                   <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
@@ -376,7 +382,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company }) => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {stats.recentLeads.map((lead, idx) => (
+            {stats.recentLeads.map((lead: any, idx: number) => (
               <TableRow key={idx}>
                 <TableCell>
                   <div className="flex items-center gap-3">

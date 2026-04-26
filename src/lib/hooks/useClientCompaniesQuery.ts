@@ -16,7 +16,7 @@ export function useClientCompaniesQuery({
   page = 1,
   pageSize = 20,
   sortConfig,
-}: UseClientCompaniesQueryParams) {
+}: UseClientCompaniesQueryParams, initialData?: { data: any[], totalCount: number }) {
   return useQuery({
     queryKey: ['client_companies', companyId, searchTerm, page, pageSize, sortConfig],
     queryFn: async () => {
@@ -47,6 +47,7 @@ export function useClientCompaniesQuery({
         totalCount: count || 0,
       };
     },
+    initialData: initialData,
     placeholderData: (previousData) => previousData,
   });
 }

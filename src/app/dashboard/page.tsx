@@ -1,24 +1,44 @@
-'use client';
+import { createClient } from '@/lib/supabase-server';
+import { getDashboardStats } from '@/lib/services/dashboard';
+import { DashboardOverview } from '@/components/features/dashboard/DashboardOverview';
+import { cookies } from 'next/headers';
 
-import React from 'react';
-import dynamic from 'next/dynamic';
-import { useAppStore } from '@/lib/store/useAppStore';
-import { Loader2 } from 'lucide-react';
+export default async function DashboardPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-const DashboardOverview = dynamic(
-  () => import('@/components/features/dashboard/DashboardOverview').then(mod => mod.DashboardOverview),
-  {
-    loading: () => (
-      <div className="flex flex-col items-center justify-center h-96 gap-4">
-        <Loader2 className="animate-spin text-blue-600" size={40} />
-        <p className="text-gray-400  uppercase  text-[10px]">Menyiapkan Komponen Dashboard...</p>
-      </div>
-    )
+  if (!user) return null;
+
+  // Try to get active company from cookie, fallback to first company
+  const cookieStore = await cookies();
+  const activeCompanyIdStr = cookieStore.get('crm_active_company_id')?.value;
+  
+  let companyId: number | null = activeCompanyIdStr ? parseInt(activeCompanyIdStr) : null;
+  let company: any = null;
+
+  if (companyId) {
+    const { data } = await supabase.from('companies').select('*').eq('id', companyId).maybeSingle();
+    company = data;
   }
-);
 
-export default function DashboardPage() {
-  const { activeCompany } = useAppStore();
-  if (!activeCompany) return null;
-  return <DashboardOverview company={activeCompany} />;
+  if (!company) {
+    // Fallback: get the first company the user is a member of
+    const { data: memberCompanies } = await supabase
+      .from('company_members')
+      .select('company:companies(*)')
+      .eq('user_id', user.id)
+      .limit(1)
+      .maybeSingle();
+    
+    if (memberCompanies) {
+      company = (memberCompanies as any).company;
+      companyId = company.id;
+    }
+  }
+
+  if (!company) return null;
+
+  const stats = await getDashboardStats(companyId!);
+
+  return <DashboardOverview company={company} initialStats={stats} />;
 }

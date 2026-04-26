@@ -1,5 +1,11 @@
-'use client';
+import { getAllCompanies, getAllUsers } from '@/lib/services/admin';
+import { AdminUsersView } from '@/components/features/admin/AdminUsersView';
 
-export default function AdminUsersPage() {
-  return null;
+export default async function AdminUsersPage() {
+  const [companies, users] = await Promise.all([
+    getAllCompanies(),
+    getAllUsers()
+  ]);
+  
+  return <AdminUsersView initialUsers={users} allCompanies={companies} />;
 }

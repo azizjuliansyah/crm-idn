@@ -1,17 +1,48 @@
-'use client';
-
-import React from 'react';
-import { useAppStore } from '@/lib/store/useAppStore';
+import { createClient } from '@/lib/supabase-server';
+import { getSalesRequests, getSalesRequestCategory } from '@/lib/services/sales-requests';
 import { SalesRequestsView } from '@/components/features/sales-requests/SalesRequestsView';
-import { useParams } from 'next/navigation';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 
-export default function SalesRequestsPage() {
-    const { activeCompany: company } = useAppStore();
-    const params = useParams();
+export default async function SalesRequestsPage({ params }: { params: { categoryId: string } }) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-    const categoryId = parseInt(params.categoryId as string);
+  if (!user) {
+    redirect('/login');
+  }
 
-    if (!company || isNaN(categoryId)) return null;
+  const cookieStore = await cookies();
+  const activeCompanyIdStr = cookieStore.get('crm_active_company_id')?.value;
+  
+  if (!activeCompanyIdStr) {
+     return null;
+  }
 
-    return <SalesRequestsView company={company} categoryId={categoryId} />;
+  const companyId = parseInt(activeCompanyIdStr);
+  const categoryId = parseInt(params.categoryId);
+
+  if (isNaN(categoryId)) return null;
+
+  const { data: activeCompany } = await supabase
+    .from('companies')
+    .select('*')
+    .eq('id', companyId)
+    .maybeSingle();
+
+  if (!activeCompany) return null;
+
+  const [initialRequests, initialCategory] = await Promise.all([
+    getSalesRequests({ companyId, categoryId }),
+    getSalesRequestCategory(categoryId)
+  ]);
+
+  return (
+    <SalesRequestsView 
+      company={activeCompany} 
+      categoryId={categoryId}
+      initialRequests={initialRequests}
+      initialCategory={initialCategory}
+    />
+  );
 }

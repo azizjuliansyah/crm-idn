@@ -31,21 +31,28 @@ interface Props {
   activeCompany: Company;
   user: Profile;
   activeView?: string;
+  initialTickets?: { data: SupportTicket[], totalCount: number };
+  metadata?: any;
 }
 
 type ViewMode = 'table' | 'kanban';
 
-export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, user }) => {
+export const SupportTicketsView: React.FC<Props> = ({ 
+  activeCompany: company, 
+  user,
+  initialTickets,
+  metadata
+}) => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
   // Filters State
   const filters = useSupportTicketFilters([]);
 
-  const [stages, setStages] = useState<SupportStage[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [members, setMembers] = useState<CompanyMember[]>([]);
-  const [topics, setTopics] = useState<TicketTopic[]>([]);
+  const [stages, setStages] = useState<SupportStage[]>(metadata?.stages || []);
+  const [clients, setClients] = useState<Client[]>(metadata?.clients || []);
+  const [members, setMembers] = useState<CompanyMember[]>(metadata?.members || []);
+  const [topics, setTopics] = useState<TicketTopic[]>(metadata?.topics || []);
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -67,7 +74,7 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
     sortConfig: filters.sortConfig,
     page,
     pageSize,
-  });
+  }, initialTickets);
 
   const tickets = ticketsData?.data || [];
 
@@ -97,8 +104,10 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
   }, [company.id]);
 
   useEffect(() => {
-    fetchMetadata();
-  }, [fetchMetadata]);
+    if (!metadata) {
+      fetchMetadata();
+    }
+  }, [fetchMetadata, metadata]);
 
   // Reset page to 1 when filters change
   useEffect(() => {
@@ -107,7 +116,7 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
 
   const handleDeleteClick = (id: number, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    const t = tickets.find(ticket => ticket.id === id);
+    const t = tickets.find((ticket: any) => ticket.id === id);
     setConfirmDelete({ isOpen: true, id, name: t?.title || 'Ticket ini' });
   };
 
@@ -124,7 +133,7 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
     if (selectedIds.length === tickets.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(tickets.map(t => t.id));
+      setSelectedIds(tickets.map((t: any) => t.id));
     }
   };
 
@@ -172,7 +181,7 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
       { header: 'Tanggal Dibuat', key: 'date_label', width: 20 },
     ];
 
-    const formattedData = dataToExport.map(t => ({
+    const formattedData = dataToExport.map((t: any) => ({
       ...t,
       client_name: t.client?.name || 'Umum',
       topic_name: t.ticket_topics?.name || '-',
@@ -395,7 +404,7 @@ export const SupportTicketsView: React.FC<Props> = ({ activeCompany: company, us
         onClose={() => setIsConfirmBulkStatusOpen(false)}
         onConfirm={(status) => handleBulkUpdateStatus(String(status))}
         count={selectedIds.length}
-        options={stages.map(s => ({ id: s.name.toLowerCase(), name: s.name.toUpperCase() }))}
+        options={stages.map((s: any) => ({ id: s.name.toLowerCase(), name: s.name.toUpperCase() }))}
         title="Ubah Status Tiket"
         label="Pilih Status Baru"
         isProcessing={bulkUpdateTicketsStatus.status === 'pending'}

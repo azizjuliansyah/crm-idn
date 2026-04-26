@@ -1,5 +1,8 @@
-'use client';
+import { getPlatformSettings } from '@/lib/services/admin';
+import { AdminPlatformSettingsView } from '@/components/features/admin/AdminPlatformSettingsView';
 
-export default function AdminPlatformPage() {
-  return null;
+export default async function AdminPlatformSettingsPage() {
+  const settings = await getPlatformSettings();
+  
+  return <AdminPlatformSettingsView initialSettings={settings} />;
 }

@@ -28,9 +28,17 @@ interface Props {
   activeCompany: Company | null;
   activeView: string;
   user: Profile;
+  initialLeads?: { data: Lead[], totalCount: number };
+  metadata?: any;
 }
 
-export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) => {
+export const LeadsView: React.FC<Props> = ({ 
+  activeCompany, 
+  activeView, 
+  user,
+  initialLeads,
+  metadata
+}) => {
   const [viewMode, setViewMode] = useState<'kanban' | 'table'>('table');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -64,7 +72,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
     sources: sourcesQuery, 
     clientCompanies: clientCompaniesQuery, 
     categories: categoriesQuery 
-  } = useLeadMetadata(companyId);
+  } = useLeadMetadata(companyId, metadata);
 
   const stages = stagesQuery.data || [];
   const members = membersQuery.data || [];
@@ -96,7 +104,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
     sortConfig,
     page,
     pageSize
-  });
+  }, initialLeads);
 
   const leads = leadsData?.data || [];
 
@@ -134,7 +142,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
       showToast('Status lead berhasil diperbarui!', 'success');
       
       if (newStatus.toLowerCase() === 'qualified') {
-        const lead = leads.find(l => l.id === leadId);
+        const lead = leads.find((l: any) => l.id === leadId);
         if (lead) setLeadToConvert(lead);
       }
     } catch (error: any) {
@@ -198,11 +206,11 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
       { header: 'Tanggal Dibuat', key: 'created_at_label', width: 20 },
     ];
 
-    const formattedData = dataToExport.map(l => ({
+    const formattedData = dataToExport.map((l: any) => ({
       ...l,
       company_name: l.client_company?.name || '-',
-      status_label: stages.find(s => s.name.toLowerCase() === l.status.toLowerCase())?.name || l.status,
-      sales_name: members.find(m => m.user_id === l.sales_id)?.profile?.full_name || '-',
+      status_label: stages.find((s: any) => s.name.toLowerCase() === l.status.toLowerCase())?.name || l.status,
+      sales_name: members.find((m: any) => m.user_id === l.sales_id)?.profile?.full_name || '-',
       formatted_budget: new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(l.expected_value || 0),
       urgent_label: l.is_urgent ? 'Ya' : 'Tidak',
       created_at_label: new Date(l.created_at).toLocaleDateString('id-ID', {
@@ -224,7 +232,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
     if (selectedIds.length === leads.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(leads.map(l => l.id));
+      setSelectedIds(leads.map((l: any) => l.id));
     }
   };
 
@@ -239,7 +247,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
   });
 
   const onDrop = async (leadId: number, newStatus: string, index?: number) => {
-    const draggedCard = leads.find(l => l.id === leadId);
+    const draggedCard = leads.find((l: any) => l.id === leadId);
     if (!draggedCard) return;
     
     try {
@@ -254,11 +262,10 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
     }
   };
 
-  const leadsByStatus = stages.reduce((acc, stage) => {
-    const statusKey = stage.name.toLowerCase();
-    acc[statusKey] = leads
-      .filter(l => l.status === statusKey)
-      .sort((a, b) => {
+  const leadsByStatus = stages.reduce((acc: any, stage: any) => {
+    acc[stage.name.toLowerCase()] = leads
+      .filter((l: any) => l.status.toLowerCase() === stage.name.toLowerCase())
+      .sort((a: Lead, b: Lead) => {
         const orderA = a.kanban_order || 0;
         const orderB = b.kanban_order || 0;
         if (orderA !== orderB) return orderA - orderB;
@@ -370,7 +377,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
           members={members} stages={stages} onClose={() => setSelectedLead(null)}
           onUpdate={handleUpdate} onDelete={() => handleDelete(selectedLead.id)}
           onConvertToDeal={() => setLeadToConvert(selectedLead)}
-          user={members.find(m => m.user_id === selectedLead.sales_id)?.profile as any}
+          user={members.find((m: any) => m.user_id === selectedLead.sales_id)?.profile as any}
           sources={sources} clientCompanies={clientCompanies} categories={categories}
         />
       )}
@@ -408,7 +415,7 @@ export const LeadsView: React.FC<Props> = ({ activeCompany, activeView, user }) 
         onClose={() => setIsConfirmBulkStatusOpen(false)}
         onConfirm={handleBulkUpdateStatus}
         count={selectedIds.length}
-        options={stages.map(s => ({ id: s.name.toLowerCase(), name: s.name }))}
+        options={stages.map((s: any) => ({ id: s.name.toLowerCase(), name: s.name }))}
         title="Ubah Status Lead"
         label="Pilih Status Baru"
         isProcessing={bulkUpdateLeadsStatus.status === 'pending'}

@@ -1,5 +1,8 @@
-'use client';
+import { getPlatformSettings } from '@/lib/services/admin';
+import { AdminEmailSettingsView } from '@/components/features/admin/AdminEmailSettingsView';
 
-export default function AdminEmailPage() {
-  return null;
+export default async function AdminEmailSettingsPage() {
+  const settings = await getPlatformSettings();
+  
+  return <AdminEmailSettingsView initialSettings={settings} />;
 }

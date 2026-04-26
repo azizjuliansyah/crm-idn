@@ -18,7 +18,7 @@ export function useProductsQuery({
   sortConfig,
   page = 1,
   pageSize = 20,
-}: UseProductsQueryParams) {
+}: UseProductsQueryParams, initialData?: { data: any[], totalCount: number }) {
   return useQuery({
     queryKey: ['products', companyId, searchTerm, filterCategoryId, sortConfig, page, pageSize],
     queryFn: async () => {
@@ -53,6 +53,7 @@ export function useProductsQuery({
         totalCount: count || 0,
       };
     },
+    initialData: initialData,
     placeholderData: (previousData) => previousData,
   });
 }
@@ -122,14 +123,15 @@ export function useProductMutations() {
     return { upsertProduct, addCategory, addUnit, bulkDeleteProducts, deleteProduct };
 }
 
-export function useProductMetadata(companyId: number) {
+export function useProductMetadata(companyId: number, initialData?: any) {
     const categories = useQuery({
         queryKey: ['product_categories', companyId],
         queryFn: async () => {
             const { data, error } = await supabase.from('product_categories').select('*').eq('company_id', companyId);
             if (error) throw error;
             return data as ProductCategory[];
-        }
+        },
+        initialData: initialData?.categories
     });
 
     const units = useQuery({
@@ -138,7 +140,8 @@ export function useProductMetadata(companyId: number) {
             const { data, error } = await supabase.from('product_units').select('*').eq('company_id', companyId);
             if (error) throw error;
             return data as ProductUnit[];
-        }
+        },
+        initialData: initialData?.units
     });
 
     return { categories, units };
