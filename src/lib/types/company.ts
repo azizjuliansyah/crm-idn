@@ -1,5 +1,12 @@
 import type { Profile } from './auth';
 
+export interface Package {
+  id: number;
+  name: string;
+  max_members: number;
+  created_at?: string;
+}
+
 export interface Company {
   id: number;
   name: string;
@@ -9,6 +16,8 @@ export interface Company {
   has_lead_urgency?: boolean;
   has_invoice_urgency?: boolean;
   has_kwitansi_urgency?: boolean;
+  package_id?: number | null;
+  packages?: Package;
 }
 
 export interface CompanyRole {

@@ -1,11 +1,12 @@
-import { getAllCompanies, getAllUsers } from '@/lib/services/admin';
+import { getAllCompanies, getAllUsers, getAllPackages } from '@/lib/services/admin';
 import { AdminCompaniesView } from '@/components/features/admin/AdminCompaniesView';
 
 export default async function AdminCompaniesPage() {
-  const [companies, users] = await Promise.all([
+  const [companies, users, packages] = await Promise.all([
     getAllCompanies(),
-    getAllUsers()
+    getAllUsers(),
+    getAllPackages()
   ]);
   
-  return <AdminCompaniesView initialCompanies={companies} allUsers={users} />;
+  return <AdminCompaniesView initialCompanies={companies} allUsers={users} allPackages={packages} />;
 }

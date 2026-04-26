@@ -93,34 +93,6 @@ export const CompanyWizard: React.FC<Props> = ({ userId, onSuccess }) => {
       if (coErr) throw coErr;
       if (!company) throw new Error("Gagal membuat data perusahaan.");
 
-      // 2. Fetch the 'Administrator' role with retry logic to ensure trigger has finished
-      let adminRole = null;
-      for (let i = 0; i < 3; i++) {
-        const { data } = await supabase
-          .from('company_roles')
-          .select('id')
-          .eq('company_id', company.id)
-          .eq('name', 'Administrator')
-          .maybeSingle();
-
-        if (data) {
-          adminRole = data;
-          break;
-        }
-        // Tunggu sebentar jika trigger database masih memproses seeding
-        await new Promise(r => setTimeout(r, 500));
-      }
-
-      // 3. Attach current user as the first member
-      // Jika adminRole tetap null, sistem tetap mengizinkan member masuk sebagai 'member' biasa tanpa role_id
-      const { error: memErr } = await supabase.from('company_members').insert({
-        company_id: company.id,
-        user_id: userId,
-        role_id: adminRole?.id || null
-      });
-
-      if (memErr) throw memErr;
-
       onSuccess();
     } catch (err: any) {
       setError(err.message || "Terjadi kesalahan sistem saat mendaftarkan perusahaan.");

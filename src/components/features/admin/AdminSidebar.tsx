@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
-  LayoutDashboard, Building2, Users, Settings, Mail, ShieldAlert 
+  LayoutDashboard, Building2, Users, Settings, Mail, ShieldAlert, Package 
 } from 'lucide-react';
 import { Card, Label } from '@/components/ui';
 
@@ -14,6 +14,7 @@ const menuItems = [
   { id: 'pengguna', label: 'Pengguna', icon: Users, href: '/dashboard/admin/users' },
   { id: 'pengaturan', label: 'Platform', icon: Settings, href: '/dashboard/admin/platform' },
   { id: 'pengaturan_email', label: 'Mailketing', icon: Mail, href: '/dashboard/admin/email' },
+  { id: 'data_paket', label: 'Data Paket', icon: Package, href: '/dashboard/admin/packages' },
 ];
 
 export const AdminSidebar: React.FC = () => {

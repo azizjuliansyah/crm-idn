@@ -5,6 +5,7 @@ export function getPathFromViewId(viewId: string): string {
     case 'pengguna': return '/dashboard/admin/users';
     case 'pengaturan': return '/dashboard/admin/platform';
     case 'pengaturan_email': return '/dashboard/admin/email';
+    case 'data_paket': return '/dashboard/admin/packages';
     case 'leads': return '/dashboard/leads';
     case 'pengaturan_leads': return '/dashboard/leads/settings';
     case 'pengaturan_sumber_leads': return '/dashboard/leads/sources';
@@ -74,6 +75,7 @@ export function getViewIdFromPath(pathname: string): string {
   if (pathname === '/dashboard/admin/users') return 'pengguna';
   if (pathname === '/dashboard/admin/platform') return 'pengaturan';
   if (pathname === '/dashboard/admin/email') return 'pengaturan_email';
+  if (pathname === '/dashboard/admin/packages') return 'data_paket';
 
   // Leads
   if (pathname === '/dashboard/leads') return 'leads';

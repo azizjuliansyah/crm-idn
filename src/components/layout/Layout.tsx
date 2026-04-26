@@ -653,6 +653,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   {renderMenuItem('pengguna', 'Pengguna', <Users />, 'bg-purple-500')}
                   {renderMenuItem('pengaturan', 'Platform', <ShieldCheck />, 'bg-orange-500')}
                   {renderMenuItem('pengaturan_email', 'Email System', <Mail />, 'bg-indigo-500')}
+                  {renderMenuItem('data_paket', 'Data Paket', <Package />, 'bg-rose-500')}
                 </>
               )}
             </div>

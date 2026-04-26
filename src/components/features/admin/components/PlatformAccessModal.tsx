@@ -36,7 +36,7 @@ export const PlatformAccessModal: React.FC<PlatformAccessModalProps> = ({
          onClose={onClose}
          title={accessMode.type === 'user_to_companies' ? `Kelola Workspace: ${accessMode.target?.full_name}` : `Kelola Anggota: ${accessMode.target?.name}`}
          size="lg"
-         footer={<Button onClick={onSaveAccess} isLoading={isProcessing} leftIcon={!isProcessing ? <Save size={14} /> : undefined} className="px-10 bg-indigo-600 hover:bg-indigo-700">Simpan Akses</Button>}
+         footer={<Button onClick={onSaveAccess} isLoading={isProcessing} leftIcon={!isProcessing ? <Save size={14} /> : undefined} variant='primary'>Simpan Akses</Button>}
       >
          <div className="space-y-6">
             <Input

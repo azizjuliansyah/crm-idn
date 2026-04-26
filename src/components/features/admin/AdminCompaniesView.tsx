@@ -17,11 +17,13 @@ import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModa
 interface AdminCompaniesViewProps {
   initialCompanies: Company[];
   allUsers: Profile[];
+  allPackages: any[];
 }
 
 export const AdminCompaniesView: React.FC<AdminCompaniesViewProps> = ({ 
   initialCompanies,
-  allUsers 
+  allUsers,
+  allPackages 
 }) => {
   const [companies, setCompanies] = useState<Company[]>(initialCompanies);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -34,7 +36,8 @@ export const AdminCompaniesView: React.FC<AdminCompaniesViewProps> = ({
     type: 'success',
   });
 
-  const [coForm, setCoForm] = useState({ id: null as number | null, name: '', address: '' });
+  const [coForm, setCoForm] = useState({ id: null as number | null, name: '', address: '', package_id: null as number | null });
+  const [memberCounts, setMemberCounts] = useState<Record<number, number>>({});
   const [pendingDelete, setPendingDelete] = useState<{ id: number | string, type: 'company' | 'user' } | null>(null);
   
   const [accessMode, setAccessMode] = useState<{ type: 'user_to_companies' | 'company_to_users', target: any }>({ type: 'company_to_users', target: null });
@@ -47,9 +50,22 @@ export const AdminCompaniesView: React.FC<AdminCompaniesViewProps> = ({
   };
 
   const fetchData = async () => {
-    const { data } = await supabase.from('companies').select('*').order('created_at', { ascending: false });
-    if (data) setCompanies(data);
+    const { data: coData } = await supabase.from('companies').select('*, packages(*)').order('created_at', { ascending: false });
+    if (coData) setCompanies(coData as any);
+
+    const { data: memData } = await supabase.from('company_members').select('company_id');
+    if (memData) {
+      const counts: Record<number, number> = {};
+      memData.forEach(m => {
+        counts[m.company_id] = (counts[m.company_id] || 0) + 1;
+      });
+      setMemberCounts(counts);
+    }
   };
+
+  React.useEffect(() => {
+    fetchData();
+  }, []);
 
   const fetchAllRoles = async () => {
     const { data: allRoles } = await supabase.from('company_roles').select('*');
@@ -72,31 +88,19 @@ export const AdminCompaniesView: React.FC<AdminCompaniesViewProps> = ({
     setIsProcessing(true);
     try {
       if (coForm.id) {
-        await supabase.from('companies').update({ name: coForm.name, address: coForm.address }).eq('id', coForm.id);
+        await supabase.from('companies').update({ 
+          name: coForm.name, 
+          address: coForm.address,
+          package_id: coForm.package_id 
+        }).eq('id', coForm.id);
       } else {
-        const { data: newCo, error: coErr } = await supabase.from('companies').insert({
+        const { error: coErr } = await supabase.from('companies').insert({
           name: coForm.name,
-          address: coForm.address
-        }).select().single();
+          address: coForm.address,
+          package_id: coForm.package_id
+        });
 
         if (coErr) throw coErr;
-
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user && newCo) {
-          await new Promise(r => setTimeout(r, 800));
-          const { data: adminRole } = await supabase
-            .from('company_roles')
-            .select('id')
-            .eq('company_id', newCo.id)
-            .eq('name', 'Administrator')
-            .maybeSingle();
-
-          await supabase.from('company_members').insert({
-            company_id: newCo.id,
-            user_id: user.id,
-            role_id: adminRole?.id || null
-          });
-        }
       }
       setIsCoModalOpen(false);
       fetchData();
@@ -142,6 +146,15 @@ export const AdminCompaniesView: React.FC<AdminCompaniesViewProps> = ({
     try {
       await supabase.from('company_members').delete().eq('company_id', target.id);
       const inserts = Object.entries(selectedWithRoles).map(([userId, roleId]) => ({ company_id: target.id, user_id: userId, role_id: roleId }));
+      
+      // Validation for max members
+      if (target.packages) {
+        const max = target.packages.max_members;
+        if (inserts.length > max) {
+          throw new Error(`Workspace ini memiliki limit maximal ${max} anggota berdasarkan paket yang dipilih.`);
+        }
+      }
+
       if (inserts.length > 0) await supabase.from('company_members').insert(inserts);
       setIsAccessModalOpen(false);
       showToast('Akses anggota berhasil diperbarui.');
@@ -165,7 +178,7 @@ export const AdminCompaniesView: React.FC<AdminCompaniesViewProps> = ({
         title="Master Workspace"
         action={
           <Button
-            onClick={() => { setCoForm({ id: null, name: '', address: '' }); setIsCoModalOpen(true); }}
+            onClick={() => { setCoForm({ id: null, name: '', address: '', package_id: null }); setIsCoModalOpen(true); }}
             size="sm"
             leftIcon={<Plus size={16} />}
           >
@@ -177,6 +190,8 @@ export const AdminCompaniesView: React.FC<AdminCompaniesViewProps> = ({
           <TableHeader>
             <TableRow>
               <TableCell isHeader>Workspace</TableCell>
+              <TableCell isHeader className="text-center">Paket</TableCell>
+              <TableCell isHeader className="text-center">Anggota</TableCell>
               <TableCell isHeader className="text-center">Akses</TableCell>
               <TableCell isHeader className="text-center">Aksi</TableCell>
             </TableRow>
@@ -189,6 +204,28 @@ export const AdminCompaniesView: React.FC<AdminCompaniesViewProps> = ({
                   <div>
                     <Subtext className="">{co.name}</Subtext>
                     <Subtext className="text-[10px] font-mono text-gray-400">ID: {String(co.id).padStart(5, '0')}</Subtext>
+                  </div>
+                </TableCell>
+                <TableCell className="text-center">
+                  {co.packages ? (
+                    <span className="px-2 py-0.5 rounded-lg bg-rose-50 text-rose-600 text-[10px] font-bold">
+                      {co.packages.name}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-gray-400">Tanpa Paket</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-center">
+                  <div className="flex flex-col items-center">
+                    <span className={`text-xs font-bold ${(memberCounts[co.id] || 0) >= (co.packages?.max_members || 999) ? 'text-red-500' : 'text-gray-700'}`}>
+                      {memberCounts[co.id] || 0} / {co.packages?.max_members || '-'}
+                    </span>
+                    <div className="w-16 h-1 bg-gray-100 rounded-full mt-1 overflow-hidden">
+                      <div 
+                        className={`h-full transition-all ${ (memberCounts[co.id] || 0) >= (co.packages?.max_members || 999) ? 'bg-red-500' : 'bg-blue-500'}`}
+                        style={{ width: `${Math.min(((memberCounts[co.id] || 0) / (co.packages?.max_members || 1)) * 100, 100)}%` }}
+                      />
+                    </div>
                   </div>
                 </TableCell>
                 <TableCell className="text-center">
@@ -205,7 +242,7 @@ export const AdminCompaniesView: React.FC<AdminCompaniesViewProps> = ({
                     variant="ghost"
                     size="sm"
                     className="p-2 text-blue-500"
-                    onClick={() => { setCoForm({ id: co.id, name: co.name, address: co.address }); setIsCoModalOpen(true); }}
+                    onClick={() => { setCoForm({ id: co.id, name: co.name, address: co.address, package_id: co.package_id || null }); setIsCoModalOpen(true); }}
                   >
                     <Edit2 size={16} />
                   </Button>
@@ -231,6 +268,7 @@ export const AdminCompaniesView: React.FC<AdminCompaniesViewProps> = ({
         setForm={setCoForm}
         onSave={handleSaveCompany}
         isProcessing={isProcessing}
+        allPackages={allPackages}
       />
 
       <PlatformAccessModal

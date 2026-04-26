@@ -30,9 +30,50 @@ export async function getAllCompanies() {
   const supabase = await createClient();
   const { data } = await supabase
     .from('companies')
+    .select('*, packages(*)')
+    .order('created_at', { ascending: false });
+  return data || [];
+}
+
+export async function getAllPackages() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('packages')
     .select('*')
     .order('created_at', { ascending: false });
   return data || [];
+}
+
+export async function createPackage(name: string, max_members: number) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('packages')
+    .insert({ name, max_members })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updatePackage(id: number, name: string, max_members: number) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('packages')
+    .update({ name, max_members })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deletePackage(id: number) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('packages')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
 }
 
 export async function getAllUsers() {
