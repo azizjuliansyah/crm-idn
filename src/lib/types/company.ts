@@ -18,6 +18,7 @@ export interface Company {
   has_kwitansi_urgency?: boolean;
   package_id?: number | null;
   packages?: Package;
+  is_suspended?: boolean;
 }
 
 export interface CompanyRole {

@@ -2,12 +2,14 @@
 
 import React, { useState } from 'react';
 import { 
-  Building2, Plus, Edit2, Trash2, Loader2, Search 
+  Building2, Plus, Edit2, Trash2, Loader2, Search, MoreVertical, ShieldAlert 
 } from 'lucide-react';
-import { 
+import {
   Button, Table, TableHeader, TableBody, TableRow, TableCell, 
-  Subtext, Avatar, Card, Toast, ToastType 
+  Subtext, Avatar, Card, Toast, ToastType, Select 
 } from '@/components/ui';
+import { StandardFilterBar } from '@/components/shared/filters/StandardFilterBar';
+import { ActionMenu } from '@/components/shared/ActionMenu';
 import { Company, Profile, CompanyRole } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import { PlatformWorkspaceFormModal } from './components/PlatformWorkspaceFormModal';
@@ -26,6 +28,8 @@ export const AdminCompaniesView: React.FC<AdminCompaniesViewProps> = ({
   allPackages 
 }) => {
   const [companies, setCompanies] = useState<Company[]>(initialCompanies);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'suspended'>('all');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isCoModalOpen, setIsCoModalOpen] = useState(false);
   const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
@@ -170,25 +174,71 @@ export const AdminCompaniesView: React.FC<AdminCompaniesViewProps> = ({
     } catch (error: any) { showToast(error.message, 'error'); } finally { setIsConfirmModalOpen(false); setPendingDelete(null); setIsProcessing(false); }
   };
 
+  const handleToggleSuspension = async (companyId: number, currentStatus: boolean) => {
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .update({ is_suspended: !currentStatus })
+        .eq('id', companyId);
+      
+      if (error) throw error;
+      
+      showToast(`Workspace ${!currentStatus ? 'ditangguhkan' : 'diaktifkan kembali'}.`);
+      fetchData();
+    } catch (error: any) {
+      showToast(error.message, 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const filteredCompanies = React.useMemo(() => {
+    return companies.filter(co => {
+      const matchesSearch = co.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        (co.address && co.address.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      const matchesStatus = statusFilter === 'all' || 
+        (statusFilter === 'active' && !co.is_suspended) || 
+        (statusFilter === 'suspended' && co.is_suspended);
+        
+      return matchesSearch && matchesStatus;
+    });
+  }, [companies, searchTerm, statusFilter]);
+
   const filteredItems = allUsers.filter(u => u.full_name.toLowerCase().includes(accessSearchTerm.toLowerCase()) || u.email.toLowerCase().includes(accessSearchTerm.toLowerCase()));
 
   return (
-    <div>
-      <Card
+    <div className="flex flex-col gap-6">
+      <StandardFilterBar
         title="Master Workspace"
-        action={
-          <Button
-            onClick={() => { setCoForm({ id: null, name: '', address: '', package_id: null }); setIsCoModalOpen(true); }}
-            size="sm"
-            leftIcon={<Plus size={16} />}
-          >
-            Tambah
-          </Button>
-        }
+        subtitle={`Total ${filteredCompanies.length} workspace terdaftar`}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Cari nama workspace..."
+        primaryAction={{
+          label: "Tambah Workspace",
+          onClick: () => { setCoForm({ id: null, name: '', address: '', package_id: null }); setIsCoModalOpen(true); },
+          icon: <Plus size={14} />
+        }}
       >
+        <Select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as any)}
+          className="!py-2 !px-4 !text-[10px] !h-[38px] min-w-[120px]"
+          containerClassName="!space-y-0"
+        >
+          <option value="all">SEMUA STATUS</option>
+          <option value="active">AKTIF</option>
+          <option value="suspended">DITANGGUHKAN</option>
+        </Select>
+      </StandardFilterBar>
+
+      <Card>
         <Table>
           <TableHeader>
             <TableRow>
+              <TableCell isHeader className="w-4"></TableCell>
               <TableCell isHeader>Workspace</TableCell>
               <TableCell isHeader className="text-center">Paket</TableCell>
               <TableCell isHeader className="text-center">Anggota</TableCell>
@@ -197,8 +247,11 @@ export const AdminCompaniesView: React.FC<AdminCompaniesViewProps> = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {companies.map(co => (
+            {filteredCompanies.map(co => (
               <TableRow key={co.id}>
+                <TableCell className="w-4">
+                  <div className={`w-2 h-2 rounded-full ${co.is_suspended ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'}`} title={co.is_suspended ? 'Suspended' : 'Active'} />
+                </TableCell>
                 <TableCell className="flex items-center gap-4">
                   <Avatar src={co.logo_url || ''} name={co.name} shape="square" size="lg" />
                   <div>
@@ -254,6 +307,15 @@ export const AdminCompaniesView: React.FC<AdminCompaniesViewProps> = ({
                   >
                     <Trash2 size={16} />
                   </Button>
+                  <ActionMenu>
+                    <button
+                      onClick={() => handleToggleSuspension(co.id, !!co.is_suspended)}
+                      className="w-full text-left px-4 py-2 text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
+                    >
+                      <ShieldAlert size={14} />
+                      {co.is_suspended ? 'Aktifkan Workspace' : 'Tangguhkan Workspace'}
+                    </button>
+                  </ActionMenu>
                 </TableCell>
               </TableRow>
             ))}

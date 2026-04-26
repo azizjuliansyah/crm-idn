@@ -2,12 +2,14 @@
 
 import React, { useState } from 'react';
 import { 
-  Plus, Edit2, Trash2, Search 
+  Plus, Edit2, Trash2, Search, MoreVertical, ShieldAlert, UserPlus 
 } from 'lucide-react';
 import { 
   Button, Table, TableHeader, TableBody, TableRow, TableCell, 
-  Subtext, Avatar, Card, Badge, Toast, ToastType 
+  Subtext, Avatar, Card, Badge, Toast, ToastType, Select 
 } from '@/components/ui';
+import { ActionMenu } from '@/components/shared/ActionMenu';
+import { StandardFilterBar } from '@/components/shared/filters/StandardFilterBar';
 import { Company, Profile, CompanyRole } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import { createClient } from '@supabase/supabase-js';
@@ -28,6 +30,8 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({
   allCompanies 
 }) => {
   const [users, setUsers] = useState<Profile[]>(initialUsers);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'suspended'>('all');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
@@ -145,26 +149,72 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({
     } catch (error: any) { showToast(error.message, 'error'); } finally { setIsConfirmModalOpen(false); setPendingDelete(null); setIsProcessing(false); }
   };
 
+  const handleToggleSuspension = async (userId: string, currentStatus: boolean) => {
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_suspended: !currentStatus })
+        .eq('id', userId);
+      
+      if (error) throw error;
+      
+      showToast(`User ${!currentStatus ? 'ditangguhkan' : 'diaktifkan kembali'}.`);
+      fetchData();
+    } catch (error: any) {
+      showToast(error.message, 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const filteredUsers = React.useMemo(() => {
+    return users.filter(u => {
+      const matchesSearch = u.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (u.whatsapp && u.whatsapp.includes(searchTerm));
+      
+      const matchesStatus = statusFilter === 'all' || 
+        (statusFilter === 'active' && !u.is_suspended) || 
+        (statusFilter === 'suspended' && u.is_suspended);
+        
+      return matchesSearch && matchesStatus;
+    });
+  }, [users, searchTerm, statusFilter]);
+
   const filteredItems = allCompanies.filter(co => String(co.id).includes(accessSearchTerm) || co.name.toLowerCase().includes(accessSearchTerm.toLowerCase())).sort((a, b) => a.id - b.id);
 
   return (
-    <div>
-      <Card
+    <div className="flex flex-col gap-6">
+      <StandardFilterBar
         title="Data Pengguna"
-        action={
-          <Button
-            onClick={() => { setFormUser({ id: '', full_name: '', email: '', whatsapp: '', password: '', platform_role: 'USER' }); setIsUserModalOpen(true); }}
-            variant="success"
-            size="sm"
-            leftIcon={<Plus size={16} />}
-          >
-            Buat User
-          </Button>
-        }
+        subtitle={`Total ${filteredUsers.length} pengguna terdaftar`}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Cari nama, email, atau whatsapp..."
+        primaryAction={{
+          label: "Buat User",
+          onClick: () => { setFormUser({ id: '', full_name: '', email: '', whatsapp: '', password: '', platform_role: 'USER' }); setIsUserModalOpen(true); },
+          icon: <UserPlus size={14} />
+        }}
       >
+        <Select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as any)}
+          className="!py-2 !px-4 !text-[10px] !h-[38px] min-w-[120px]"
+          containerClassName="!space-y-0"
+        >
+          <option value="all">SEMUA STATUS</option>
+          <option value="active">AKTIF</option>
+          <option value="suspended">DITANGGUHKAN</option>
+        </Select>
+      </StandardFilterBar>
+
+      <Card>
         <Table>
           <TableHeader>
             <TableRow>
+              <TableCell isHeader className="w-4"></TableCell>
               <TableCell isHeader>User & Email</TableCell>
               <TableCell isHeader>Role Platform</TableCell>
               <TableCell isHeader className="text-center">Workspace</TableCell>
@@ -172,8 +222,11 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users.map(u => (
+            {filteredUsers.map(u => (
               <TableRow key={u.id}>
+                <TableCell className="w-4">
+                  <div className={`w-2 h-2 rounded-full ${u.is_suspended ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'}`} title={u.is_suspended ? 'Suspended' : 'Active'} />
+                </TableCell>
                 <TableCell className="flex items-center gap-3">
                   <Avatar src={u.avatar_url || ''} name={u.full_name} shape="square" size="lg" />
                   <div>
@@ -212,6 +265,15 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({
                   >
                     <Trash2 size={16} />
                   </Button>
+                  <ActionMenu>
+                    <button
+                      onClick={() => handleToggleSuspension(u.id, !!u.is_suspended)}
+                      className="w-full text-left px-4 py-2 text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
+                    >
+                      <ShieldAlert size={14} />
+                      {u.is_suspended ? 'Aktifkan User' : 'Tangguhkan User'}
+                    </button>
+                  </ActionMenu>
                 </TableCell>
               </TableRow>
             ))}

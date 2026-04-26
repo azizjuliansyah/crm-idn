@@ -6,4 +6,5 @@ export interface Profile {
   whatsapp?: string;
   avatar_url?: string;
   created_at?: string;
+  is_suspended?: boolean;
 }
