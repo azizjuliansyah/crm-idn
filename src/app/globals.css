@@ -15,11 +15,7 @@ body {
   font-family: var(--font-sans);
 }
 
-/* Enforce light mode inputs */
-input, textarea, select {
-  background-color: #ffffff;
-  color: #111827;
-}
+
 
 /* Custom scrollbar refinements */
 ::-webkit-scrollbar { width: 4px; height: 4px; }

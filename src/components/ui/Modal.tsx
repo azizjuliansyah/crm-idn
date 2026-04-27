@@ -67,7 +67,7 @@ export const Modal: React.FC<ModalProps> = ({
     >
       <div
         ref={modalRef}
-        className={`w-full ${sizeClasses[size]} bg-white rounded-2xl shadow-2xl shadow-gray-900/10 overflow-hidden transform`}
+        className={`w-full ${sizeClasses[size]} bg-white rounded-2xl shadow-2xl shadow-gray-900/10 overflow-hidden transform text-gray-900`}
       >
         {!hideClose && (
           <div className={`px-8 pt-8 pb-4 flex items-center justify-between border-b border-gray-50 ${title === '' ? 'absolute top-0 right-0 z-50 border-none bg-transparent' : ''}`}>

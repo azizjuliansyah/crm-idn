@@ -149,14 +149,14 @@ interface TableContainerProps {
   containerClassName?: string;
 }
 
-export const TableContainer: React.FC<TableContainerProps> = ({ 
-  children, 
-  footer, 
-  height = 'h-[75vh]', 
-  className = '', 
-  containerClassName = '' 
+export const TableContainer: React.FC<TableContainerProps> = ({
+  children,
+  footer,
+  height = 'h-[75vh]',
+  className = '',
+  containerClassName = ''
 }) => (
-  <div className={`bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col overflow-hidden ${height} ${containerClassName}`}>
+  <div className={`bg-white rounded-2xl border border-gray-100 shadow-sm text-gray-900 flex flex-col overflow-hidden ${height} ${containerClassName}`}>
     <div className={`overflow-x-auto overflow-y-auto flex-1 custom-scrollbar scroll-smooth outline-none ${className}`}>
       {children}
     </div>
