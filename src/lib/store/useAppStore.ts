@@ -77,8 +77,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   })),
 
   init: async () => {
-    const { loading } = get();
-    if (!loading) set({ loading: true });
+    const { user, loading } = get();
+    // Only show global loading on initial fetch (when no user is present)
+    if (!user && !loading) set({ loading: true });
 
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();

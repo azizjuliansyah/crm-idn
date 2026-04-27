@@ -120,18 +120,16 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         >
             <div className="flex flex-col gap-6 pb-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="md:col-span-2 space-y-2">
-                        <Label className="text-[10px] text-gray-400 uppercase  ml-1">Nama Produk*</Label>
-                        <div className="relative">
-                            <Package size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                            <Input
-                                type="text"
-                                value={form.name || ''}
-                                onChange={e => setForm({ ...form, name: e.target.value })}
-                                className="w-full pl-12 pr-5 py-3.5 bg-gray-50 border border-gray-100 rounded-lg outline-none focus:bg-white focus:border-emerald-500 transition-all shadow-sm"
-                                placeholder="Nama produk atau jasa..."
-                            />
-                        </div>
+                    <div className="md:col-span-2">
+                        <Input
+                            label="Nama Produk*"
+                            type="text"
+                            value={form.name || ''}
+                            onChange={e => setForm({ ...form, name: e.target.value })}
+                            leftIcon={<Package size={18} />}
+                            placeholder="Nama produk atau jasa..."
+                            className="bg-gray-50 focus:bg-white focus:border-emerald-500"
+                        />
                     </div>
 
                     <div className="space-y-2">
@@ -190,18 +188,16 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         )}
                     </div>
 
-                    <div className="md:col-span-2 space-y-2">
-                        <Label className="text-[10px] text-gray-400 uppercase  ml-1">Harga Jual Dasar (IDR)*</Label>
-                        <div className="relative">
-                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 font-bold text-xs">Rp</div>
-                            <Input
-                                type="number"
-                                value={form.price || 0}
-                                onChange={e => setForm({ ...form, price: Number(e.target.value) })}
-                                className="w-full pl-12 pr-5 py-3.5 bg-white border border-gray-100 rounded-lg outline-none focus:border-emerald-500 transition-all shadow-sm font-semibold text-gray-900"
-                                placeholder="0"
-                            />
-                        </div>
+                    <div className="md:col-span-2">
+                        <Input
+                            label="Harga Jual Dasar (IDR)*"
+                            type="number"
+                            value={form.price || 0}
+                            onChange={e => setForm({ ...form, price: Number(e.target.value) })}
+                            placeholder="0"
+                            leftIcon={<div className="bg-emerald-50 text-emerald-600 text-[10px] font-bold px-1.5 py-0.5 rounded border border-emerald-100">RP</div>}
+                            className="!font-bold !text-lg !h-12 !pl-14"
+                        />
                     </div>
 
                     <div className="md:col-span-2 space-y-2">

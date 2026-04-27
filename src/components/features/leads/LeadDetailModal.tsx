@@ -528,19 +528,15 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                 </>
               )}
 
-              <div className="p-5 bg-blue-50/40 border border-blue-100 rounded-sm space-y-2">
-                <Label className="text-[9px] font-bold text-blue-600 uppercase ">Nilai Proyeksi (IDR)</Label>
-                <div className="flex items-center gap-3">
-                  <Label className="text-[10px] font-bold text-blue-400 bg-white px-2 py-0.5 border border-blue-100 rounded-sm">RP</Label>
-                  <input
-                    type="number"
-                    value={form.expected_value}
-                    onChange={e => setForm({ ...form, expected_value: Number(e.target.value) })}
-                    className="bg-transparent border-none outline-none font-bold text-xl text-gray-900 w-full"
-                    placeholder="0"
-                  />
-                </div>
-              </div>
+              <Input
+                label="Nilai Proyeksi (IDR)"
+                type="number"
+                value={form.expected_value}
+                onChange={e => setForm({ ...form, expected_value: Number(e.target.value) })}
+                placeholder="0"
+                leftIcon={<div className="bg-blue-50 text-blue-600 text-[10px] font-bold px-1.5 py-0.5 rounded border border-blue-100">RP</div>}
+                className="!text-lg font-bold !h-12 !pl-14"
+              />
 
               {activeTab === 'baru' && (
                 <div className="space-y-3">
@@ -578,14 +574,16 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                 options={members.map(m => ({ value: m.user_id, label: m.profile?.full_name || 'Tanpa Nama' }))}
               />
 
-              <div className="space-y-1.5">
-                <Label className="text-[9px]  text-gray-400 font-bold uppercase  ml-0.5">Alamat / Lokasi</Label>
-                <Textarea
-                  value={form.address || ''}
-                  onChange={e => setForm({ ...form, address: e.target.value })}
-                  className="w-full min-h-[60px] bg-gray-50 border border-gray-200 rounded-sm p-3 text-xs font-bold outline-none focus:bg-white focus:border-blue-400 transition-all resize-none"
-                />
-              </div>
+              {activeTab === 'baru' && (
+                <div className="space-y-1.5">
+                  <Label className="text-[9px]  text-gray-400 font-bold uppercase  ml-0.5">Alamat / Lokasi</Label>
+                  <Textarea
+                    value={form.address || ''}
+                    onChange={e => setForm({ ...form, address: e.target.value })}
+                    className="w-full min-h-[60px] bg-gray-50 border border-gray-200 rounded-sm p-3 text-xs font-bold outline-none focus:bg-white focus:border-blue-400 transition-all resize-none"
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
