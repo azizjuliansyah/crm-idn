@@ -94,8 +94,17 @@ export const LoginView: React.FC<Props> = ({ platformSettings }) => {
           options: { captchaToken }
         });
 
+
         if (signInError) throw signInError;
-        router.push('/dashboard');
+        
+        // Penting: Refresh router untuk sinkronisasi cookie ke Server Components
+        // Ini mengatasi masalah delay/stuck saat login pertama kali/incognito di production
+        router.refresh();
+        
+        // Berikan jeda sangat singkat untuk memastikan state sinkron sebelum redirect
+        setTimeout(() => {
+          router.push('/dashboard');
+        }, 100);
       } else {
         const { error: resetError } = await implicitSupabase.auth.resetPasswordForEmail(email.trim(), {
           redirectTo: window.location.origin + '/reset-password',
@@ -107,6 +116,7 @@ export const LoginView: React.FC<Props> = ({ platformSettings }) => {
         setLoading(false);
       }
     } catch (err: any) {
+      setLoading(false); // Pastikan loading dimatikan jika terjadi error
       console.error("Auth Exception:", err);
 
       if (captchaRef.current) {
