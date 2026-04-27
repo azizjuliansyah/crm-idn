@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { 
-  Plus, Edit2, Trash2, Search, MoreVertical, ShieldAlert, UserPlus 
+  Plus, Edit2, Trash2, Search, MoreVertical, ShieldAlert, UserPlus, Key 
 } from 'lucide-react';
 import { 
   Button, Table, TableHeader, TableBody, TableRow, TableCell, 
@@ -19,6 +19,15 @@ import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModa
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+// Create a client specifically for sending reset links using the implicit flow.
+// This avoids PKCE verifier errors when the link is opened in a different browser.
+const implicitSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    flowType: 'implicit',
+    persistSession: false
+  }
+});
 
 interface AdminUsersViewProps {
   initialUsers: Profile[];
@@ -168,6 +177,23 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({
     }
   };
 
+  const handleResetPassword = async (email: string) => {
+    setIsProcessing(true);
+    try {
+      const { error } = await implicitSupabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      
+      if (error) throw error;
+      
+      showToast(`Link reset password telah dikirim ke ${email}.`);
+    } catch (error: any) {
+      showToast(error.message, 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const filteredUsers = React.useMemo(() => {
     return users.filter(u => {
       const matchesSearch = u.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -272,6 +298,13 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({
                     >
                       <ShieldAlert size={14} />
                       {u.is_suspended ? 'Aktifkan User' : 'Tangguhkan User'}
+                    </button>
+                    <button
+                      onClick={() => handleResetPassword(u.email)}
+                      className="w-full text-left px-4 py-2 text-xs font-medium text-blue-600 hover:bg-blue-50 flex items-center gap-2 transition-colors"
+                    >
+                      <Key size={14} />
+                      Kirim Link Reset Password
                     </button>
                   </ActionMenu>
                 </TableCell>

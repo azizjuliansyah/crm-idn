@@ -12,6 +12,18 @@ import Link from 'next/link';
 import { PlatformSettings } from '@/lib/types';
 import HCaptcha from '@hcaptcha/react-hcaptcha';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@supabase/supabase-js';
+
+const implicitSupabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  {
+    auth: {
+      flowType: 'implicit',
+      persistSession: false
+    }
+  }
+);
 
 interface Props {
   platformSettings: PlatformSettings;
@@ -85,8 +97,8 @@ export const LoginView: React.FC<Props> = ({ platformSettings }) => {
         if (signInError) throw signInError;
         router.push('/dashboard');
       } else {
-        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-          redirectTo: window.location.origin + '/reset-password', // Adjusted for Next.js structure
+        const { error: resetError } = await implicitSupabase.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: window.location.origin + '/reset-password',
           captchaToken
         });
 

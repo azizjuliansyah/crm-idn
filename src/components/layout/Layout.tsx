@@ -649,11 +649,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               {renderMenuItem('dashboard', 'Dashboard', <LayoutDashboard />, 'bg-blue-500')}
               {isAdmin && (
                 <>
+                  {renderMenuItem('data_paket', 'Data Paket', <Package />, 'bg-rose-500')}
                   {renderMenuItem('perusahaan', 'Workspace', <Building2 />, 'bg-emerald-500')}
                   {renderMenuItem('pengguna', 'Pengguna', <Users />, 'bg-purple-500')}
                   {renderMenuItem('pengaturan', 'Platform', <ShieldCheck />, 'bg-orange-500')}
                   {renderMenuItem('pengaturan_email', 'Email System', <Mail />, 'bg-indigo-500')}
-                  {renderMenuItem('data_paket', 'Data Paket', <Package />, 'bg-rose-500')}
                 </>
               )}
             </div>

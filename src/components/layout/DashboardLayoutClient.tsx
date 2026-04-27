@@ -69,7 +69,7 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
                 </div>
                 <H2 className="text-2xl text-gray-900">Akun Ditangguhkan</H2>
                 <Subtext className="text-gray-600">Maaf, akun Anda telah ditangguhkan oleh administrator. Silakan hubungi dukungan untuk informasi lebih lanjut.</Subtext>
-                <Button onClick={() => logout()} variant="ghost" className="mt-4">
+                <Button onClick={() => logout()} variant="primary" className="mt-4">
                   Keluar dari Akun
                 </Button>
               </div>

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Input, Button, H1, Subtext } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { Lock, Eye, EyeOff, CheckCircle2, AlertTriangle, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { PlatformSettings } from '@/lib/types';
@@ -19,6 +20,79 @@ export const ResetPasswordView: React.FC<Props> = ({ platformSettings }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [hasSession, setHasSession] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const handleAuth = async () => {
+      // 1. Check for code in URL (PKCE)
+      const query = new URLSearchParams(window.location.search);
+      const code = query.get('code');
+      
+      if (code) {
+        console.log("ResetPasswordView: Found code, exchanging with simple client...");
+        // Use a standard client that doesn't use @supabase/ssr cookie storage for PKCE
+        const simpleSupabase = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
+        const { error } = await simpleSupabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          console.error("ResetPasswordView: Exchange error:", error);
+        } else {
+          // After exchange, the session should be available to the main client too
+          // as they share the same backend storage if configured, but here we'll just check
+        }
+      }
+
+      // 2. Poll for session with retries (supports both PKCE and Implicit)
+      let retryCount = 0;
+      const checkSession = async () => {
+        // Fallback: manually parse hash if present and session is still missing
+        if (typeof window !== 'undefined' && window.location.hash) {
+          const hash = window.location.hash.substring(1);
+          const params = new URLSearchParams(hash);
+          const accessToken = params.get('access_token');
+          const refreshToken = params.get('refresh_token');
+
+          if (accessToken && refreshToken) {
+            console.log("ResetPasswordView: Found tokens in hash, setting session manually...");
+            await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken
+            });
+          }
+        }
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          console.log("ResetPasswordView: Session established!");
+          setHasSession(true);
+          setError(null);
+        } else if (retryCount < 10) {
+          retryCount++;
+          setTimeout(checkSession, 500);
+        } else {
+          console.error("ResetPasswordView: Failed to establish session after retries.");
+          setHasSession(false);
+          setError("Sesi tidak ditemukan atau telah kadaluarsa. Silakan gunakan tautan reset password terbaru dari email Anda.");
+        }
+      };
+
+      checkSession();
+    };
+
+    handleAuth();
+
+    // 3. Listen for auth state changes as a fallback
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        setHasSession(true);
+        setError(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +112,12 @@ export const ResetPasswordView: React.FC<Props> = ({ platformSettings }) => {
     setError(null);
 
     try {
+      // Re-verify session before update
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Sesi tidak ditemukan. Tautan reset password mungkin sudah kadaluarsa atau sudah digunakan.");
+      }
+
       const { error: updateError } = await supabase.auth.updateUser({
         password: password
       });

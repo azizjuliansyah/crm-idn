@@ -10,11 +10,11 @@ import { Card, Label } from '@/components/ui';
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard/admin' },
+  { id: 'data_paket', label: 'Data Paket', icon: Package, href: '/dashboard/admin/packages' },
   { id: 'perusahaan', label: 'Workspace', icon: Building2, href: '/dashboard/admin/companies' },
   { id: 'pengguna', label: 'Pengguna', icon: Users, href: '/dashboard/admin/users' },
   { id: 'pengaturan', label: 'Platform', icon: Settings, href: '/dashboard/admin/platform' },
   { id: 'pengaturan_email', label: 'Mailketing', icon: Mail, href: '/dashboard/admin/email' },
-  { id: 'data_paket', label: 'Data Paket', icon: Package, href: '/dashboard/admin/packages' },
 ];
 
 export const AdminSidebar: React.FC = () => {
