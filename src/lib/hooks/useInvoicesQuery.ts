@@ -51,7 +51,7 @@ export function useInvoicesQuery({
       if (sortConfig) {
         query = query.order(sortConfig.key, { ascending: sortConfig.direction === 'asc' });
       } else {
-        query = query.order('id', { ascending: false });
+        query = query.order('created_at', { ascending: false });
       }
 
       const from = (page - 1) * pageSize;

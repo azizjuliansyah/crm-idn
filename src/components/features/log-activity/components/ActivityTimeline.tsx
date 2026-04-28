@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { H2, Badge, Subtext, Timeline, TimelineItem, TimelineIcon, TimelineContent, Avatar, Label, InfiniteScrollSentinel, Input } from '@/components/ui';
@@ -32,6 +32,26 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
 }) => {
     const router = useRouter();
 
+    const [localSearch, setLocalSearch] = useState(searchQuery || '');
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    useEffect(() => {
+        if (searchQuery !== undefined && searchQuery !== localSearch) {
+            setLocalSearch(searchQuery);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchQuery]);
+
+    const handleSearchChange = (value: string) => {
+        setLocalSearch(value);
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+        }
+        timeoutRef.current = setTimeout(() => {
+            setSearchQuery(value);
+        }, 500);
+    };
+
     return (
         <div className="flex-1 bg-white border border-gray-100 rounded-2xl flex flex-col">
             <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/30 flex items-center justify-between shrink-0">
@@ -42,8 +62,8 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
                         <Input
                             type="text"
                             placeholder="Cari aktivitas..."
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
+                            value={localSearch}
+                            onChange={e => handleSearchChange(e.target.value)}
                             className="pl-9 h-8 text-xs bg-white border-gray-200"
                         />
                     </div>

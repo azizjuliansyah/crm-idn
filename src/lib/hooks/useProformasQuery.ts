@@ -32,7 +32,7 @@ export function useProformasQuery({
       if (searchTerm) {
         const { data: clientsData } = await supabase.from('clients').select('id').ilike('name', `%${searchTerm}%`);
         const clientIds = clientsData?.map(c => c.id).join(',') || '';
-        
+
         if (clientIds) {
           query = query.or(`number.ilike.%${searchTerm}%,client_id.in.(${clientIds})`);
         } else {
@@ -51,7 +51,7 @@ export function useProformasQuery({
       if (sortConfig) {
         query = query.order(sortConfig.key, { ascending: sortConfig.direction === 'asc' });
       } else {
-        query = query.order('id', { ascending: false });
+        query = query.order('created_at', { ascending: false });
       }
 
       const from = (page - 1) * pageSize;
@@ -71,27 +71,27 @@ export function useProformasQuery({
 }
 
 export function useProformaMutations() {
-    const queryClient = useQueryClient();
+  const queryClient = useQueryClient();
 
-    const bulkDeleteProformas = useMutation({
-        mutationFn: async (ids: number[]) => {
-            const { error } = await supabase.from('proformas').delete().in('id', ids);
-            if (error) throw error;
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['proformas'] });
-        }
-    });
+  const bulkDeleteProformas = useMutation({
+    mutationFn: async (ids: number[]) => {
+      const { error } = await supabase.from('proformas').delete().in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['proformas'] });
+    }
+  });
 
-    const bulkUpdateProformasStatus = useMutation({
-        mutationFn: async ({ ids, status }: { ids: number[], status: string }) => {
-            const { error } = await supabase.from('proformas').update({ status }).in('id', ids);
-            if (error) throw error;
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['proformas'] });
-        }
-    });
+  const bulkUpdateProformasStatus = useMutation({
+    mutationFn: async ({ ids, status }: { ids: number[], status: string }) => {
+      const { error } = await supabase.from('proformas').update({ status }).in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['proformas'] });
+    }
+  });
 
-    return { bulkDeleteProformas, bulkUpdateProformasStatus };
+  return { bulkDeleteProformas, bulkUpdateProformasStatus };
 }

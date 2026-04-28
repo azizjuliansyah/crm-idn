@@ -75,7 +75,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sidebar Container */}
       <aside className={`
-        fixed inset-y-0 left-0 z-[100] w-[300px] bg-gray-950 border-r border-gray-900 flex flex-col transition-all duration-500 ease-in-out
+        fixed inset-y-0 left-0 z-[100] w-[300px] bg-slate-900 border-r border-slate-800 flex flex-col transition-all duration-500 ease-in-out
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         ${!isSidebarVisible ? 'lg:-translate-x-full' : ''}
       `}>

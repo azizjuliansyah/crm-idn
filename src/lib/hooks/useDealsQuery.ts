@@ -43,10 +43,13 @@ export function useDealsQuery({
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
 
+      const isCompanyFilterActive = companyFilter && companyFilter !== 'all';
+      const clientSelectStr = isCompanyFilterActive ? 'client:clients!inner(*)' : 'client:clients(*)';
+
       let query = supabase.from('deals').select(`
         *,
         sales_profile:profiles!deals_sales_id_fkey(full_name, avatar_url, email),
-        client:clients(*),
+        ${clientSelectStr},
         quotations(id, number)
       `, { count: 'exact' });
 
@@ -64,8 +67,8 @@ export function useDealsQuery({
         query = query.eq('sales_id', assigneeFilter);
       }
 
-      if (companyFilter && companyFilter !== 'all') {
-        query = query.eq('client_company_id', companyFilter);
+      if (isCompanyFilterActive) {
+        query = query.eq('client.client_company_id', companyFilter);
       }
 
       if (probabilityFilter && probabilityFilter !== 'all') {
@@ -108,7 +111,7 @@ export function useDealsQuery({
         totalCount: count || 0,
       };
     },
-    initialData: initialData,
+    initialData: (!searchTerm && (!statusFilter || statusFilter === 'all') && (!assigneeFilter || assigneeFilter === 'all') && (!companyFilter || companyFilter === 'all') && (!probabilityFilter || probabilityFilter === 'all') && (!dateFilterType || dateFilterType === 'all') && (!followUpFilter || followUpFilter === 'all') && !sortConfig && page === 1) ? initialData : undefined,
     enabled: !!companyId && !!pipelineId,
   });
 }

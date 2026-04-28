@@ -4,7 +4,8 @@ import { SalesRequestsView } from '@/components/features/sales-requests/SalesReq
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
-export default async function SalesRequestsPage({ params }: { params: { categoryId: string } }) {
+export default async function SalesRequestsPage({ params }: { params: Promise<{ categoryId: string }> }) {
+  const resolvedParams = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -20,7 +21,7 @@ export default async function SalesRequestsPage({ params }: { params: { category
   }
 
   const companyId = parseInt(activeCompanyIdStr);
-  const categoryId = parseInt(params.categoryId);
+  const categoryId = parseInt(resolvedParams.categoryId);
 
   if (isNaN(categoryId)) return null;
 

@@ -61,7 +61,7 @@ export const NavMenu: React.FC<NavMenuProps> = ({
   const activeStates = {
     isCrmActive: ['leads', 'pengaturan_leads', 'pengaturan_sumber_leads', 'deals', 'pengaturan_deals_pipeline', 'log_activity'].includes(activeView) || activeView.startsWith('deals_'),
     isProjectActive: ['projects'].includes(activeView) || activeView.startsWith('projects_'),
-    isSupportActive: ['customer_support', 'complaints', 'knowledge_base', 'support_pipeline'].includes(activeView),
+    isSupportActive: ['customer_support', 'complaints', 'knowledge_base'].includes(activeView),
     isSalesActive: ['daftar_penawaran', 'buat_penawaran', 'edit_penawaran', 'daftar_proforma', 'buat_proforma', 'edit_proforma', 'daftar_invoice', 'buat_invoice', 'edit_invoice', 'daftar_kwitansi', 'buat_kwitansi', 'edit_kwitansi', 'request_invoice', 'buat_request_invoice', 'edit_request_invoice', 'request_kwitansi', 'buat_request_kwitansi', 'edit_request_kwitansi'].includes(activeView),
     isClientActive: ['data_client', 'perusahaan_client', 'pengaturan_kategori_client'].includes(activeView),
     isSettingsActive: [
@@ -321,7 +321,7 @@ export const NavMenu: React.FC<NavMenuProps> = ({
             )}
             <Button onClick={() => setIsSettingsOpen(!isSettingsOpen)} variant="ghost-dark" align="left" className={`w-full flex items-center justify-between !px-3 !py-2.5 rounded-xl transition-all duration-300 font-medium cursor-pointer !normal-case !h-auto group/settings ${activeStates.isSettingsActive ? 'text-blue-400 bg-blue-400/5' : isSettingsOpen ? 'text-white bg-white/5' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>
               <div className="flex-1 flex items-center gap-4">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 shadow-md ${activeStates.isSettingsActive ? 'bg-amber-500 text-white shadow-amber-900/20' : 'bg-amber-50 text-white group-hover/settings:scale-110'}`}><Settings size={14} /></div>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 shadow-md ${activeStates.isSettingsActive ? 'bg-amber-500 text-white shadow-amber-900/20' : 'bg-amber-500 text-white group-hover/settings:scale-110'}`}><Settings size={14} /></div>
                 <Label className={`text-[13px] !capitalize ! transition-colors duration-300 ${activeStates.isSettingsActive ? 'text-blue-400 font-bold' : isSettingsOpen ? 'text-white font-semibold' : 'text-inherit'}`}>Workspace Setup</Label>
               </div>
               <ChevronRight size={14} className={`transition-all duration-300 ${isSettingsOpen ? 'rotate-90 text-amber-400' : activeStates.isSettingsActive ? 'text-amber-400' : 'text-gray-600 group-hover/settings:translate-x-1'}`} />

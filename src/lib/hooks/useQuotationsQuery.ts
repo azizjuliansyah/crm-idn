@@ -33,7 +33,7 @@ export function useQuotationsQuery({
       if (searchTerm) {
         const { data: clientsData } = await supabase.from('clients').select('id').ilike('name', `%${searchTerm}%`);
         const clientIds = clientsData?.map(c => c.id).join(',') || '';
-        
+
         if (clientIds) {
           query = query.or(`number.ilike.%${searchTerm}%,client_id.in.(${clientIds})`);
         } else {
@@ -52,7 +52,7 @@ export function useQuotationsQuery({
       if (sortConfig) {
         query = query.order(sortConfig.key, { ascending: sortConfig.direction === 'asc' });
       } else {
-        query = query.order('id', { ascending: false });
+        query = query.order('created_at', { ascending: false });
       }
 
       const from = (page - 1) * pageSize;

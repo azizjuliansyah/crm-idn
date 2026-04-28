@@ -41,7 +41,7 @@ export function useClientsQuery({
       if (sortConfig) {
         query = query.order(sortConfig.key, { ascending: sortConfig.direction === 'asc' });
       } else {
-        query = query.order('id', { ascending: false });
+        query = query.order('created_at', { ascending: false });
       }
 
       const { data, error, count } = await query.range(from, to);
@@ -52,7 +52,7 @@ export function useClientsQuery({
         totalCount: count || 0,
       };
     },
-    initialData: initialData,
+    initialData: (!searchTerm && (!companyFilter || companyFilter === 'all') && !sortConfig && page === 1) ? initialData : undefined,
     enabled: !!companyId,
     placeholderData: (previousData) => previousData,
   });

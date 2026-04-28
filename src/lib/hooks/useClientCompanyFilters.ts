@@ -6,6 +6,7 @@ export type ClientCompanySortKey = 'name' | 'id' | 'category_id';
 
 export function useClientCompanyFilters() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>({
     key: 'name',
     direction: 'asc',
@@ -26,6 +27,8 @@ export function useClientCompanyFilters() {
   return {
     searchTerm,
     setSearchTerm,
+    categoryFilter,
+    setCategoryFilter,
     sortConfig,
     setSortConfig,
     handleSort,

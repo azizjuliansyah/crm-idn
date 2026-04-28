@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Label, SearchInput, Checkbox, H2, Toast, ToastType, TableContainer } from '@/components/ui';
+import { Button, Table, TableHeader, TableBody, TableRow, TableCell, Subtext, Label, SearchInput, Checkbox, H2, Toast, ToastType, TableContainer, ComboBox } from '@/components/ui';
 
 
 import { supabase } from '@/lib/supabase';
@@ -53,6 +53,7 @@ export const ClientCompaniesView: React.FC<Props> = ({
   
   const { 
     searchTerm, setSearchTerm, 
+    categoryFilter, setCategoryFilter,
     sortConfig, handleSort 
   } = useClientCompanyFilters();
   const { showToast } = useAppStore();
@@ -73,6 +74,7 @@ export const ClientCompaniesView: React.FC<Props> = ({
   } = useClientCompaniesQuery({
     companyId: String(company.id),
     searchTerm,
+    categoryFilter,
     sortConfig,
     page,
     pageSize,
@@ -264,7 +266,20 @@ export const ClientCompaniesView: React.FC<Props> = ({
             </Button>
           )
         }
-      />
+      >
+        <div className="flex items-center gap-3 shrink-0 ml-auto">
+          <ComboBox
+            value={categoryFilter}
+            onChange={(val: string | number) => { setCategoryFilter(val as string); setPage(1); }}
+            options={[
+              { value: 'all', label: 'SEMUA KATEGORI' },
+              ...categories.map(c => ({ value: c.id.toString(), label: c.name.toUpperCase() }))
+            ]}
+            className="w-48"
+            placeholderSize="text-[10px] font-bold text-gray-900 uppercase"
+          />
+        </div>
+      </StandardFilterBar>
 
       <ClientCompaniesTableView
         items={items}

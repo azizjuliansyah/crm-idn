@@ -21,13 +21,13 @@ export const SidebarFooter: React.FC<SidebarFooterProps> = ({
   setIsSidebarOpen
 }) => {
   return (
-    <div className="p-4 border-t border-gray-900 flex items-center justify-between gap-2 bg-gray-900/10">
+    <div className="p-4 border-t border-slate-800 flex items-center justify-between gap-2 bg-slate-900/50">
       <Link 
         href={getPathFromViewId('profil_saya')} 
-        className="flex-1 flex items-center gap-3 overflow-hidden p-2 rounded-xl text-left cursor-pointer hover:bg-white/5 transition-all border border-transparent hover:border-gray-800 group" 
+        className="flex-1 flex items-center gap-3 overflow-hidden p-2 rounded-xl text-left cursor-pointer hover:bg-white/5 transition-all border border-transparent hover:border-slate-700 group" 
         onClick={() => setIsSidebarOpen(false)}
       >
-        <div className="w-10 h-10 rounded-xl bg-gray-900 border border-gray-800 flex items-center justify-center text-gray-500 overflow-hidden shrink-0 shadow-sm group-hover:border-blue-500/50 transition-colors">
+        <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500 overflow-hidden shrink-0 shadow-sm group-hover:border-blue-500/50 transition-colors">
           {user.avatar_url ? <img src={user.avatar_url} className="w-full h-full object-cover" alt="Avatar" /> : <User size={20} />}
         </div>
         <div className="overflow-hidden">

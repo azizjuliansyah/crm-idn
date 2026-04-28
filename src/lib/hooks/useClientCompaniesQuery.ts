@@ -5,6 +5,7 @@ import { ClientCompany } from '@/lib/types';
 interface UseClientCompaniesQueryParams {
   companyId: string;
   searchTerm?: string;
+  categoryFilter?: string;
   page?: number;
   pageSize?: number;
   sortConfig?: { key: string; direction: 'asc' | 'desc' } | null;
@@ -13,12 +14,13 @@ interface UseClientCompaniesQueryParams {
 export function useClientCompaniesQuery({
   companyId,
   searchTerm,
+  categoryFilter,
   page = 1,
   pageSize = 20,
   sortConfig,
 }: UseClientCompaniesQueryParams, initialData?: { data: any[], totalCount: number }) {
   return useQuery({
-    queryKey: ['client_companies', companyId, searchTerm, page, pageSize, sortConfig],
+    queryKey: ['client_companies', companyId, searchTerm, categoryFilter, page, pageSize, sortConfig],
     queryFn: async () => {
       let query = supabase
         .from('client_companies')
@@ -28,11 +30,15 @@ export function useClientCompaniesQuery({
       if (searchTerm) {
         query = query.or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,whatsapp.ilike.%${searchTerm}%`);
       }
+
+      if (categoryFilter && categoryFilter !== 'all') {
+        query = query.eq('category_id', categoryFilter);
+      }
       
       if (sortConfig) {
         query = query.order(sortConfig.key, { ascending: sortConfig.direction === 'asc' });
       } else {
-        query = query.order('name', { ascending: true });
+        query = query.order('created_at', { ascending: false });
       }
 
       const from = (page - 1) * pageSize;
@@ -47,7 +53,7 @@ export function useClientCompaniesQuery({
         totalCount: count || 0,
       };
     },
-    initialData: initialData,
+    initialData: (!searchTerm && (!categoryFilter || categoryFilter === 'all') && !sortConfig && page === 1) ? initialData : undefined,
     placeholderData: (previousData) => previousData,
   });
 }

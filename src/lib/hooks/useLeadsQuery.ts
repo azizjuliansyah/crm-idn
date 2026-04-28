@@ -44,11 +44,11 @@ export function useLeadsQuery({
       query = query.eq('company_id', companyId);
 
       if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,client_company_name.ilike.%${searchTerm}%`);
+        query = query.or(`name.ilike.%${searchTerm}%`);
       }
 
       if (statusFilter && statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
+        query = query.ilike('status', statusFilter);
       }
 
       if (assigneeFilter && assigneeFilter !== 'all') {
@@ -75,9 +75,7 @@ export function useLeadsQuery({
       if (sortConfig) {
         query = query.order(sortConfig.key, { ascending: sortConfig.direction === 'asc' });
       } else {
-        query = query
-          .order('kanban_order', { ascending: true })
-          .order('created_at', { ascending: false });
+        query = query.order('created_at', { ascending: false });
       }
 
       const { data, error, count } = await query.range(from, to);
@@ -88,7 +86,7 @@ export function useLeadsQuery({
         totalCount: count || 0,
       };
     },
-    initialData: initialData,
+    initialData: (!searchTerm && (!statusFilter || statusFilter === 'all') && (!assigneeFilter || assigneeFilter === 'all') && (!companyFilter || companyFilter === 'all') && (!dateFilterType || dateFilterType === 'all') && !sortConfig && page === 1) ? initialData : undefined,
     enabled: !!companyId,
   });
 }

@@ -38,7 +38,7 @@ export function useSupportTicketsQuery({
       }
 
       if (filterStatus && filterStatus !== 'all') {
-        query = query.eq('status', filterStatus);
+        query = query.ilike('status', filterStatus);
       }
 
       if (filterClientId && filterClientId !== 'all') {
@@ -56,7 +56,7 @@ export function useSupportTicketsQuery({
       if (sortConfig) {
         query = query.order(sortConfig.key, { ascending: sortConfig.direction === 'asc' });
       } else {
-        query = query.order('id', { ascending: false });
+        query = query.order('created_at', { ascending: false });
       }
 
       const from = (page - 1) * pageSize;
@@ -71,7 +71,7 @@ export function useSupportTicketsQuery({
         totalCount: count || 0,
       };
     },
-    initialData: initialData,
+    initialData: (!searchTerm && (!filterStatus || filterStatus === 'all') && (!filterClientId || filterClientId === 'all') && (!filterTopicId || filterTopicId === 'all') && !sortConfig && page === 1) ? initialData : undefined,
     placeholderData: (previousData) => previousData,
   });
 }

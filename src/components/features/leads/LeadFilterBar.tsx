@@ -56,7 +56,7 @@ export const LeadFilterBar: React.FC<LeadFilterBarProps> = ({
         onChange={(val: string | number) => setStatusFilter(val.toString())}
         options={[
           { value: 'all', label: 'SEMUA STATUS' },
-          ...stages.map(s => ({ value: s.name.toLowerCase(), label: s.name.toUpperCase() }))
+          ...stages.map(s => ({ value: s.name, label: s.name.toUpperCase() }))
         ]}
         className="w-40"
         hideSearch

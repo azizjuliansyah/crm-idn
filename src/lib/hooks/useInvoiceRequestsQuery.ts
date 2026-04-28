@@ -46,7 +46,7 @@ export function useInvoiceRequestsQuery({
       } else {
         // Default sort: urgency then id desc
         // Note: multiple orders are applied in sequence
-        query = query.order('id', { ascending: false });
+        query = query.order('created_at', { ascending: false });
       }
 
       const from = (page - 1) * pageSize;

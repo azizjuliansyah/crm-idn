@@ -38,7 +38,7 @@ export function useProductsQuery({
       if (sortConfig) {
         query = query.order(sortConfig.key, { ascending: sortConfig.direction === 'asc' });
       } else {
-        query = query.order('name', { ascending: true });
+        query = query.order('created_at', { ascending: false });
       }
 
       const from = (page - 1) * pageSize;
@@ -53,7 +53,7 @@ export function useProductsQuery({
         totalCount: count || 0,
       };
     },
-    initialData: initialData,
+    initialData: (!searchTerm && !filterCategoryId && !sortConfig && page === 1) ? initialData : undefined,
     placeholderData: (previousData) => previousData,
   });
 }

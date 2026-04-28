@@ -41,11 +41,11 @@ export async function getLeads(params: {
   query = query.eq('company_id', companyId);
 
   if (searchTerm) {
-    query = query.or(`name.ilike.%${searchTerm}%,client_company_name.ilike.%${searchTerm}%`);
+    query = query.or(`name.ilike.%${searchTerm}%`);
   }
 
   if (statusFilter && statusFilter !== 'all') {
-    query = query.eq('status', statusFilter);
+    query = query.ilike('status', statusFilter);
   }
 
   if (assigneeFilter && assigneeFilter !== 'all') {

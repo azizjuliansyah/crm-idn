@@ -24,9 +24,14 @@ export function useSalesRequestsQuery({
   return useQuery({
     queryKey: ['sales_requests', companyId, categoryIdIndex, searchTerm, filterStatus, sortConfig, page, pageSize],
     queryFn: async () => {
+      let selectStr = '*, client:clients(*, client_company:client_companies(*)), quotation:quotations(number), proforma:proformas(number), urgency_level:urgency_levels(id, name, color, sort_order)';
+      if (searchTerm) {
+        selectStr = '*, client:clients!inner(*, client_company:client_companies(*)), quotation:quotations(number), proforma:proformas(number), urgency_level:urgency_levels(id, name, color, sort_order)';
+      }
+
       let query = supabase
         .from('sales_requests')
-        .select('*, client:clients(*, client_company:client_companies(*)), quotation:quotations(number), proforma:proformas(number), urgency_level:urgency_levels(id, name, color, sort_order)', { count: 'exact' })
+        .select(selectStr, { count: 'exact' })
         .eq('company_id', companyId)
         .eq('category_id', categoryIdIndex);
 
@@ -43,7 +48,7 @@ export function useSalesRequestsQuery({
         query = query.order(sortConfig.key, { ascending: sortConfig.direction === 'asc' });
       } else {
         // Default sort: urgency then id
-        query = query.order('id', { ascending: false });
+        query = query.order('created_at', { ascending: false });
       }
 
       const from = (page - 1) * pageSize;
@@ -58,33 +63,33 @@ export function useSalesRequestsQuery({
         totalCount: count || 0,
       };
     },
-    initialData: initialData,
+    initialData: (!searchTerm && (!filterStatus || filterStatus === 'all') && !sortConfig && page === 1) ? initialData : undefined,
     placeholderData: (previousData) => previousData,
   });
 }
 
 export function useSalesRequestMutations() {
-    const queryClient = useQueryClient();
-    
-    const bulkDeleteSalesRequests = useMutation({
-        mutationFn: async (ids: number[]) => {
-            const { error } = await supabase.from('sales_requests').delete().in('id', ids);
-            if (error) throw error;
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['sales_requests'] });
-        }
-    });
+  const queryClient = useQueryClient();
 
-    const bulkUpdateSalesRequestsStatus = useMutation({
-        mutationFn: async ({ ids, status }: { ids: number[], status: string }) => {
-            const { error } = await supabase.from('sales_requests').update({ status }).in('id', ids);
-            if (error) throw error;
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['sales_requests'] });
-        }
-    });
+  const bulkDeleteSalesRequests = useMutation({
+    mutationFn: async (ids: number[]) => {
+      const { error } = await supabase.from('sales_requests').delete().in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales_requests'] });
+    }
+  });
 
-    return { bulkDeleteSalesRequests, bulkUpdateSalesRequestsStatus };
+  const bulkUpdateSalesRequestsStatus = useMutation({
+    mutationFn: async ({ ids, status }: { ids: number[], status: string }) => {
+      const { error } = await supabase.from('sales_requests').update({ status }).in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales_requests'] });
+    }
+  });
+
+  return { bulkDeleteSalesRequests, bulkUpdateSalesRequestsStatus };
 }

@@ -35,7 +35,7 @@ export async function getSupportTickets(params: {
   }
 
   if (filterStatus && filterStatus !== 'all') {
-    query = query.eq('status', filterStatus);
+    query = query.ilike('status', filterStatus);
   }
 
   if (filterClientId && filterClientId !== 'all') {

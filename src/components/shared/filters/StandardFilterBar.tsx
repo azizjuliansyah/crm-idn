@@ -57,12 +57,9 @@ export const StandardFilterBar: React.FC<StandardFilterBarProps> = ({
   className = ''
 }) => {
   const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm || '');
-  const onSearchChangeRef = useRef(onSearchChange);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    onSearchChangeRef.current = onSearchChange;
-  }, [onSearchChange]);
-
+  // Sync prop -> state
   useEffect(() => {
     if (searchTerm !== undefined && searchTerm !== localSearchTerm) {
       setLocalSearchTerm(searchTerm);
@@ -70,15 +67,25 @@ export const StandardFilterBar: React.FC<StandardFilterBarProps> = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm]);
 
+  const handleSearchChange = (value: string) => {
+    setLocalSearchTerm(value);
+    
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    if (onSearchChange) {
+      timeoutRef.current = setTimeout(() => {
+        onSearchChange(value);
+      }, 500);
+    }
+  };
+
   useEffect(() => {
-    if (searchTerm === undefined) return;
-    const handler = setTimeout(() => {
-      if (localSearchTerm !== searchTerm && onSearchChangeRef.current) {
-        onSearchChangeRef.current(localSearchTerm);
-      }
-    }, 500);
-    return () => clearTimeout(handler);
-  }, [localSearchTerm, searchTerm]);
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   return (
     <div className={`flex flex-col gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0 ${className}`}>
@@ -158,7 +165,7 @@ export const StandardFilterBar: React.FC<StandardFilterBarProps> = ({
               <SearchInput
                 placeholder={searchPlaceholder}
                 value={localSearchTerm}
-                onChange={e => setLocalSearchTerm(e.target.value)}
+                onChange={e => handleSearchChange(e.target.value)}
                 className="!rounded-md !border-gray-200 transition-all !shadow-none !text-[10px] !font-bold !uppercase placeholder:uppercase placeholder:text-[10px] placeholder:font-bold placeholder:text-gray-400 !py-3.5"
               />
             </div>
