@@ -154,7 +154,7 @@ export const DocumentItemsTable: React.FC<Props> = ({
                     rows={1}
                     value={item.description}
                     onChange={e => { const n = [...items]; n[idx].description = e.target.value; onChange(n); }}
-                    className="w-full text-xs px-3 py-2 bg-white border border-gray-200 rounded-md outline-none focus:border-blue-500 transition-all font-medium resize-y"
+                    className="w-full text-xs px-4 py-3 bg-white border-2 border-gray-300 rounded-md outline-none focus:border-blue-500 transition-all font-medium resize-y min-h-[58px]"
                     placeholder="Detail spesifikasi..."
                   />
                 </TableCell>
@@ -163,11 +163,11 @@ export const DocumentItemsTable: React.FC<Props> = ({
                     type="number"
                     value={item.qty}
                     onChange={e => { const n = [...items]; n[idx].qty = Number(e.target.value); n[idx].total = n[idx].qty * n[idx].price; onChange(n); }}
-                    className="w-full text-xs px-2 py-2 text-center font-bold bg-white border border-gray-200 rounded-md outline-none focus:border-blue-500 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    className="w-full text-xs px-2 py-2 text-center font-bold bg-white border-2 border-gray-300 rounded-md outline-none focus:border-blue-500 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                 </TableCell>
                 <TableCell className="px-4 py-3 text-center">
-                  <div className="w-full px-2 py-2 bg-gray-50 border border-gray-100 rounded-[4px] text-[10px] text-center text-gray-400 font-bold uppercase ">
+                  <div className="w-full px-2 py-2 bg-gray-50 border-2 border-gray-300 rounded-md text-[10px] text-center text-gray-400 font-bold uppercase ">
                     {item.unit}
                   </div>
                 </TableCell>
@@ -176,7 +176,7 @@ export const DocumentItemsTable: React.FC<Props> = ({
                     type="number"
                     value={item.price}
                     onChange={e => { const n = [...items]; n[idx].price = Number(e.target.value); n[idx].total = n[idx].qty * n[idx].price; onChange(n); }}
-                    className="w-full text-xs px-3 py-2 text-right font-bold bg-white border border-gray-200 rounded-md outline-none focus:border-blue-500 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    className="w-full text-xs px-3 py-2 text-right font-bold bg-white border-2 border-gray-300 rounded-md outline-none focus:border-blue-500 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                 </TableCell>
                 <TableCell className="px-4 py-3 text-right font-bold text-gray-700 text-sm whitespace-nowrap">

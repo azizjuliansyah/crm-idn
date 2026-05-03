@@ -3,10 +3,12 @@ import {
   Table, TableHeader, TableBody, TableRow, TableCell, 
   Badge, Label, Subtext, EmptyState, InfiniteScrollSentinel 
 } from '@/components/ui';
-import { Clock, FileCheck, FileDown, FilePlus, Edit2, Trash2, FileText } from 'lucide-react';
+import { Clock, FileCheck, FileDown, FilePlus, Edit2, Trash2, FileText, MoreVertical, Eye } from 'lucide-react';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
+import { ActionMenu } from '@/components/shared/ActionMenu';
 import { Quotation } from '@/lib/types';
 import { formatIDR } from '@/lib/utils/formatters';
+import Link from 'next/link';
 import { SortKey } from '@/lib/hooks/useQuotationFilters';
 
 interface QuotationTableProps {
@@ -82,31 +84,38 @@ export const QuotationTable: React.FC<QuotationTableProps> = ({
               </Badge>
             </TableCell>
             <TableCell>
-              <div className="flex items-center justify-center gap-2">
-                <ActionButton
-                  icon={FileDown}
-                  variant="emerald"
-                  onClick={() => onDownload(q)}
-                  title="Unduh PDF"
-                />
-                <ActionButton
-                  icon={FilePlus}
-                  variant="indigo"
-                  onClick={() => onRequest(q.id, q.status)}
-                  title="Buat Request Tambahan"
-                />
-                <ActionButton
-                  icon={Edit2}
-                  variant="blue"
-                  href={`/dashboard/sales/quotations/${q.id}`}
-                  title="Edit"
-                />
-                <ActionButton
-                  icon={Trash2}
-                  variant="rose"
-                  onClick={() => onDelete(q.id, q.number)}
-                  title="Hapus"
-                />
+              <div className="flex justify-center">
+                <ActionMenu>
+                  <button
+                    onClick={() => onDownload(q)}
+                    className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 transition-none"
+                  >
+                    <FileDown size={14} />
+                    Unduh PDF
+                  </button>
+                  <button
+                    onClick={() => onRequest(q.id, q.status)}
+                    className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-indigo-600 hover:bg-indigo-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+                  >
+                    <FilePlus size={14} />
+                    Request Tambahan
+                  </button>
+                  <Link
+                    href={`/dashboard/sales/quotations/${q.id}`}
+                    className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-blue-600 hover:bg-blue-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Eye size={14} />
+                    Edit Penawaran
+                  </Link>
+                  <button
+                    onClick={() => onDelete(q.id, q.number)}
+                    className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-rose-600 hover:bg-rose-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+                  >
+                    <Trash2 size={14} />
+                    Hapus Penawaran
+                  </button>
+                </ActionMenu>
               </div>
             </TableCell>
           </TableRow>

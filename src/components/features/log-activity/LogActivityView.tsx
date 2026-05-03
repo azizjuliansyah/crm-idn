@@ -307,7 +307,7 @@ export const LogActivityView: React.FC<Props> = ({ user, companyId }) => {
 
 
     return (
-        <div className="flex flex-col bg-white space-y-6 min-h-full">
+        <div className="flex flex-col space-y-8 pb-20">
             <ActivityHeader
                 isAdmin={isAdmin}
                 userFilter={userFilter}

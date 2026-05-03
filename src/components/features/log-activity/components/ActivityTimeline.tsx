@@ -53,7 +53,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
     };
 
     return (
-        <div className="flex-1 bg-white border border-gray-100 rounded-2xl flex flex-col">
+        <div className="flex-1 bg-white border-2 border-gray-300 rounded-2xl flex flex-col">
             <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/30 flex items-center justify-between shrink-0">
                 <H2 className="text-sm font-semibold text-gray-900 !capitalize !">Riwayat Aktivitas</H2>
                 <div className="flex items-center gap-3">

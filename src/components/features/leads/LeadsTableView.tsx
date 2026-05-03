@@ -9,13 +9,16 @@ import {
   ComboBox,
 } from '@/components/ui';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
+import { ActionMenu } from '@/components/shared/ActionMenu';
 import { Lead } from '@/lib/types';
 import { 
   Table as TableIcon, 
   Trash2, 
   Clock, 
   Zap,
-  Users
+  Users,
+  Eye,
+  MoreVertical
 } from 'lucide-react';
 import { formatIDR } from '@/lib/utils/formatters';
 import { BaseDataTable, ColumnConfig } from '@/components/shared/tables/BaseDataTable';
@@ -175,26 +178,34 @@ export const LeadsTableView: React.FC<Props> = ({
       headerClassName: 'text-center',
       className: 'text-center',
       render: (lead) => (
-        <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <ActionButton
-            icon={Zap}
-            variant={lead.is_urgent ? 'amber' : 'gray'}
-            onClick={(e) => { e.stopPropagation(); onToggleUrgency(lead.id, !!lead.is_urgent); }}
-            title={lead.is_urgent ? 'Hapus Prioritas' : 'Tandai Prioritas'}
-            className={lead.is_urgent ? 'animate-pulse' : ''}
-          />
-          <ActionButton
-            icon={TableIcon}
-            variant="blue"
-            onClick={() => onEdit(lead)}
-            title="Detail Lead"
-          />
-          <ActionButton
-            icon={Trash2}
-            variant="rose"
-            onClick={(e) => { e.stopPropagation(); onDelete(lead.id); }}
-            title="Hapus Lead"
-          />
+        <div className="flex justify-center">
+          <ActionMenu>
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggleUrgency(lead.id, !!lead.is_urgent); }}
+              className={`w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase flex items-center gap-2 transition-none ${
+                lead.is_urgent ? 'text-amber-600 bg-amber-50/30' : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <Zap size={14} className={lead.is_urgent ? 'fill-amber-500' : ''} />
+              {lead.is_urgent ? 'Hapus Prioritas' : 'Tandai Prioritas'}
+            </button>
+            
+            <button
+              onClick={() => onEdit(lead)}
+              className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-blue-600 hover:bg-blue-50 flex items-center gap-2 transition-none"
+            >
+              <Eye size={14} />
+              Detail Lead
+            </button>
+            
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(lead.id); }}
+              className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-rose-600 hover:bg-rose-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+            >
+              <Trash2 size={14} />
+              Hapus Lead
+            </button>
+          </ActionMenu>
         </div>
       )
     }

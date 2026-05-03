@@ -7,8 +7,9 @@ import { H2, Subtext, Label, Badge, Button } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { Company, KwitansiRequest } from '@/lib/types';
 import {
-    Plus, FileQuestion, Clock, Check, Trash2, FilePlus, Zap, FileDown, User, X, FileText, FileCheck, Building
+    Plus, FileQuestion, Clock, Check, Trash2, FilePlus, Zap, FileDown, User, X, FileText, FileCheck, Building, MoreVertical, Eye
 } from 'lucide-react';
+import { ActionMenu } from '@/components/shared/ActionMenu';
 import { BaseDataTable, ColumnConfig } from '@/components/shared/tables/BaseDataTable';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
@@ -365,47 +366,52 @@ export const KwitansiRequestsView: React.FC<Props> = ({ company }) => {
             headerClassName: 'text-center',
             className: 'text-center',
             render: (r: KwitansiRequest) => (
-                <div className="flex items-center justify-center gap-2">
-                    {r.status === 'Pending' && hasApprovalPermission && (
-                        <>
-                            <ActionButton
-                                icon={Check}
-                                variant="emerald"
-                                onClick={() => handleUpdateStatus(r.id, 'Approved')}
-                                title="Approve"
-                            />
-                            <ActionButton
-                                icon={X}
-                                variant="rose"
-                                onClick={() => handleUpdateStatus(r.id, 'Rejected')}
-                                title="Reject"
-                            />
-                        </>
-                    )}
-                    {r.status === 'Approved' && !r.kwitansi_id && hasApprovalPermission && (
-                        <ActionButton
-                            icon={FilePlus}
-                            variant="indigo"
-                            onClick={() => handleCreateKwitansi(r.id)}
-                            title="Buat Kwitansi"
-                        />
-                    )}
-                    {r.status === 'Approved' && r.kwitansi_id && (
-                        <>
-                            <ActionButton
-                                icon={FileDown}
-                                variant="emerald"
+                <div className="flex justify-center">
+                    <ActionMenu>
+                        {r.status === 'Pending' && hasApprovalPermission && (
+                            <>
+                                <button
+                                    onClick={() => handleUpdateStatus(r.id, 'Approved')}
+                                    className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 transition-none"
+                                >
+                                    <Check size={14} />
+                                    Approve Request
+                                </button>
+                                <button
+                                    onClick={() => handleUpdateStatus(r.id, 'Rejected')}
+                                    className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-rose-600 hover:bg-rose-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+                                >
+                                    <X size={14} />
+                                    Reject Request
+                                </button>
+                            </>
+                        )}
+                        {r.status === 'Approved' && !r.kwitansi_id && hasApprovalPermission && (
+                            <button
+                                onClick={() => handleCreateKwitansi(r.id)}
+                                className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-indigo-600 hover:bg-indigo-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+                            >
+                                <FilePlus size={14} />
+                                Buat Kwitansi
+                            </button>
+                        )}
+                        {r.status === 'Approved' && r.kwitansi_id && (
+                            <button
                                 onClick={() => handleDownloadKwitansi(r)}
-                                title="Download Kwitansi"
-                            />
-                        </>
-                    )}
-                    <ActionButton
-                        icon={Trash2}
-                        variant="rose"
-                        onClick={() => setConfirmDelete({ isOpen: true, id: r.id })}
-                        title="Hapus"
-                    />
+                                className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 transition-none"
+                            >
+                                <FileDown size={14} />
+                                Download Kwitansi
+                            </button>
+                        )}
+                        <button
+                            onClick={() => setConfirmDelete({ isOpen: true, id: r.id })}
+                            className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-rose-600 hover:bg-rose-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+                        >
+                            <Trash2 size={14} />
+                            Hapus Request
+                        </button>
+                    </ActionMenu>
                 </div>
             )
         }

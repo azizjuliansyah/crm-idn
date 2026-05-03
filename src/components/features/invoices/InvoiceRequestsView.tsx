@@ -10,8 +10,9 @@ import { supabase } from '@/lib/supabase';
 import { Company, InvoiceRequest } from '@/lib/types';
 import {
   Plus, FileQuestion, Clock, User, Building,
-  Check, Trash2, FilePlus, ExternalLink, Zap, FileDown, X
+  Check, Trash2, FilePlus, ExternalLink, Zap, FileDown, X, MoreVertical, Eye
 } from 'lucide-react';
+import { ActionMenu } from '@/components/shared/ActionMenu';
 import { BaseDataTable, ColumnConfig } from '@/components/shared/tables/BaseDataTable';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
@@ -380,53 +381,61 @@ export const InvoiceRequestsView: React.FC<Props> = ({ company }) => {
       headerClassName: 'text-center',
       className: 'text-center',
       render: (r: InvoiceRequest) => (
-        <div className="flex items-center justify-center gap-2">
-          {r.status === 'Pending' && hasApprovalPermission && (
-            <>
-              <ActionButton
-                icon={Check}
-                variant="emerald"
-                onClick={() => handleUpdateStatus(r.id, 'Approved')}
-                title="Approve"
-              />
-              <ActionButton
-                icon={X}
-                variant="rose"
-                onClick={() => handleUpdateStatus(r.id, 'Rejected')}
-                title="Reject"
-              />
-            </>
-          )}
-          {r.status === 'Approved' && !r.invoice_id && hasApprovalPermission && (
-            <ActionButton
-              icon={FilePlus}
-              variant="indigo"
-              href={`/dashboard/sales/invoices/create?requestId=${r.id}&clientId=${r.client_id}${r.proforma_id ? `&proformaId=${r.proforma_id}` : ''}${r.quotation_id ? `&quotationId=${r.quotation_id}` : ''}`}
-              title="Buat Invoice"
-            />
-          )}
-          {r.status === 'Approved' && r.invoice_id && (
-            <>
-              <ActionButton
-                icon={FileDown}
-                variant="emerald"
-                onClick={() => handleDownloadInvoice(r)}
-                title="Download Invoice"
-              />
-              <ActionButton
-                icon={ExternalLink}
-                variant="blue"
-                href={`/dashboard/sales/invoices/${r.invoice_id}`}
-                title={`Lihat Invoice ${r.invoice?.number || ''}`}
-              />
-            </>
-          )}
-          <ActionButton
-            icon={Trash2}
-            variant="rose"
-            onClick={() => setConfirmDelete({ isOpen: true, id: r.id })}
-            title="Hapus"
-          />
+        <div className="flex justify-center">
+          <ActionMenu>
+            {r.status === 'Pending' && hasApprovalPermission && (
+              <>
+                <button
+                  onClick={() => handleUpdateStatus(r.id, 'Approved')}
+                  className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 transition-none"
+                >
+                  <Check size={14} />
+                  Approve Request
+                </button>
+                <button
+                  onClick={() => handleUpdateStatus(r.id, 'Rejected')}
+                  className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-rose-600 hover:bg-rose-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+                >
+                  <X size={14} />
+                  Reject Request
+                </button>
+              </>
+            )}
+            {r.status === 'Approved' && !r.invoice_id && hasApprovalPermission && (
+              <Link
+                href={`/dashboard/sales/invoices/create?requestId=${r.id}&clientId=${r.client_id}${r.proforma_id ? `&proformaId=${r.proforma_id}` : ''}${r.quotation_id ? `&quotationId=${r.quotation_id}` : ''}`}
+                className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-indigo-600 hover:bg-indigo-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+              >
+                <FilePlus size={14} />
+                Buat Invoice
+              </Link>
+            )}
+            {r.status === 'Approved' && r.invoice_id && (
+              <>
+                <button
+                  onClick={() => handleDownloadInvoice(r)}
+                  className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 transition-none"
+                >
+                  <FileDown size={14} />
+                  Download Invoice
+                </button>
+                <Link
+                  href={`/dashboard/sales/invoices/${r.invoice_id}`}
+                  className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-blue-600 hover:bg-blue-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+                >
+                  <ExternalLink size={14} />
+                  Lihat Invoice
+                </Link>
+              </>
+            )}
+            <button
+              onClick={() => setConfirmDelete({ isOpen: true, id: r.id })}
+              className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-rose-600 hover:bg-rose-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+            >
+              <Trash2 size={14} />
+              Hapus Request
+            </button>
+          </ActionMenu>
         </div>
       )
     }

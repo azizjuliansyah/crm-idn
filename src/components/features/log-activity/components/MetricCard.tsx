@@ -32,7 +32,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({ title, value, icon, colo
         return (
             <Link
                 href={href}
-                className="bg-white border border-gray-100 rounded-2xl p-5 hover:shadow-md transition-shadow relative overflow-hidden group block"
+                className="bg-white border-2 border-gray-300 rounded-2xl p-6 hover:shadow-md transition-shadow relative overflow-hidden group block"
             >
                 {content}
             </Link>
@@ -40,7 +40,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({ title, value, icon, colo
     }
 
     return (
-        <div className="bg-white border border-gray-100 rounded-2xl p-5 hover:shadow-md transition-shadow relative overflow-hidden group">
+        <div className="bg-white border-2 border-gray-300 rounded-2xl p-6 hover:shadow-md transition-shadow relative overflow-hidden group">
             {content}
         </div>
     );

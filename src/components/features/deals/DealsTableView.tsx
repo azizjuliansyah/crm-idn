@@ -10,6 +10,7 @@ import {
 } from '@/components/ui';
 import { Deal, Pipeline } from '@/lib/types';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
+import { ActionMenu } from '@/components/shared/ActionMenu';
 import { 
   Trash2, 
   Edit2, 
@@ -18,7 +19,9 @@ import {
   FilePlus, 
   Clock, 
   Zap,
-  TrendingUp
+  TrendingUp,
+  Eye,
+  MoreVertical
 } from 'lucide-react';
 import { formatIDR } from '@/lib/utils/formatters';
 import { BaseDataTable, ColumnConfig } from '@/components/shared/tables/BaseDataTable';
@@ -235,43 +238,56 @@ export const DealsTableView: React.FC<Props> = ({
       render: (deal) => {
         const quotation: any = Array.isArray(deal.quotations) ? deal.quotations[0] : deal.quotations;
         return (
-          <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <ActionButton
-              icon={Zap}
-              variant={deal.is_urgent ? 'amber' : 'gray'}
-              onClick={(e) => { e.stopPropagation(); onToggleUrgency(deal.id, !!deal.is_urgent); }}
-              title={deal.is_urgent ? 'Hapus Prioritas' : 'Tandai Prioritas'}
-              className={deal.is_urgent ? 'animate-pulse' : ''}
-            />
-            {quotation ? (
-              <ActionButton
-                icon={FileText}
-                variant="emerald"
-                href={`/dashboard/sales/quotations/${quotation.id}`}
-                title="Dokumen Penawaran"
-              />
-            ) : (
-              onCreateQuotation && deal.client_id && (
-                <ActionButton
-                  icon={FilePlus}
-                  variant="indigo"
-                  href={`/dashboard/sales/quotations/create?client_id=${deal.client_id}&deal_id=${deal.id}`}
-                  title="Buat Penawaran"
-                />
-              )
-            )}
-            <ActionButton
-              icon={Edit2}
-              variant="blue"
-              onClick={() => onEdit(deal)}
-              title="Edit Transaksi"
-            />
-            <ActionButton
-              icon={Trash2}
-              variant="rose"
-              onClick={() => onDelete(deal.id)}
-              title="Hapus Transaksi"
-            />
+          <div className="flex justify-center">
+            <ActionMenu>
+              <button
+                onClick={(e) => { e.stopPropagation(); onToggleUrgency(deal.id, !!deal.is_urgent); }}
+                className={`w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase flex items-center gap-2 transition-none ${
+                  deal.is_urgent ? 'text-amber-600 bg-amber-50/30' : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <Zap size={14} className={deal.is_urgent ? 'fill-amber-500' : ''} />
+                {deal.is_urgent ? 'Hapus Prioritas' : 'Tandai Prioritas'}
+              </button>
+
+              {quotation ? (
+                <Link
+                  href={`/dashboard/sales/quotations/${quotation.id}`}
+                  className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 transition-none"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <FileText size={14} />
+                  Lihat Penawaran
+                </Link>
+              ) : (
+                onCreateQuotation && deal.client_id && (
+                  <Link
+                    href={`/dashboard/sales/quotations/create?client_id=${deal.client_id}&deal_id=${deal.id}`}
+                    className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 transition-none"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <FilePlus size={14} />
+                    Buat Penawaran
+                  </Link>
+                )
+              )}
+
+              <button
+                onClick={() => onEdit(deal)}
+                className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-blue-600 hover:bg-blue-50 flex items-center gap-2 transition-none border-t border-gray-50"
+              >
+                <Eye size={14} />
+                Detail Transaksi
+              </button>
+
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(deal.id); }}
+                className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-rose-600 hover:bg-rose-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+              >
+                <Trash2 size={14} />
+                Hapus Transaksi
+              </button>
+            </ActionMenu>
           </div>
         );
       }

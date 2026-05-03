@@ -16,7 +16,10 @@ import {
   ListTodo, 
   Edit2, 
   Trash2,
+  Eye,
+  MoreVertical
 } from 'lucide-react';
+import { ActionMenu } from '@/components/shared/ActionMenu';
 import { BaseDataTable, ColumnConfig } from '@/components/shared/tables/BaseDataTable';
 
 interface Props {
@@ -148,25 +151,33 @@ export const ProjectsTableView: React.FC<Props> = ({
       headerClassName: 'text-center',
       className: 'text-center',
       render: (project) => (
-        <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <ActionButton
-            icon={ListTodo}
-            variant="emerald"
-            href={`/dashboard/projects/tasks/${project.id}`}
-            title="Buka Tasks Proyek"
-          />
-          <ActionButton
-            icon={Edit2}
-            variant="blue"
-            onClick={() => onEdit(project)}
-            title="Edit Proyek"
-          />
-          <ActionButton
-            icon={Trash2}
-            variant="rose"
-            onClick={() => onDelete(project.id, project.name)}
-            title="Hapus Proyek"
-          />
+        <div className="flex justify-center">
+          <ActionMenu>
+            <Link
+              href={`/dashboard/projects/tasks/${project.id}`}
+              className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 transition-none"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ListTodo size={14} />
+              Daftar Tugas
+            </Link>
+            
+            <button
+              onClick={() => onEdit(project)}
+              className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-blue-600 hover:bg-blue-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+            >
+              <Eye size={14} />
+              Detail Proyek
+            </button>
+            
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(project.id, project.name); }}
+              className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-rose-600 hover:bg-rose-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+            >
+              <Trash2 size={14} />
+              Hapus Proyek
+            </button>
+          </ActionMenu>
         </div>
       )
     }

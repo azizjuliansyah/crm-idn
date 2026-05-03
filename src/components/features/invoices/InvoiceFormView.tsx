@@ -710,7 +710,6 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
               label="Nomor Invoice"
               value={invoiceNumber}
               onChange={e => setInvoiceNumber(e.target.value)}
-              className="font-medium h-[46px]"
             />
             <ComboBox
               label="Status"
@@ -727,14 +726,12 @@ export const InvoiceFormView: React.FC<Props> = ({ company, editingId, initialCl
               type="date"
               value={date}
               onChange={e => setDate(e.target.value)}
-              className="font-medium h-[46px]"
             />
             <Input
               label="Jatuh Tempo"
               type="date"
               value={dueDate}
               onChange={e => setDueDate(e.target.value)}
-              className="font-medium h-[46px]"
             />
             <ComboBox
               label="Referensi Proforma"

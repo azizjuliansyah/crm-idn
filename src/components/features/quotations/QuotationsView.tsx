@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Plus, Loader2, FileCheck, FileText, FilePlus, Clock, FileDown, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Loader2, FileCheck, FileText, FilePlus, Clock, FileDown, Edit2, Trash2, MoreVertical, Eye } from 'lucide-react';
+import { ActionMenu } from '@/components/shared/ActionMenu';
 
 import { 
   H2, Subtext, Modal, Badge, Label
@@ -279,31 +280,38 @@ export const QuotationsView: React.FC<Props> = ({ company }) => {
       headerClassName: 'text-center',
       className: 'text-center',
       render: (q: Quotation) => (
-        <div className="flex items-center justify-center gap-2">
-          <ActionButton
-            icon={FileDown}
-            variant="emerald"
-            onClick={() => downloadQuotationPDF(q, company)}
-            title="Unduh PDF"
-          />
-          <ActionButton
-            icon={FilePlus}
-            variant="indigo"
-            onClick={() => setRequestModal({ isOpen: true, quotationId: q.id, quotationStatus: q.status })}
-            title="Buat Request Tambahan"
-          />
-          <ActionButton
-            icon={Edit2}
-            variant="blue"
-            href={`/dashboard/sales/quotations/${q.id}`}
-            title="Edit"
-          />
-          <ActionButton
-            icon={Trash2}
-            variant="rose"
-            onClick={() => setConfirmDelete({ isOpen: true, id: q.id, number: q.number })}
-            title="Hapus"
-          />
+        <div className="flex justify-center">
+          <ActionMenu>
+            <button
+              onClick={() => downloadQuotationPDF(q, company)}
+              className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 transition-none"
+            >
+              <FileDown size={14} />
+              Unduh PDF
+            </button>
+            <button
+              onClick={() => setRequestModal({ isOpen: true, quotationId: q.id, quotationStatus: q.status })}
+              className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-indigo-600 hover:bg-indigo-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+            >
+              <FilePlus size={14} />
+              Request Tambahan
+            </button>
+            <Link
+              href={`/dashboard/sales/quotations/${q.id}`}
+              className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-blue-600 hover:bg-blue-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Eye size={14} />
+              Edit Penawaran
+            </Link>
+            <button
+              onClick={() => setConfirmDelete({ isOpen: true, id: q.id, number: q.number })}
+              className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-rose-600 hover:bg-rose-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+            >
+              <Trash2 size={14} />
+              Hapus Penawaran
+            </button>
+          </ActionMenu>
         </div>
       )
     }

@@ -13,8 +13,10 @@ import {
   Trash2, 
   MapPin, 
   Mail, 
-  Phone
+  Phone,
+  MoreVertical
 } from 'lucide-react';
+import { ActionMenu } from '@/components/shared/ActionMenu';
 import { BaseDataTable, ColumnConfig } from '@/components/shared/tables/BaseDataTable';
 
 interface Props {
@@ -106,9 +108,23 @@ export const ClientCompaniesTableView: React.FC<Props> = ({
       headerClassName: 'text-center',
       className: 'text-center',
       render: (item) => (
-        <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-          <ActionButton icon={Edit2} variant="blue" onClick={() => onEdit(item)} title="Edit" />
-          <ActionButton icon={Trash2} variant="rose" onClick={() => onDelete(item.id, item.name)} title="Hapus" />
+        <div className="flex justify-center">
+          <ActionMenu>
+            <button
+              onClick={() => onEdit(item)}
+              className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-blue-600 hover:bg-blue-50 flex items-center gap-2 transition-none"
+            >
+              <Edit2 size={14} />
+              Edit Perusahaan
+            </button>
+            <button
+              onClick={() => onDelete(item.id, item.name)}
+              className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-rose-600 hover:bg-rose-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+            >
+              <Trash2 size={14} />
+              Hapus Perusahaan
+            </button>
+          </ActionMenu>
         </div>
       )
     }

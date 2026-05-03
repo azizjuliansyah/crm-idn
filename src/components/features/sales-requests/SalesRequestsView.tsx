@@ -11,9 +11,10 @@ import { supabase } from '@/lib/supabase';
 import { Company, SalesRequest, SalesRequestCategory } from '@/lib/types';
 import {
     Plus, FileQuestion, Loader2,
-    Check, Trash2, Clock, User, FileText, FileCheck, Zap, X
+    Check, Trash2, Clock, User, FileText, FileCheck, Zap, X, MoreVertical, Eye
 } from 'lucide-react';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
+import { ActionMenu } from '@/components/shared/ActionMenu';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
 import { ConfirmBulkDeleteModal } from '@/components/shared/modals/ConfirmBulkDeleteModal';
 import { ConfirmBulkStatusModal } from '@/components/shared/modals/ConfirmBulkStatusModal';
@@ -273,61 +274,66 @@ export const SalesRequestsView: React.FC<Props> = ({
             key: 'actions' as any,
             className: 'text-center',
             render: (r: SalesRequest) => (
-                <div className="flex items-center justify-center gap-2">
-                    {r.status === 'Pending' && hasApprovalPermission && (
-                        <>
-                            <ActionButton
-                                icon={Check}
-                                variant="emerald"
-                                onClick={async () => {
-                                    setIsProcessing(true);
-                                    try {
-                                        const { error } = await supabase
-                                            .from('sales_requests')
-                                            .update({ status: 'Approved' })
-                                            .eq('id', r.id);
-                            
-                                        if (error) throw error;
-                                        showToast(`Request telah di-approved.`, 'success');
-                                        refetchRequests();
-                                    } catch (err: any) {
-                                        showToast(err.message, 'error');
-                                    } finally {
-                                        setIsProcessing(false);
-                                    }
-                                }}
-                                title="Approve"
-                            />
-                            <ActionButton
-                                icon={X}
-                                variant="rose"
-                                onClick={async () => {
-                                    setIsProcessing(true);
-                                    try {
-                                        const { error } = await supabase
-                                            .from('sales_requests')
-                                            .update({ status: 'Rejected' })
-                                            .eq('id', r.id);
-                            
-                                        if (error) throw error;
-                                        showToast(`Request telah di-rejected.`, 'success');
-                                        refetchRequests();
-                                    } catch (err: any) {
-                                        showToast(err.message, 'error');
-                                    } finally {
-                                        setIsProcessing(false);
-                                    }
-                                }}
-                                title="Reject"
-                            />
-                        </>
-                    )}
-                    <ActionButton
-                        icon={Trash2}
-                        variant="rose"
-                        onClick={() => setConfirmDelete({ isOpen: true, id: r.id })}
-                        title="Hapus"
-                    />
+                <div className="flex justify-center">
+                    <ActionMenu>
+                        {r.status === 'Pending' && hasApprovalPermission && (
+                            <>
+                                <button
+                                    onClick={async () => {
+                                        setIsProcessing(true);
+                                        try {
+                                            const { error } = await supabase
+                                                .from('sales_requests')
+                                                .update({ status: 'Approved' })
+                                                .eq('id', r.id);
+                                
+                                            if (error) throw error;
+                                            showToast(`Request telah di-approved.`, 'success');
+                                            refetchRequests();
+                                        } catch (err: any) {
+                                            showToast(err.message, 'error');
+                                        } finally {
+                                            setIsProcessing(false);
+                                        }
+                                    }}
+                                    className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 transition-none"
+                                >
+                                    <Check size={14} />
+                                    Setujui (Approve)
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        setIsProcessing(true);
+                                        try {
+                                            const { error } = await supabase
+                                                .from('sales_requests')
+                                                .update({ status: 'Rejected' })
+                                                .eq('id', r.id);
+                                
+                                            if (error) throw error;
+                                            showToast(`Request telah di-rejected.`, 'success');
+                                            refetchRequests();
+                                        } catch (err: any) {
+                                            showToast(err.message, 'error');
+                                        } finally {
+                                            setIsProcessing(false);
+                                        }
+                                    }}
+                                    className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-rose-600 hover:bg-rose-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+                                >
+                                    <X size={14} />
+                                    Tolak (Reject)
+                                </button>
+                            </>
+                        )}
+                        <button
+                            onClick={() => setConfirmDelete({ isOpen: true, id: r.id })}
+                            className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-rose-600 hover:bg-rose-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+                        >
+                            <Trash2 size={14} />
+                            Hapus Request
+                        </button>
+                    </ActionMenu>
                 </div>
             )
         }

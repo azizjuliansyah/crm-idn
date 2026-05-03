@@ -511,7 +511,7 @@ export const QuotationFormView: React.FC<Props> = ({ company, editingId, initial
                 onSearchChange={setClientSearch}
               />
             </div>
-            <div className="space-y-1.5"><Label className="ml-1 ">Nomor Penawaran</Label><Input type="text" value={quotationNumber} onChange={(e: any) => setQuotationNumber(e.target.value)} className="!py-3" /></div>
+            <Input label="Nomor Penawaran" value={quotationNumber} onChange={(e: any) => setQuotationNumber(e.target.value)} />
             <ComboBox
               label="Status"
               value={status}
@@ -523,8 +523,8 @@ export const QuotationFormView: React.FC<Props> = ({ company, editingId, initial
                 { value: 'Declined', label: 'Declined' },
               ]}
             />
-            <div className="space-y-1.5"><Label className="ml-1 ">Tanggal</Label><Input type="date" value={date} onChange={(e: any) => setDate(e.target.value)} className="!py-3" /></div>
-            <div className="space-y-1.5"><Label className="ml-1 ">Berlaku Sampai</Label><Input type="date" value={expiryDate} onChange={(e: any) => setExpiryDate(e.target.value)} className="!py-3" /></div>
+            <Input label="Tanggal" type="date" value={date} onChange={(e: any) => setDate(e.target.value)} />
+            <Input label="Berlaku Sampai" type="date" value={expiryDate} onChange={(e: any) => setExpiryDate(e.target.value)} />
             <ComboBox
               label="Hubungkan Deal (Optional)"
               value={dealId?.toString() || ''}

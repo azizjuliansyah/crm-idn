@@ -18,8 +18,9 @@ import { Company, KbArticle as KnowledgeBaseArticle, KbCategory as KnowledgeBase
 import {
   Plus, Book, MessageSquare,
   ChevronRight, Tag, Clock, Newspaper,
-  Settings, Edit, Trash2
+  Settings, Edit, Trash2, MoreVertical
 } from 'lucide-react';
+import { ActionMenu } from '@/components/shared/ActionMenu';
 import { ConfirmBulkDeleteModal } from '@/components/shared/modals/ConfirmBulkDeleteModal';
 import { KnowledgeBaseArticleModal } from './KnowledgeBaseArticleModal';
 import { KnowledgeBaseCategoryModal } from './KnowledgeBaseCategoryModal';
@@ -194,18 +195,43 @@ export const KnowledgeBaseView: React.FC<Props> = ({ activeCompany: company }) =
     {
       header: 'Aksi',
       key: 'actions' as any,
-      className: 'pr-6 text-right w-16',
+      className: 'pr-6 text-center w-16',
       render: (article: KnowledgeBaseArticle) => (
-        <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
-          <ActionButton
-            icon={Edit}
-            variant="blue"
-            title="Edit Artikel"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleEditArticle(article);
-            }}
-          />
+        <div className="flex justify-center">
+          <ActionMenu>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEditArticle(article);
+              }}
+              className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-blue-600 hover:bg-blue-50 flex items-center gap-2 transition-none"
+            >
+              <Edit size={14} />
+              Edit Artikel
+            </button>
+            <button
+              onClick={async (e) => {
+                e.stopPropagation();
+                if (window.confirm('Apakah Anda yakin ingin menghapus artikel ini?')) {
+                  try {
+                    const { error } = await supabase
+                      .from('kb_articles')
+                      .delete()
+                      .eq('id', article.id);
+                    if (error) throw error;
+                    showToast('Artikel berhasil dihapus', 'success');
+                    refetchArticles();
+                  } catch (err: any) {
+                    showToast(err.message, 'error');
+                  }
+                }
+              }}
+              className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-rose-600 hover:bg-rose-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+            >
+              <Trash2 size={14} />
+              Hapus Artikel
+            </button>
+          </ActionMenu>
         </div>
       )
     }

@@ -2,7 +2,8 @@ import React, { useMemo } from 'react';
 import { Badge, Label, Subtext } from '@/components/ui';
 import { SupportTicket } from '@/lib/types';
 import { ActionButton } from '@/components/shared/buttons/ActionButton';
-import { Trash2, Edit2, Zap } from 'lucide-react';
+import { ActionMenu } from '@/components/shared/ActionMenu';
+import { Trash2, Edit2, Zap, Eye, MoreVertical } from 'lucide-react';
 import { BaseDataTable, ColumnConfig } from '@/components/shared/tables/BaseDataTable';
 import { SortConfig, SortKey } from '@/lib/hooks/useSupportTicketFilters';
 
@@ -99,19 +100,23 @@ export const ComplaintsTableView: React.FC<Props> = ({
       headerClassName: 'text-center',
       className: 'text-center',
       render: (t: SupportTicket) => (
-        <div className="flex items-center justify-center gap-2">
-          <ActionButton
-            icon={Edit2}
-            variant="blue"
-            onClick={() => onEdit(t)}
-            title="Edit Keluhan"
-          />
-          <ActionButton
-            icon={Trash2}
-            variant="rose"
-            onClick={() => onDelete(t.id)}
-            title="Hapus Keluhan"
-          />
+        <div className="flex justify-center">
+          <ActionMenu>
+            <button
+              onClick={() => onEdit(t)}
+              className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-blue-600 hover:bg-blue-50 flex items-center gap-2 transition-none"
+            >
+              <Eye size={14} />
+              Detail Keluhan
+            </button>
+            <button
+              onClick={() => onDelete(t.id)}
+              className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-rose-600 hover:bg-rose-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+            >
+              <Trash2 size={14} />
+              Hapus Keluhan
+            </button>
+          </ActionMenu>
         </div>
       )
     }

@@ -29,7 +29,7 @@ export const ActivityHeader: React.FC<ActivityHeaderProps> = ({
     setendDateFilter
 }) => {
     return (
-        <div className="flex flex-col gap-4 bg-gray-50/50 p-6 rounded-2xl border border-gray-100 shrink-0">
+        <div className="flex flex-col gap-4 bg-white p-6 rounded-2xl border-2 border-gray-300 shrink-0">
             <div className="flex items-center justify-between">
                 <div>
                     <H2 className="text-xl font-semibold text-gray-900 !capitalize !">Aktivitas Tim Sales</H2>

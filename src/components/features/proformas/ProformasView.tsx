@@ -8,8 +8,9 @@ import { Company, ProformaInvoice, SalesRequestCategory } from '@/lib/types';
 import {
   Plus, Edit2, Trash2, Loader2, FileCheck,
   FileDown, FileText, FilePlus,
-  Clock
+  Clock, MoreVertical, Eye
 } from 'lucide-react';
+import { ActionMenu } from '@/components/shared/ActionMenu';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { generateTemplate6 } from '@/lib/pdf-templates';
@@ -418,31 +419,38 @@ export const ProformasView: React.FC<Props> = ({ company }) => {
       headerClassName: 'text-center',
       className: 'text-center',
       render: (r: ProformaInvoice) => (
-        <div className="flex items-center justify-center gap-2">
-          <ActionButton
-            icon={FileDown}
-            variant="emerald"
-            onClick={() => handleDownloadPDF(r)}
-            title="Unduh PDF"
-          />
-          <ActionButton
-            icon={FilePlus}
-            variant="indigo"
-            onClick={() => setRequestModal({ isOpen: true, proformaId: r.id, proformaStatus: r.status })}
-            title="Buat Request Berdasarkan Proforma"
-          />
-          <ActionButton
-            icon={Edit2}
-            variant="blue"
-            href={`/dashboard/sales/proformas/${r.id}`}
-            title="Edit"
-          />
-          <ActionButton
-            icon={Trash2}
-            variant="rose"
-            onClick={() => setConfirmDelete({ isOpen: true, id: r.id, number: r.number })}
-            title="Hapus"
-          />
+        <div className="flex justify-center">
+          <ActionMenu>
+            <button
+              onClick={() => handleDownloadPDF(r)}
+              className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 transition-none"
+            >
+              <FileDown size={14} />
+              Unduh PDF
+            </button>
+            <button
+              onClick={() => setRequestModal({ isOpen: true, proformaId: r.id, proformaStatus: r.status })}
+              className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-indigo-600 hover:bg-indigo-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+            >
+              <FilePlus size={14} />
+              Request Tambahan
+            </button>
+            <Link
+              href={`/dashboard/sales/proformas/${r.id}`}
+              className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-blue-600 hover:bg-blue-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Eye size={14} />
+              Edit Proforma
+            </Link>
+            <button
+              onClick={() => setConfirmDelete({ isOpen: true, id: r.id, number: r.number })}
+              className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-rose-600 hover:bg-rose-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+            >
+              <Trash2 size={14} />
+              Hapus Proforma
+            </button>
+          </ActionMenu>
         </div>
       )
     }

@@ -7,8 +7,9 @@ import { supabase } from '@/lib/supabase';
 import { Company, Invoice } from '@/lib/types';
 import {
   Plus, Edit2, Trash2, Loader2, FileBadge,
-  FileDown, Download, FilePlus
+  FileDown, Download, FilePlus, MoreVertical, Eye
 } from 'lucide-react';
+import { ActionMenu } from '@/components/shared/ActionMenu';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { generateTemplate1, generateTemplate5, generateTemplate6 } from '@/lib/pdf-templates';
@@ -572,41 +573,49 @@ export const InvoicesView: React.FC<Props> = ({ company }) => {
               key: 'actions',
               className: 'text-center',
               render: (inv) => (
-                <div className="flex items-center justify-center gap-2">
-                  <ActionButton
-                    icon={FileDown}
-                    variant="emerald"
-                    onClick={() => handleDownloadPDF(inv)}
-                    title="Unduh PDF"
-                  />
-                  {inv.status === 'Paid' && (inv as any).kwitansis?.length > 0 && (
-                    <ActionButton
-                      icon={Download}
-                      variant="rose"
-                      onClick={() => handleDownloadKwitansi(inv)}
-                      title="Unduh Kwitansi"
-                    />
-                  )}
-                  {inv.status === 'Paid' && (inv as any).kwitansis?.length === 0 && hasApprovalPermission && (
-                    <ActionButton
-                      icon={FilePlus}
-                      variant="indigo"
-                      onClick={() => handleCreateKwitansi(inv)}
-                      title="Buat Kwitansi"
-                    />
-                  )}
-                  <ActionButton
-                    icon={Edit2}
-                    variant="blue"
-                    href={`/dashboard/sales/invoices/${inv.id}`}
-                    title="Edit"
-                  />
-                  <ActionButton
-                    icon={Trash2}
-                    variant="rose"
-                    onClick={() => setConfirmDelete({ isOpen: true, id: inv.id, number: inv.number })}
-                    title="Hapus"
-                  />
+                <div className="flex justify-center">
+                  <ActionMenu>
+                    <button
+                      onClick={() => handleDownloadPDF(inv)}
+                      className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-emerald-600 hover:bg-emerald-50 flex items-center gap-2 transition-none"
+                    >
+                      <FileDown size={14} />
+                      Unduh PDF
+                    </button>
+                    {inv.status === 'Paid' && (inv as any).kwitansis?.length > 0 && (
+                      <button
+                        onClick={() => handleDownloadKwitansi(inv)}
+                        className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-rose-600 hover:bg-rose-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+                      >
+                        <Download size={14} />
+                        Unduh Kwitansi
+                      </button>
+                    )}
+                    {inv.status === 'Paid' && (inv as any).kwitansis?.length === 0 && hasApprovalPermission && (
+                      <button
+                        onClick={() => handleCreateKwitansi(inv)}
+                        className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-indigo-600 hover:bg-indigo-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+                      >
+                        <FilePlus size={14} />
+                        Buat Kwitansi
+                      </button>
+                    )}
+                    <Link
+                      href={`/dashboard/sales/invoices/${inv.id}`}
+                      className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-blue-600 hover:bg-blue-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Eye size={14} />
+                      Edit Invoice
+                    </Link>
+                    <button
+                      onClick={() => setConfirmDelete({ isOpen: true, id: inv.id, number: inv.number })}
+                      className="w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase text-rose-600 hover:bg-rose-50 border-t border-gray-50 flex items-center gap-2 transition-none"
+                    >
+                      <Trash2 size={14} />
+                      Hapus Invoice
+                    </button>
+                  </ActionMenu>
                 </div>
               )
             }

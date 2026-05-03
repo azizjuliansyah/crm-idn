@@ -16,7 +16,7 @@ interface ActivityMetricsProps {
 
 export const ActivityMetrics: React.FC<ActivityMetricsProps> = ({ metrics }) => {
     return (
-        <div className="grid grid-cols-5 gap-4 shrink-0">
+        <div className="grid grid-cols-5 gap-6 shrink-0">
             <MetricCard
                 title="Jumlah Leads"
                 value={metrics.leadsCount}

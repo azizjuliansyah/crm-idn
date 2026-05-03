@@ -28,7 +28,7 @@ export const ActivitySummaryChart: React.FC<ActivitySummaryChartProps> = ({
     setSelectedMetrics
 }) => {
     return (
-        <div className="bg-white border border-gray-100 rounded-2xl p-6 shrink-0 flex flex-col gap-6">
+        <div className="bg-white border-2 border-gray-300 rounded-2xl p-8 shrink-0 flex flex-col gap-6">
             <div>
                 <H2 className="text-sm font-semibold text-gray-900 !capitalize !">Grafik Ringkasan Aktivitas</H2>
                 <Subtext className="text-xs text-gray-500 mt-1">Visualisasi tren aktivitas berdasarkan filter.</Subtext>

@@ -178,7 +178,7 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
                 badgeVariant === 'violet' ? 'bg-violet-50 text-violet-600 border-violet-100' :
                 'bg-gray-50 text-gray-400 border-gray-200'
               }`
-            : `${size === 'sm' ? 'gap-2 px-3 py-2' : 'gap-3 px-5 py-3.5'} bg-white border rounded-md ${isOpen ? 'border-blue-500 ring-4 ring-blue-50/50' : 'border-gray-200 hover:border-gray-300'}`
+            : `${size === 'sm' ? 'gap-2 px-3 py-2' : 'gap-3 px-5 py-3.5'} bg-white border-2 rounded-md ${isOpen ? 'border-blue-500 ring-4 ring-blue-50/50' : 'border-gray-300 hover:border-gray-400'}`
           }
           ${disabled ? 'opacity-50 cursor-not-allowed grayscale' : ''}
           ${error ? 'border-rose-300 ring-rose-50/50' : ''}
