@@ -98,17 +98,17 @@ export function KanbanBoard<T extends KanbanItem>({
                             }}
                             className="flex flex-col gap-3 min-w-[260px] w-[260px] h-full transition-all"
                         >
-                            <div className={`p-4 ${stage.colorClass || 'bg-blue-500'} rounded-2xl shadow-lg shadow-black/5 flex items-center justify-between border-b-4 border-black/10`}>
+                            <div className={`p-4 ${stage.colorClass || 'bg-blue-500'} rounded-2xl border-b-4 border-black/10 flex items-center justify-between`}>
                                 <Label className="text-[10px] uppercase text-white font-semibold tracking-wider">{stage.name}</Label>
                                 <div className="flex items-center justify-center bg-white/20 px-2.5 py-1 rounded-lg border border-white/20">
                                     <Label className="text-[10px] text-white font-medium">{columnItems.length}</Label>
                                 </div>
                             </div>
 
-                            <div className={`flex-1 min-h-0 relative rounded-2xl border-2 border-dashed transition-all overflow-hidden ${dropTarget?.stage === sKey && dropTarget?.index === undefined ? 'bg-blue-50/50 border-blue-300' : 'bg-gray-50/50 border-gray-200'}`}>
+                            <div className={`flex-1 min-h-0 relative rounded-2xl border-2 border-dashed transition-all overflow-hidden ${dropTarget?.stage === sKey && dropTarget?.index === undefined ? 'bg-blue-50/50 border-blue-300' : 'bg-gray-50/50 border-gray-300'}`}>
                                 <div className="absolute inset-0 overflow-y-auto custom-scrollbar p-2">
                                     {columnItems.length === 0 && (
-                                        <div className="h-24 flex items-center justify-center border-2 border-dashed border-gray-100 rounded-2xl text-[9px] uppercase text-gray-200 tracking-[0.2em] font-medium">
+                                        <div className="h-24 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-2xl text-[9px] uppercase text-gray-200 tracking-[0.2em] font-medium">
                                             Kosong
                                         </div>
                                     )}

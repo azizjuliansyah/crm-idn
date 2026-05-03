@@ -80,8 +80,8 @@ export const Toast: React.FC<ToastProps> = ({
 
     return createPortal(
         <div
-            className={`fixed top-6 right-6 z-[999999] flex items-center gap-4 px-3 py-3 min-w-[320px] rounded-2xl border backdrop-blur-md transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] transform ${isVisible ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-4 opacity-0 scale-95'
-                } ${variant.bg} ${variant.border} shadow-xl ${variant.glow}`}
+            className={`fixed top-6 right-6 z-[999999] flex items-center gap-4 px-3 py-3 min-w-[320px] rounded-2xl border-2 backdrop-blur-md transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] transform ${isVisible ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-4 opacity-0 scale-95'
+                } ${variant.bg} ${variant.border} shadow-none`}
         >
             <div className="shrink-0 p-2 bg-white/50 rounded-xl">
                 {variant.icon}

@@ -180,7 +180,7 @@ export const UrgencyLevelsSettingsView: React.FC<Props> = ({ company }) => {
 
     return (
         <div className="max-w-4xl flex flex-col space-y-6">
-            <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+            <div className="flex items-center justify-between bg-white p-4 rounded-2xl border-2 border-gray-300 shadow-none shrink-0">
                 <div>
                     <H2 className="text-xl ">Tingkat Urgensi</H2>
                     <Subtext className="text-[10px] uppercase font-semibold text-gray-400">Atur prioritas status untuk Request yang dinamis.</Subtext>
@@ -188,7 +188,7 @@ export const UrgencyLevelsSettingsView: React.FC<Props> = ({ company }) => {
                 <Button
                     onClick={handleAddClick}
                     leftIcon={<Plus size={14} strokeWidth={3} />}
-                    className="!px-6 py-2.5 text-[10px] uppercase shadow-lg shadow-blue-100"
+                    className="!px-6 py-2.5 text-[10px] uppercase shadow-none"
                     variant='primary'
                     size='sm'
                 >
@@ -196,15 +196,15 @@ export const UrgencyLevelsSettingsView: React.FC<Props> = ({ company }) => {
                 </Button>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden p-6 space-y-3">
+            <div className="bg-white rounded-2xl border-2 border-gray-300 shadow-none overflow-hidden p-6 space-y-3">
                 {urgencies.map((u, idx) => {
                     return (
-                        <div key={u.id} className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-xl hover:border-blue-200 transition-all group">
+                        <div key={u.id} className="flex items-center justify-between p-4 bg-gray-50 border-2 border-gray-300 rounded-xl hover:border-blue-500 transition-all group shadow-none">
                             <div className="flex items-center gap-4">
                                 <div className="text-gray-300">
                                     <GripVertical size={18} />
                                 </div>
-                                <div className={`w-9 h-9 border rounded-lg flex items-center justify-center shadow-sm ${getColorClasses(u.color || 'gray')}`}>
+                                <div className={`w-9 h-9 border-2 rounded-lg flex items-center justify-center shadow-none ${getColorClasses(u.color || 'gray')}`}>
                                     <AlertTriangle size={16} />
                                 </div>
                                 <div>

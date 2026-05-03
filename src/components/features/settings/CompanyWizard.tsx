@@ -177,7 +177,7 @@ export const CompanyWizard: React.FC<Props> = ({ userId, onSuccess }) => {
                     value={form.name}
                     onChange={(e: any) => setForm({ ...form, name: e.target.value })}
                     placeholder="PT Teknologi Maju"
-                    className="!pl-12 !py-4 shadow-sm"
+                    className="!pl-12 !py-4 shadow-none border-2 border-gray-300"
                   />
                 </div>
               </div>
@@ -192,7 +192,7 @@ export const CompanyWizard: React.FC<Props> = ({ userId, onSuccess }) => {
                     value={form.address}
                     onChange={(e: any) => setForm({ ...form, address: e.target.value })}
                     placeholder="Alamat lengkap operasional..."
-                    className="!pl-12 !py-4 shadow-sm !h-28"
+                    className="!pl-12 !py-4 shadow-none !h-28 border-2 border-gray-300"
                   />
                 </div>
               </div>
@@ -204,7 +204,7 @@ export const CompanyWizard: React.FC<Props> = ({ userId, onSuccess }) => {
               disabled={uploading}
               rightIcon={!loading && <ArrowRight size={18} />}
               variant="primary"
-              className="w-full !py-4 shadow-xl shadow-blue-100"
+              className="w-full !py-4 shadow-none border-2 border-blue-600"
             >
               {loading ? 'Memproses...' : 'Aktifkan Dashboard'}
             </Button>

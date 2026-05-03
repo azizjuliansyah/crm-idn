@@ -131,7 +131,7 @@ export const Pagination: React.FC<PaginationProps> = ({
               variant={currentPage === p ? 'primary' : 'ghost'}
               size="sm"
               onClick={() => onPageChange(p)}
-              className={`min-w-[32px] !h-8 !p-0 font-bold ${currentPage === p ? 'shadow-md shadow-blue-100' : ''}`}
+              className={`min-w-[32px] !h-8 !p-0 font-bold ${currentPage === p ? 'border-2 border-blue-500 bg-blue-50 text-blue-600' : ''}`}
             >
               {p}
             </Button>

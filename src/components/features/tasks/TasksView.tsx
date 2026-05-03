@@ -232,7 +232,7 @@ export const TasksView: React.FC<Props> = ({ company, user, members, projectId }
         leftElement={
           <Link
             href={project ? `/dashboard/projects/${project.pipeline_id}` : '/dashboard/projects'}
-            className="p-2.5 text-gray-400 hover:text-gray-900 border border-gray-100 rounded-xl hover:bg-gray-50 transition-all flex items-center justify-center shadow-sm"
+            className="p-2.5 text-gray-400 hover:text-gray-900 border border-gray-100 rounded-xl hover:bg-gray-50 transition-all flex items-center justify-center shadow-none"
           >
             <ArrowLeft size={16} />
           </Link>

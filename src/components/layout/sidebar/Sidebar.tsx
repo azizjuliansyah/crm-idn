@@ -68,16 +68,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Mobile Overlay */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99] lg:hidden transition-all duration-500" 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[99] lg:hidden transition-opacity duration-300" 
           onClick={() => setIsSidebarOpen(false)} 
         />
       )}
 
       {/* Sidebar Container */}
       <aside className={`
-        fixed inset-y-0 left-0 z-[100] w-[300px] bg-slate-900 border-r border-slate-800 flex flex-col transition-all duration-500 ease-in-out
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        ${!isSidebarVisible ? 'lg:-translate-x-full' : ''}
+        fixed inset-y-0 left-0 z-[100] w-[300px] bg-[#081526] border-r border-slate-800 flex flex-col transition-transform duration-300 ease-in-out will-change-transform
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        ${isSidebarVisible ? 'lg:translate-x-0' : 'lg:-translate-x-full'}
       `}>
         <WorkspaceSelector 
           activeCompany={activeCompany}

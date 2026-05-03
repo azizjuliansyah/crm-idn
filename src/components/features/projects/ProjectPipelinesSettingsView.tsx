@@ -222,7 +222,7 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
 
   return (
     <div className="flex flex-col space-y-6 max-w-5xl">
-      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border-2 border-gray-300 shadow-none shrink-0">
         <div>
           <H2 className="text-xl ">Project Pipeline Management</H2>
           <Subtext className="text-[10px] uppercase font-semibold text-gray-400">Kelola tahapan pengerjaan proyek di workspace Anda.</Subtext>
@@ -238,7 +238,7 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
         </Button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm flex flex-col relative">
+      <div className="bg-white rounded-2xl border-2 border-gray-300 overflow-hidden shadow-none flex flex-col relative">
         <Table>
           <TableHeader>
             <TableRow>
@@ -252,7 +252,7 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
               <TableRow key={p.id}>
                 <TableCell className="py-8 px-6">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-center text-blue-600 shadow-sm">
+                    <div className="w-10 h-10 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-center text-blue-600 shadow-none">
                       <Workflow size={20} />
                     </div>
                     <div>
@@ -266,7 +266,7 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
                 <TableCell className="py-8 px-6">
                   <div className="flex flex-wrap gap-2">
                     {p.stages?.map(s => (
-                      <Badge key={s.id} variant="neutral" className="px-3 py-1 bg-white border border-gray-100 text-[10px] text-gray-500 font-bold uppercase shadow-sm">
+                      <Badge key={s.id} variant="neutral" className="px-3 py-1 bg-white border border-gray-100 text-[10px] text-gray-500 font-bold uppercase shadow-none">
                         {s.name}
                       </Badge>
                     ))}
@@ -348,7 +348,7 @@ export const ProjectPipelinesSettingsView: React.FC<Props> = ({ company }) => {
 
               <div className="space-y-2">
                 {modalForm.stages.map((s, idx) => (
-                  <div key={idx} className="flex items-center justify-between gap-3 p-3 bg-white border border-gray-100 rounded-xl shadow-sm hover:border-blue-100 transition-all group w-full">
+                  <div key={idx} className="flex items-center justify-between gap-3 p-3 bg-white border border-gray-100 rounded-xl shadow-none hover:border-blue-100 transition-all group w-full">
                     <div className="flex items-center gap-3 flex-1">
                       <div className="w-6 h-6 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-[9px] font-bold text-gray-400 shrink-0">
                         {idx + 1}

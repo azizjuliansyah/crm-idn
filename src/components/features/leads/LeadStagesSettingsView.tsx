@@ -140,9 +140,9 @@ export const LeadStagesSettingsView: React.FC<Props> = ({ company }) => {
 
   return (
     <div className="flex flex-col space-y-6 max-w-4xl">
-      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border-2 border-gray-300 shadow-none shrink-0">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 shadow-sm">
+          <div className="w-10 h-10 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 shadow-none">
             <Target size={20} />
           </div>
           <div>
@@ -163,13 +163,13 @@ export const LeadStagesSettingsView: React.FC<Props> = ({ company }) => {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm p-6 space-y-3">
+      <div className="bg-white rounded-2xl border-2 border-gray-300 overflow-hidden shadow-none p-6 space-y-3">
         {stages.map((stage, idx) => {
           const isUsed = usedStatuses.includes(stage.name.toLowerCase());
           return (
             <div key={stage.id} className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 rounded-xl hover:border-blue-200 transition-all group">
               <div className="flex items-center gap-4">
-                <div className="w-8 h-8 bg-white border border-gray-100 rounded-lg flex items-center justify-center text-[10px] font-bold text-gray-400 shadow-sm">
+                <div className="w-8 h-8 bg-white border border-gray-100 rounded-lg flex items-center justify-center text-[10px] font-bold text-gray-400 shadow-none">
                   {idx + 1}
                 </div>
                 <div className="flex items-center gap-2">

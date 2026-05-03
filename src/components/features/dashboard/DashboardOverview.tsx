@@ -147,11 +147,11 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company, initialSt
         <Link 
           href="/dashboard/leads"
           onMouseEnter={() => router.prefetch('/dashboard/leads')}
-          className="bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-600 p-6 rounded-2xl shadow-xl shadow-blue-100 hover:translate-y-[-4px] transition-all group overflow-hidden relative block"
+          className="bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-600 p-6 rounded-2xl border-2 border-blue-400/30 hover:translate-y-[-4px] transition-all group overflow-hidden relative block"
         >
           <div className="absolute top-0 right-0 p-4 opacity-10 scale-150 rotate-12"><Users size={80} /></div>
           <div className="flex items-center justify-between mb-4 relative z-10">
-            <div className="w-12 h-12 rounded-xl bg-white/20 text-white flex items-center justify-center backdrop-blur-sm shadow-inner">
+            <div className="w-12 h-12 rounded-xl bg-white/20 text-white flex items-center justify-center backdrop-blur-sm">
               <Users size={22} />
             </div>
             <div className="flex items-center gap-1 text-white text-[10px]  bg-white/20 px-2.5 py-1 rounded-full uppercase backdrop-blur-md">
@@ -165,11 +165,11 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company, initialSt
         <Link 
           href="/dashboard/crm/deals"
           onMouseEnter={() => router.prefetch('/dashboard/crm/deals')}
-          className="bg-gradient-to-br from-violet-700 via-violet-600 to-purple-600 p-6 rounded-2xl shadow-xl shadow-purple-100 hover:translate-y-[-4px] transition-all group overflow-hidden relative block"
+          className="bg-gradient-to-br from-violet-700 via-violet-600 to-purple-600 p-6 rounded-2xl border-2 border-purple-400/30 hover:translate-y-[-4px] transition-all group overflow-hidden relative block"
         >
           <div className="absolute top-0 right-0 p-4 opacity-10 scale-150 rotate-12"><Target size={80} /></div>
           <div className="flex items-center justify-between mb-4 relative z-10">
-            <div className="w-12 h-12 rounded-xl bg-white/20 text-white flex items-center justify-center backdrop-blur-sm shadow-inner">
+            <div className="w-12 h-12 rounded-xl bg-white/20 text-white flex items-center justify-center backdrop-blur-sm">
               <Target size={22} />
             </div>
             <div className="flex items-center gap-1 text-white text-[10px]  bg-white/20 px-2.5 py-1 rounded-full uppercase backdrop-blur-md">
@@ -183,11 +183,11 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company, initialSt
         <Link 
           href="/dashboard/sales/quotations"
           onMouseEnter={() => router.prefetch('/dashboard/sales/quotations')}
-          className="bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 p-6 rounded-2xl shadow-xl shadow-emerald-100 hover:translate-y-[-4px] transition-all group overflow-hidden relative block"
+          className="bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 p-6 rounded-2xl border-2 border-emerald-400/30 hover:translate-y-[-4px] transition-all group overflow-hidden relative block"
         >
           <div className="absolute top-0 right-0 p-4 opacity-10 scale-150 rotate-12"><ReceiptCent size={80} /></div>
           <div className="flex items-center justify-between mb-4 relative z-10">
-            <div className="w-12 h-12 rounded-xl bg-white/20 text-white flex items-center justify-center backdrop-blur-sm shadow-inner">
+            <div className="w-12 h-12 rounded-xl bg-white/20 text-white flex items-center justify-center backdrop-blur-sm">
               <ReceiptCent size={22} />
             </div>
             <div className="flex items-center gap-1 text-white text-[10px]  bg-white/20 px-2.5 py-1 rounded-full uppercase backdrop-blur-md">
@@ -201,11 +201,11 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company, initialSt
         <Link 
           href="/dashboard/customer-service/tickets"
           onMouseEnter={() => router.prefetch('/dashboard/customer-service/tickets')}
-          className="bg-gradient-to-br from-rose-600 via-rose-500 to-pink-500 p-6 rounded-2xl shadow-xl shadow-rose-100 hover:translate-y-[-4px] transition-all group overflow-hidden relative block"
+          className="bg-gradient-to-br from-rose-600 via-rose-500 to-pink-500 p-6 rounded-2xl border-2 border-rose-400/30 hover:translate-y-[-4px] transition-all group overflow-hidden relative block"
         >
           <div className="absolute top-0 right-0 p-4 opacity-10 scale-150 rotate-12"><Ticket size={80} /></div>
           <div className="flex items-center justify-between mb-4 relative z-10">
-            <div className="w-12 h-12 rounded-xl bg-white/20 text-white flex items-center justify-center backdrop-blur-sm shadow-inner">
+            <div className="w-12 h-12 rounded-xl bg-white/20 text-white flex items-center justify-center backdrop-blur-sm">
               <Ticket size={22} />
             </div>
             <div className="px-2.5 py-1 bg-white/20 rounded-full text-[9px]  text-white uppercase  backdrop-blur-md">
@@ -219,7 +219,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company, initialSt
 
       {/* Main Charts Area */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
+        <div className="bg-white p-8 rounded-2xl border-2 border-gray-300 overflow-hidden">
           <div className="flex items-center justify-between mb-10">
             <div>
               <H3 className="normal-case text-lg  text-gray-900 ">Tren Pendapatan Bulanan</H3>
@@ -235,7 +235,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company, initialSt
                 <YAxis hide />
                 <Tooltip
                   cursor={{ fill: '#f9fafb' }}
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontWeight: 'bold', fontSize: '12px' }}
+                  contentStyle={{ borderRadius: '12px', border: '2px solid #d1d5db', boxShadow: 'none', fontWeight: 'bold', fontSize: '12px' }}
                   formatter={(value: any) => [formatIDR(Number(value)), 'Revenue']}
                 />
                 <Bar dataKey="amount" fill="#4F46E5" radius={[6, 6, 0, 0]} barSize={40} />
@@ -244,7 +244,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company, initialSt
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
+        <div className="bg-white p-8 rounded-2xl border-2 border-gray-300 overflow-hidden">
           <div className="flex items-center justify-between mb-10">
             <div>
               <H3 className="normal-case text-lg  text-gray-900 ">Distribusi Nilai Pipeline</H3>
@@ -265,7 +265,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company, initialSt
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 9, fontWeight: 'bold' }} dy={10} />
                 <YAxis hide />
                 <Tooltip
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontWeight: 'bold', fontSize: '12px' }}
+                  contentStyle={{ borderRadius: '12px', border: '2px solid #d1d5db', boxShadow: 'none', fontWeight: 'bold', fontSize: '12px' }}
                   formatter={(value: any) => [formatIDR(Number(value)), 'Value']}
                 />
                 <Area type="monotone" dataKey="value" stroke="#10B981" fillOpacity={1} fill="url(#colorValue)" strokeWidth={4} />
@@ -277,7 +277,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company, initialSt
 
       {/* Secondary Row: Leads & Support */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm lg:col-span-1">
+        <div className="bg-white p-8 rounded-2xl border-2 border-gray-300 lg:col-span-1 overflow-hidden">
           <div className="mb-8">
             <H3 className="normal-case text-lg  text-gray-900 ">Sumber Prospek</H3>
             <Subtext>Analisis channel pemasaran terkuat.</Subtext>
@@ -317,7 +317,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company, initialSt
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm lg:col-span-2">
+        <div className="bg-white p-8 rounded-2xl border-2 border-gray-300 lg:col-span-2 overflow-hidden">
           <div className="flex items-center justify-between mb-8">
             <div>
               <H3 className="normal-case text-lg  text-gray-900 ">Kesehatan Tim Support</H3>
@@ -334,7 +334,7 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company, initialSt
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10, fontWeight: 'bold' }} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10 }} />
                 <Tooltip
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', fontSize: '12px' }}
+                  contentStyle={{ borderRadius: '12px', border: '2px solid #d1d5db', boxShadow: 'none', fontSize: '12px' }}
                 />
                 <Line type="monotone" dataKey="value" stroke="#EF4444" strokeWidth={5} dot={{ r: 5, fill: '#EF4444', strokeWidth: 3, stroke: '#fff' }} activeDot={{ r: 8 }} />
               </LineChart>
@@ -362,8 +362,8 @@ export const DashboardOverview: React.FC<DashboardProps> = ({ company, initialSt
       </div>
 
       {/* Recent Activity Table */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="p-8 border-b border-gray-50 flex items-center justify-between">
+      <div className="bg-white rounded-2xl border-2 border-gray-300 overflow-hidden">
+        <div className="p-8 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
               <Clock size={20} />

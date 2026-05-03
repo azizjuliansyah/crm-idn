@@ -69,7 +69,7 @@ export const TeamMembersView: React.FC<Props> = ({ company, members, roles, user
 
   return (
     <div className="flex flex-col space-y-6 max-w-5xl">
-      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border-2 border-gray-300 shadow-none shrink-0">
         <div>
           <H2 className="text-xl ">Anggota Tim</H2>
           <Subtext className="text-[10px] uppercase font-semibold text-gray-400">Kelola akses dan keanggotaan staf di workspace Anda.</Subtext>
@@ -77,7 +77,7 @@ export const TeamMembersView: React.FC<Props> = ({ company, members, roles, user
         <Button
           onClick={() => setIsInviteModalOpen(true)}
           leftIcon={<Plus size={14} strokeWidth={3} />}
-          className="!px-6 py-2.5 text-[10px] uppercase shadow-lg shadow-blue-100"
+          className="!px-6 py-2.5 text-[10px] uppercase shadow-none"
           variant='primary'
           size='sm'
         >
@@ -85,7 +85,7 @@ export const TeamMembersView: React.FC<Props> = ({ company, members, roles, user
         </Button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm flex flex-col relative">
+      <div className="bg-white rounded-2xl border-2 border-gray-300 overflow-hidden shadow-none flex flex-col relative">
         <Table>
           <TableHeader>
             <TableRow>
@@ -98,7 +98,7 @@ export const TeamMembersView: React.FC<Props> = ({ company, members, roles, user
             {members.map(m => (
               <TableRow key={m.id}>
                 <TableCell className="flex items-center gap-3 py-4 px-6">
-                  <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-300 overflow-hidden shrink-0 shadow-sm">
+                  <div className="w-10 h-10 rounded-xl bg-gray-50 border-2 border-gray-100 flex items-center justify-center text-gray-300 overflow-hidden shrink-0 shadow-none">
                     {m.profile?.avatar_url ? (
                       <img src={m.profile.avatar_url} className="w-full h-full object-cover" alt="Avatar" />
                     ) : (

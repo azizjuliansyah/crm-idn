@@ -54,7 +54,7 @@ export const ProductsTableView: React.FC<ProductsTableViewProps> = ({
       className: 'py-5 px-6',
       render: (item: Product) => (
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shadow-sm border border-emerald-100 shrink-0">
+          <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shadow-none border border-emerald-100 shrink-0">
             <Package size={20} strokeWidth={2.5} />
           </div>
           <div className="min-w-0 text-left">
@@ -74,7 +74,7 @@ export const ProductsTableView: React.FC<ProductsTableViewProps> = ({
       sortable: true,
       className: 'py-5 px-6',
       render: (item: Product) => (
-        <Label className="px-3 py-1 bg-white border border-gray-100 rounded-full text-[9px] uppercase text-gray-500 shadow-sm">
+        <Label className="px-3 py-1 bg-white border border-gray-100 rounded-full text-[9px] uppercase text-gray-500 shadow-none">
           {item.product_categories?.name || 'Umum'}
         </Label>
       )

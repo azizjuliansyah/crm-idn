@@ -31,7 +31,7 @@ export const Input: React.FC<InputProps> = ({
           </div>
         )}
         <input
-          className={`w-full ${leftIcon ? 'pl-11' : 'pl-5'} ${rightIcon ? 'pr-11' : 'pr-5'} py-3.5 bg-white border border-gray-200 rounded-md font-medium text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all hover:border-gray-300 ${error ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-50/50' : ''} ${className}`}
+          className={`w-full ${leftIcon ? 'pl-11' : 'pl-5'} ${rightIcon ? 'pr-11' : 'pr-5'} py-3.5 bg-white border-2 border-gray-300 rounded-md font-medium text-sm text-gray-900 outline-none focus:border-blue-500 transition-all ${error ? 'border-rose-300 focus:border-rose-500' : ''} ${className}`}
           {...props}
         />
         {rightIcon && (

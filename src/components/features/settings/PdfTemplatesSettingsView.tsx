@@ -318,17 +318,17 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20 max-w-6xl">
-      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border-2 border-gray-300 shadow-none shrink-0">
         <div>
           <H2 className="text-xl ">Katalog Template Dokumen</H2>
           <Subtext className="text-[10px] uppercase font-semibold text-gray-400">Pilih gaya visual untuk penawaran dan invoice perusahaan Anda.</Subtext>
         </div>
-        <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shadow-sm">
+        <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center border-2 border-blue-100/50 shadow-none">
           <Palette size={20} />
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border-2 border-gray-300 shadow-none overflow-hidden">
 
         <div className="p-10 space-y-12">
           {['quotation', 'invoice', 'kwitansi'].map((type) => (
@@ -345,7 +345,7 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
                 </div>
                 <button
                   onClick={() => openConfig(type)}
-                  className="px-5 py-2.5 bg-white border border-gray-200 rounded-xl text-[10px] font-medium uppercase tracking-widest text-gray-600 hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm"
+                  className="px-5 py-2.5 bg-white border-2 border-gray-300 rounded-xl text-[10px] font-medium uppercase tracking-widest text-gray-600 hover:bg-gray-50 transition-all flex items-center gap-2 shadow-none"
                 >
                   <Settings2 size={14} /> Konfigurasi Konten
                 </button>
@@ -362,7 +362,7 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
                     <div
                       key={tmpl.id}
                       onClick={() => handleUpdateTemplate(type as any, tmpl.id)}
-                      className={`relative p-6 rounded-3xl border transition-all cursor-pointer group flex flex-col justify-between h-48 ${isActive ? 'bg-indigo-50/50 border-indigo-200 shadow-lg shadow-indigo-100/50' : 'bg-white border-gray-100 hover:border-indigo-100'}`}
+                      className={`relative p-6 rounded-3xl border-2 transition-all cursor-pointer group flex flex-col justify-between h-48 ${isActive ? 'bg-indigo-50/50 border-indigo-500 shadow-none' : 'bg-white border-gray-300 hover:border-indigo-500'}`}
                     >
                       {isActive && (
                         <div className="absolute -top-2 -right-2 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-lg border-2 border-white z-10 animate-in zoom-in">
@@ -381,7 +381,7 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
                       <div className="flex items-center justify-between mt-4">
                         <button
                           onClick={(e) => { e.stopPropagation(); handlePreview(tmpl.id, tmpl.name, type); }}
-                          className="px-4 py-2 bg-white border border-gray-100 rounded-lg text-[10px] font-medium uppercase tracking-widest text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm flex items-center gap-2"
+                          className="px-4 py-2 bg-white border-2 border-gray-300 rounded-lg text-[10px] font-medium uppercase tracking-widest text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-none flex items-center gap-2"
                         >
                           <Eye size={12} /> Preview
                         </button>
@@ -528,7 +528,7 @@ export const PdfTemplatesSettingsView: React.FC<Props> = ({ company }) => {
               <ExternalLink size={14} /> Buka di Tab Baru
             </button>
           </div>
-          <div className="flex-1 w-full bg-gray-100 rounded-b-xl overflow-hidden shadow-inner border border-gray-200">
+          <div className="flex-1 w-full bg-gray-100 rounded-b-xl overflow-hidden shadow-none border-2 border-gray-300">
             {previewUrl && <iframe src={previewUrl} className="w-full h-full" title="PDF Preview" />}
           </div>
         </div>

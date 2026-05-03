@@ -43,7 +43,7 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
             size="sm"
             isLoading={isProcessing}
             leftIcon={!isProcessing && <Trash2 size={10} />}
-            className="!px-3 py-1.5 text-[9px] uppercase font-bold shadow-lg shadow-rose-100"
+            className="!px-3 py-1.5 text-[9px] uppercase font-bold shadow-none"
           >
             Ya, Hapus
           </Button>

@@ -101,7 +101,7 @@ export const ProductUnitsView: React.FC<Props> = ({ company }) => {
 
   return (
     <div className="max-w-4xl flex flex-col space-y-6">
-      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border-2 border-gray-300 shadow-none shrink-0">
         <div>
           <H2 className="text-xl ">Satuan Produk</H2>
           <Subtext className="text-[10px] uppercase font-semibold text-gray-400">Atur standar pengukuran untuk produk dan jasa Anda.</Subtext>
@@ -111,12 +111,13 @@ export const ProductUnitsView: React.FC<Props> = ({ company }) => {
           leftIcon={<Plus size={14} strokeWidth={3} />}
           variant='primary'
           size='sm'
+          className="shadow-none"
         >
           Satuan Baru
         </Button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border-2 border-gray-300 shadow-none overflow-hidden">
 
         <div className="overflow-x-auto">
           <Table>

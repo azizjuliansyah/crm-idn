@@ -88,7 +88,7 @@ export const StandardFilterBar: React.FC<StandardFilterBarProps> = ({
   }, []);
 
   return (
-    <div className={`flex flex-col gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0 ${className}`}>
+    <div className={`flex flex-col gap-4 bg-white p-4 rounded-2xl border-2 border-gray-300 shadow-none shrink-0 ${className}`}>
       <div className="flex items-center justify-between gap-4 overflow-x-auto custom-scrollbar pb-1 md:pb-0">
         <div className="flex items-center gap-4 flex-1 min-w-[120px]">
           {leftElement}
@@ -110,7 +110,7 @@ export const StandardFilterBar: React.FC<StandardFilterBarProps> = ({
 
         <div className="flex items-center gap-3">
           {viewModes && viewModes.options.length > 0 && (
-            <div className="flex items-center gap-1 bg-gray-50 border border-gray-100 rounded-lg p-1 shrink-0">
+            <div className="flex items-center gap-1 bg-gray-50 border-2 border-gray-300 rounded-lg p-1 shrink-0">
               {viewModes.options.map((opt) => (
                 <Button
                   key={opt.mode}
@@ -118,7 +118,7 @@ export const StandardFilterBar: React.FC<StandardFilterBarProps> = ({
                   size="sm"
                   onClick={() => viewModes.onChange(opt.mode)}
                   className={`!p-1.5 rounded-md transition-all ${viewModes.current === opt.mode
-                      ? 'bg-white text-emerald-600 shadow-sm ring-1 ring-zinc-200'
+                      ? 'bg-white text-emerald-600 border-2 border-emerald-500'
                       : '!text-gray-400 hover:text-gray-600 hover:bg-gray-100/50'
                     }`}
                   title={opt.label || opt.mode}
@@ -147,7 +147,7 @@ export const StandardFilterBar: React.FC<StandardFilterBarProps> = ({
           {primaryAction && (
             <Button
               onClick={primaryAction.onClick}
-              className="!px-6 py-2.5 text-[10px] uppercase shadow-lg shadow-emerald-100/50 hover:shadow-emerald-200/50 transition-all font-bold tracking-wider"
+              className="!px-6 py-2.5 text-[10px] uppercase shadow-none transition-all font-bold tracking-wider"
               variant="primary"
               size="sm"
               leftIcon={primaryAction.icon || <Plus size={14} />}

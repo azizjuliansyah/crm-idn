@@ -224,7 +224,7 @@ export function GanttBoard<T extends GanttItem>({ items, stages, projectStartDat
   }, []);
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden text-gray-900 text-sm">
+    <div className="flex flex-col h-full bg-white rounded-2xl border-2 border-gray-300 shadow-none overflow-hidden text-gray-900 text-sm">
       {/* Toolbar */}
       <div className="flex items-center justify-between p-3 border-b border-gray-100 bg-gray-50/50">
         <div className="flex items-center gap-2">
@@ -260,7 +260,7 @@ export function GanttBoard<T extends GanttItem>({ items, stages, projectStartDat
 
       <div className="flex flex-1 overflow-hidden relative">
         {/* Fixed Task List Column */}
-        <div className="w-[300px] flex-shrink-0 border-r border-gray-100 bg-white z-20 flex flex-col shadow-[2px_0_5px_rgba(0,0,0,0.02)]">
+        <div className="w-[300px] flex-shrink-0 border-r-2 border-gray-300 bg-white z-20 flex flex-col shadow-none">
           {/* Header */}
           <div className="h-[73px] flex-shrink-0 border-b border-gray-100 flex flex-col justify-end p-3 uppercase text-xs font-semibold text-gray-500 bg-gray-50 relative z-30">
             Daftar Pekerjaan
@@ -311,7 +311,7 @@ export function GanttBoard<T extends GanttItem>({ items, stages, projectStartDat
           <div className="flex flex-col min-h-full" style={isStretching ? { width: '100%' } : { width: `${timelineDays.length * dayWidth}px`, minWidth: 'max-content' }}>
             
             {/* Timeline Header (Sticky Top) */}
-            <div className="sticky top-0 z-30 bg-white border-b border-gray-100 shadow-sm">
+            <div className="sticky top-0 z-30 bg-white border-b-2 border-gray-300 shadow-none">
               {/* Months Row */}
               <div className="flex h-8 border-b border-gray-100">
                 {months.map((m, i) => (
@@ -382,7 +382,7 @@ export function GanttBoard<T extends GanttItem>({ items, stages, projectStartDat
                       <div key={`row-${task.id}`} className="h-16 flex-shrink-0 border-b border-gray-100/50 relative group hover:bg-gray-50/30">
                         {style ? (
                           <div
-                            className={`absolute top-2.5 h-10 rounded-lg shadow-sm border border-black/5 cursor-pointer flex items-center px-3 overflow-hidden transition-all hover:brightness-110 hover:shadow-md ${getStageColor(task.stage_id)}`}
+                            className={`absolute top-2.5 h-10 rounded-lg shadow-none border-2 border-black/10 cursor-pointer flex items-center px-3 overflow-hidden transition-all hover:brightness-110 ${getStageColor(task.stage_id)}`}
                             style={{ left: style.left, width: style.width }}
                             onClick={() => onTaskClick?.(task)}
                             title={`${task.title} (${task.start_date || '?'} - ${task.end_date || '?'})`}

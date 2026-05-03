@@ -129,7 +129,7 @@ export const ProductsView: React.FC<Props> = ({
   };
 
   if (loadingMetadata || (productsLoading && products.length === 0)) return (
-    <div className="flex flex-col items-center justify-center py-24 bg-white rounded-2xl border border-gray-100 min-h-[400px]">
+    <div className="flex flex-col items-center justify-center py-24 bg-white rounded-2xl border-2 border-gray-300 shadow-none min-h-[400px]">
       <Loader2 className="animate-spin text-emerald-600 mb-4" size={32} />
       <Subtext className="text-[10px] uppercase text-gray-400">Sinkronisasi Katalog Produk...</Subtext>
     </div>

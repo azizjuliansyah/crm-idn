@@ -226,12 +226,12 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="" size="xl" hideClose noPadding noScroll>
-      <div className="flex flex-col h-[90vh] bg-white text-gray-900 overflow-hidden rounded-2xl border border-gray-100 shadow-2xl">
+      <div className="flex flex-col h-[90vh] bg-white text-gray-900 overflow-hidden rounded-2xl border-2 border-gray-300 shadow-none">
         <header className="px-6 h-16 flex items-center justify-between border-b border-gray-100 bg-white shrink-0">
           <div className="flex items-center gap-4">
             <Button variant="ghost" onClick={onClose} className="!p-1.5 text-gray-400 border border-transparent hover:border-gray-100 hover:text-gray-900 transition-all rounded-xl"><ChevronLeft size={20} /></Button>
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-rose-100 group">
+              <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-none group">
                 <Headset size={18} className="group-hover:rotate-12 transition-transform" />
               </div>
               <H2 className="text-base   uppercase">{form.title}</H2>
@@ -256,7 +256,7 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
           <div className="flex items-center gap-6">
             <Badge variant="ghost" className="px-2.5 py-1 border border-gray-200 text-[9px]  text-gray-600 bg-white uppercase  ring-1 ring-inset ring-gray-100">ID TICKET: {ticket.id}</Badge>
             <div className="flex items-center gap-1.5 text-[10px]  text-gray-400 uppercase "><Clock size={14} className="text-gray-300" /> Dibuat {new Date(ticket.created_at).toLocaleDateString('id-ID', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
-            <Badge variant={form.type === 'complaint' ? 'danger' : 'primary'} className="flex items-center gap-1.5 px-3 py-1 text-[9px]  uppercase tracking-[0.2em] border-none ring-1 ring-inset shadow-sm">
+            <Badge variant={form.type === 'complaint' ? 'danger' : 'primary'} className="flex items-center gap-1.5 px-3 py-1 text-[9px]  uppercase tracking-[0.2em] border-none ring-1 ring-inset shadow-none">
               <Layers size={10} /> {form.type === 'complaint' ? 'COMPLAINT' : 'STANDARD TICKET'}
             </Badge>
           </div>
@@ -271,7 +271,7 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
             {stages.map((stage, idx) => {
               const isActive = form.status?.toLowerCase() === stage.name.toLowerCase();
               let bgColor = 'bg-transparent text-gray-400 hover:text-gray-600';
-              if (isActive) bgColor = 'bg-white text-rose-600 shadow-sm ring-1 ring-gray-100';
+              if (isActive) bgColor = 'bg-white text-rose-600 shadow-none ring-1 ring-gray-100';
               return (
                 <Button key={stage.id} onClick={() => handleStatusChange(stage.name)} className={`relative flex-1 h-full flex items-center justify-center transition-all text-[9px]  uppercase tracking-[0.15em] rounded-lg ${bgColor}`}>
                   {stage.name}
@@ -320,7 +320,7 @@ export const SupportTicketDetailModal: React.FC<Props> = ({
                   ) : activities.map((act) => (
                     <TimelineItem key={act.id} className="pb-8">
                       <TimelineIcon>
-                        <div className={`w-full h-full rounded-lg bg-white flex items-center justify-center shadow-sm border ${act.activity_type === 'status_change' ? 'border-blue-50 text-blue-500' : 'border-gray-50 text-gray-400'}`}>
+                        <div className={`w-full h-full rounded-lg bg-white flex items-center justify-center shadow-none border ${act.activity_type === 'status_change' ? 'border-blue-50 text-blue-500' : 'border-gray-50 text-gray-400'}`}>
                           {act.activity_type === 'status_change' ? <RefreshCw size={12} /> : <MessageSquare size={12} />}
                         </div>
                       </TimelineIcon>

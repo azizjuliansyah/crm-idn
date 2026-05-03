@@ -221,7 +221,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         menuStates={menuStates}
       />
 
-      <main className={`flex-1 flex flex-col ${isAdmin && !activeCompany ? 'bg-black text-gray-100' : 'bg-white text-gray-900'} overflow-hidden relative w-full transition-all duration-500 ${isSidebarVisible ? 'lg:pl-[300px]' : 'pl-0'}`}>
+      <main className={`flex-1 flex flex-col ${isAdmin && !activeCompany ? 'bg-black text-gray-100' : 'bg-white text-gray-900'} overflow-hidden relative w-full transition-[padding] duration-300 ease-in-out will-change-[padding] ${isSidebarVisible ? 'lg:pl-[300px]' : 'lg:pl-0'}`}>
         <Header 
           isAdmin={isAdmin}
           activeCompany={activeCompany}

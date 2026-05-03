@@ -38,7 +38,7 @@ export const SupportTicketsKanbanView: React.FC<Props> = ({
   const renderCard = (t: KanbanSupportTicket, isDragged: boolean) => (
     <div
       onClick={() => onEdit(t)}
-      className={`group p-3 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-xl hover:shadow-gray-200/50 hover:border-rose-300 transition-all cursor-grab active:cursor-grabbing transform hover:-translate-y-1 relative ${isDragged ? 'opacity-30' : ''}`}
+      className={`group p-3 bg-white border-2 border-gray-300 rounded-2xl hover:border-rose-400 transition-all cursor-grab active:cursor-grabbing transform hover:-translate-y-1 relative ${isDragged ? 'opacity-30' : ''}`}
     >
       <div className="flex items-start justify-between mb-2 pl-0.5 -mr-1.5 -mt-1">
         <Subtext className="text-[9px] font-extrabold text-gray-400 font-mono  mt-1.5">#{String(t.id).padStart(4, '0')}</Subtext>
@@ -74,7 +74,7 @@ export const SupportTicketsKanbanView: React.FC<Props> = ({
       </div>
       <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-gray-400 text-[9px] ">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full bg-rose-50 text-rose-600 border border-rose-100 flex items-center justify-center text-[8px]  shadow-sm uppercase">
+          <div className="w-6 h-6 rounded-full bg-rose-50 text-rose-600 border border-rose-100 flex items-center justify-center text-[8px]  shadow-none uppercase">
             {t.assigned_profile?.full_name?.charAt(0) || '?'}
           </div>
           <Label className=" text-gray-500">{t.assigned_profile?.full_name?.split(' ')[0]}</Label>

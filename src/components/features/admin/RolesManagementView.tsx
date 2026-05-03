@@ -66,7 +66,7 @@ export const RolesManagementView: React.FC<Props> = ({ company, roles, onUpdate 
 
   return (
     <div className="flex flex-col space-y-6">
-      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border-2 border-gray-300 shadow-none shrink-0">
         <div>
           <H2 className="text-xl ">Manajemen Role</H2>
           <Subtext className="text-[10px] uppercase font-semibold text-gray-400">Konfigurasi hak akses dan perizinan fitur untuk setiap jabatan.</Subtext>
@@ -74,7 +74,7 @@ export const RolesManagementView: React.FC<Props> = ({ company, roles, onUpdate 
         <Button
           onClick={() => { setRoleForm({ id: '', name: '', permissions: [] }); setIsRoleModalOpen(true); }}
           leftIcon={<Plus size={14} strokeWidth={3} />}
-          className="!px-6 py-2.5 text-[10px] uppercase shadow-lg shadow-blue-100"
+          className="!px-6 py-2.5 text-[10px] uppercase shadow-none"
           variant='primary'
           size='sm'
         >
@@ -82,7 +82,7 @@ export const RolesManagementView: React.FC<Props> = ({ company, roles, onUpdate 
         </Button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm flex flex-col relative">
+      <div className="bg-white rounded-2xl border-2 border-gray-300 overflow-hidden shadow-none flex flex-col relative">
         <Table>
           <TableHeader>
             <TableRow>
@@ -96,7 +96,7 @@ export const RolesManagementView: React.FC<Props> = ({ company, roles, onUpdate 
               <TableRow key={r.id}>
                 <TableCell className="py-4 px-6">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-500 shadow-sm">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-50 border-2 border-indigo-100 flex items-center justify-center text-indigo-500 shadow-none">
                       <Shield size={14} />
                     </div>
                     <Label className="text-[13px] font-semibold text-gray-900">{r.name}</Label>

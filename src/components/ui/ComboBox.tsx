@@ -208,7 +208,7 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
 
       {isOpen && (
         <div
-          className={`combobox-dropdown fixed bg-white border border-gray-100 rounded-md shadow-2xl z-[9999] py-3 animate-in fade-in zoom-in-95 duration-200 ${dropdownPosition.placement === 'top' ? 'origin-bottom' : 'origin-top'
+          className={`combobox-dropdown fixed bg-white border-2 border-gray-300 rounded-md shadow-none z-[9999] py-3 animate-in fade-in zoom-in-95 duration-200 ${dropdownPosition.placement === 'top' ? 'origin-bottom' : 'origin-top'
             }`}
           style={{
             top: dropdownPosition.placement === 'top' ? 'auto' : `${dropdownPosition.top}px`,
@@ -257,7 +257,7 @@ export const ComboBox: React.FC<ComboBoxProps> = ({
                 </div>
               ))
             ) : (
-              <div className="py-8 text-center bg-gray-50/50 rounded-md mx-2 border border-dashed border-gray-100">
+              <div className="py-8 text-center bg-gray-50/50 rounded-md mx-2 border border-dashed border-gray-200">
                 <span className="text-xs text-gray-400">Tidak ada hasil ditemukan</span>
               </div>
             )}

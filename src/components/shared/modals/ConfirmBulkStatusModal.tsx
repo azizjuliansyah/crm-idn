@@ -60,7 +60,7 @@ export const ConfirmBulkStatusModal: React.FC<ConfirmBulkStatusModalProps> = ({
             disabled={isProcessing || !selectedStatus}
             variant="primary"
             size="sm"
-            className="px-6 uppercase text-[10px] shadow-lg shadow-emerald-100/50"
+            className="px-6 uppercase text-[10px] shadow-none"
           >
             Terapkan
           </Button>
@@ -69,7 +69,7 @@ export const ConfirmBulkStatusModal: React.FC<ConfirmBulkStatusModalProps> = ({
     >
       <div className="flex flex-col gap-6 py-2">
         <div className="flex items-start gap-4">
-          <div className="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center shrink-0 border border-emerald-100/50 shadow-sm">
+          <div className="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center shrink-0 border border-emerald-100/50 shadow-none">
             <RefreshCw size={24} strokeWidth={2.5} />
           </div>
           <div className="flex-1 space-y-1">

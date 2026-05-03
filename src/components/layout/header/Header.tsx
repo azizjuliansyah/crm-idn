@@ -26,7 +26,7 @@ export const Header: React.FC<HeaderProps> = ({
   const isHidden = ['buat_penawaran', 'edit_penawaran', 'buat_proforma', 'edit_proforma', 'buat_invoice', 'edit_invoice', 'buat_kwitansi', 'edit_kwitansi', 'buat_request_invoice', 'edit_request_invoice'].includes(activeView);
 
   return (
-    <header className={`sticky top-0 z-10 ${isAdmin && !activeCompany ? 'bg-black/80 border-gray-900' : 'bg-white/80 border-gray-100'} backdrop-blur-md px-6 lg:px-10 h-20 flex items-center border-b ${isHidden ? 'hidden' : ''}`}>
+    <header className={`sticky top-0 z-10 ${isAdmin && !activeCompany ? 'bg-black/80 border-gray-900' : 'bg-white/80 border-gray-300'} backdrop-blur-md px-6 lg:px-10 h-20 flex items-center border-b-2 ${isHidden ? 'hidden' : ''}`}>
       <Button
         onClick={() => {
           if (typeof window !== 'undefined' && window.innerWidth < 1024) {

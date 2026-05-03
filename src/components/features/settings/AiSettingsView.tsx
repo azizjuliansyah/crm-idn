@@ -82,17 +82,17 @@ export const AiSettingsView: React.FC<Props> = ({ company }) => {
 
   return (
     <div className="max-w-3xl flex flex-col space-y-6">
-      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border-2 border-gray-300 shadow-none shrink-0">
         <div>
           <H2 className="text-xl">Konfigurasi Gemini AI</H2>
           <Subtext className="text-[10px] uppercase font-semibold text-gray-400">Hubungkan workspace Anda dengan Google Gemini untuk fitur cerdas.</Subtext>
         </div>
-        <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shadow-sm">
+        <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center border-2 border-indigo-100/50 shadow-none">
           <BrainCircuit size={20} />
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border-2 border-gray-300 shadow-none overflow-hidden">
         <form onSubmit={handleSave} className="p-8 space-y-6">
           <ComboBox
             label="Model Gemini"
@@ -131,7 +131,7 @@ export const AiSettingsView: React.FC<Props> = ({ company }) => {
               isLoading={isProcessing}
               leftIcon={!isProcessing && <Save size={16} />}
               variant='primary'
-              className="!px-8 shadow-lg shadow-indigo-100"
+              className="!px-8 shadow-none"
             >
               Simpan Konfigurasi
             </Button>

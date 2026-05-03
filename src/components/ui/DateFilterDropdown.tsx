@@ -95,7 +95,7 @@ export const DateFilterDropdown: React.FC<DateFilterDropdownProps> = ({
 
             {isOpen && (
                 <div 
-                    className="fixed w-[280px] bg-white border border-gray-100 rounded-xl shadow-2xl z-[9999] py-3 animate-in fade-in zoom-in duration-200 origin-top-right"
+                    className="fixed w-[280px] bg-white border-2 border-gray-300 rounded-xl shadow-none z-[9999] py-3 animate-in fade-in zoom-in duration-200 origin-top-right"
                     style={{
                         top: `${dropdownPosition.top}px`,
                         left: `${Math.max(10, Math.min(dropdownPosition.left, window.innerWidth - 290))}px`, // Ensure it doesn't go off screen left or right
@@ -130,7 +130,7 @@ export const DateFilterDropdown: React.FC<DateFilterDropdownProps> = ({
                     </div>
 
                     {(value === 'custom') && (
-                        <div className="mt-3 mx-4 pt-3 border-t border-gray-100 space-y-3">
+                        <div className="mt-3 mx-4 pt-3 border-t border-gray-200 space-y-3">
                             <div className="space-y-1">
                                 <label className="text-[10px] font-medium text-gray-400 uppercase ">Mulai Tanggal</label>
                                 <Input

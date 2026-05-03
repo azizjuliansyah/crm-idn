@@ -61,7 +61,7 @@ export const ClientCompaniesTableView: React.FC<Props> = ({
       sortable: true,
       render: (item) => (
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center shrink-0 shadow-sm border border-indigo-100 text-xs font-bold uppercase">
+          <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center shrink-0 shadow-none border border-indigo-100 text-xs font-bold uppercase">
             {item.name?.charAt(0) || '?'}
           </div>
           <div className="min-w-0">
@@ -80,7 +80,7 @@ export const ClientCompaniesTableView: React.FC<Props> = ({
       render: (item) => {
         const itemCategory = categories.find(c => c.id === item.category_id);
         return (
-          <Label className="px-3 py-1 bg-white border border-gray-100 rounded-full text-[9px] uppercase text-gray-500 shadow-sm">
+          <Label className="px-3 py-1 bg-white border border-gray-100 rounded-full text-[9px] uppercase text-gray-500 shadow-none">
             {itemCategory?.name || 'UMUM'}
           </Label>
         );

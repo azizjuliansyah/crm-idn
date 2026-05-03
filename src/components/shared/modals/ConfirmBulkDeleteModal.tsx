@@ -43,7 +43,7 @@ export const ConfirmBulkDeleteModal: React.FC<ConfirmBulkDeleteModalProps> = ({
             disabled={isProcessing}
             variant="danger"
             size="sm"
-            className="px-6 uppercase text-[10px] shadow-lg shadow-rose-100"
+            className="px-6 uppercase text-[10px] shadow-none"
           >
             Ya, Hapus Semua
           </Button>
@@ -52,7 +52,7 @@ export const ConfirmBulkDeleteModal: React.FC<ConfirmBulkDeleteModalProps> = ({
     >
       <div className="flex flex-col gap-6 py-2">
         <div className="flex items-start gap-4">
-          <div className="w-12 h-12 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center shrink-0 border border-rose-100/50 shadow-sm">
+          <div className="w-12 h-12 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center shrink-0 border border-rose-100/50 shadow-none">
             <AlertTriangle size={24} strokeWidth={2.5} />
           </div>
           <div className="flex-1 space-y-1">

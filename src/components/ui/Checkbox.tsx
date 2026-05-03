@@ -29,7 +29,7 @@ export const Checkbox: React.FC<CheckboxProps> = ({
             }}
             className={`
         w-5 h-5 rounded-md flex items-center justify-center border transition-all cursor-pointer mx-auto
-        ${checked ? variants[variant] + ' text-white scale-105 shadow-sm' : 'bg-white border-gray-200 text-transparent hover:border-gray-300'}
+        ${checked ? variants[variant] + ' text-white scale-105 shadow-none' : 'bg-white border-2 border-gray-300 text-transparent hover:border-blue-500'}
         ${className}
       `}
         >

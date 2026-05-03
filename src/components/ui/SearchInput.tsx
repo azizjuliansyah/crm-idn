@@ -14,7 +14,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
       </div>
       <input
         type="text"
-        className={`w-full pl-11 pr-4 py-3 bg-white border border-gray-100 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-50 transition-all text-sm font-medium text-gray-900 hover:border-gray-200 ${className}`}
+        className={`w-full pl-11 pr-4 py-3 bg-white border-2 border-gray-300 rounded-xl outline-none focus:border-blue-500 transition-all text-sm font-medium text-gray-900 ${className}`}
         {...props}
       />
     </div>

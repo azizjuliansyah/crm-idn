@@ -23,12 +23,12 @@ const PermissionsList: React.FC<PermissionListProps> = ({ available, selected, o
           onChange={(e) => setSearchTerm(e.target.value)} 
         />
       </div>
-      <div className="max-h-[60vh] overflow-y-auto border border-gray-100 rounded-xl rounded-b-none custom-scrollbar">
+      <div className="max-h-[60vh] overflow-y-auto border-2 border-gray-300 rounded-xl rounded-b-none custom-scrollbar">
         <Table>
           <TableBody>
             {filteredPermissions.length > 0 ? (
               filteredPermissions.map(perm => (
-                <TableRow key={perm} className="border-b border-gray-50 last:border-b-0 hover:bg-gray-50/50 transition-colors">
+                <TableRow key={perm} className="border-b-2 border-gray-100 last:border-b-0 hover:bg-gray-50/50 transition-colors">
                   <TableCell className="py-3 px-4">
                     <Label className="text-[13px] font-medium text-gray-700">{perm}</Label>
                   </TableCell>
@@ -51,7 +51,7 @@ const PermissionsList: React.FC<PermissionListProps> = ({ available, selected, o
         </Table>
       </div>
       {filteredPermissions.length > 0 && (
-         <div className="bg-gray-50 px-4 py-2 text-xs text-gray-500 rounded-b-xl border border-gray-100 border-t-0 flex justify-between">
+         <div className="bg-gray-50 px-4 py-2 text-xs text-gray-500 rounded-b-xl border-2 border-gray-300 border-t-0 flex justify-between">
            <span>Total: {filteredPermissions.length} item</span>
            <span>Terpilih: {selected.length}</span>
          </div>

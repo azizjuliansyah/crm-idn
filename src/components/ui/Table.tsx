@@ -15,7 +15,7 @@ export const Table: React.FC<TableProps> = ({ children, className = '' }) => (
 );
 
 export const TableHeader: React.FC<TableProps> = ({ children, className = '' }) => (
-  <thead className={`bg-gray-50/50 sticky top-0 z-10 backdrop-blur-sm ${className}`}>
+  <thead className={`bg-[#081526] sticky top-0 z-10 ${className}`}>
     {children}
   </thead>
 );
@@ -46,7 +46,7 @@ export const TableCell = React.forwardRef<HTMLTableCellElement, TableCellProps>(
       return (
         <th
           ref={ref as any}
-          className={`px-4 py-3 text-[12px] font-bold text-gray-600 uppercase  border-b border-gray-100 ${className}`}
+          className={`px-4 py-3 text-[12px] font-bold text-white uppercase border-b border-white/5 bg-[#081526] ${className}`}
           {...props}
         >
           {children}
@@ -156,7 +156,7 @@ export const TableContainer: React.FC<TableContainerProps> = ({
   className = '',
   containerClassName = ''
 }) => (
-  <div className={`bg-white rounded-2xl border border-gray-100 shadow-sm text-gray-900 flex flex-col overflow-hidden ${height} ${containerClassName}`}>
+  <div className={`bg-white rounded-2xl border-2 border-gray-300 text-gray-900 flex flex-col overflow-hidden ${height} ${containerClassName}`}>
     <div className={`overflow-x-auto overflow-y-auto flex-1 custom-scrollbar scroll-smooth outline-none ${className}`}>
       {children}
     </div>

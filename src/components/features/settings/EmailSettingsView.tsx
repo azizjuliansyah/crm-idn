@@ -90,9 +90,9 @@ export const EmailSettingsView: React.FC<Props> = ({ company }) => {
 
   return (
     <div className="max-w-3xl flex flex-col gap-6">
-      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+      <div className="bg-white p-4 rounded-2xl border-2 border-gray-300 shadow-none shrink-0">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shadow-sm border border-indigo-100/50">
+          <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center border-2 border-indigo-100/50 shadow-none">
             <Mail size={20} strokeWidth={2.5} />
           </div>
           <div>
@@ -102,7 +102,7 @@ export const EmailSettingsView: React.FC<Props> = ({ company }) => {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm flex-1">
+      <div className="bg-white rounded-2xl border-2 border-gray-300 overflow-hidden shadow-none flex-1">
 
         <form onSubmit={handleSave} className="p-8 space-y-6">
           <div className="space-y-2">

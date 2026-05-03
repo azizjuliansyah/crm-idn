@@ -25,11 +25,11 @@ export const Button: React.FC<ButtonProps> = ({
   const baseStyles = 'inline-flex items-center uppercase font-medium transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none cursor-pointer';
 
   const variants = {
-    primary: 'bg-blue-600 text-white shadow-lg shadow-blue-100 hover:bg-blue-700',
+    primary: 'bg-blue-600 text-white shadow-none hover:bg-blue-700',
     secondary: 'bg-gray-100 text-gray-600 hover:bg-gray-200',
-    danger: 'bg-rose-600 text-white shadow-lg shadow-rose-100 hover:bg-rose-700',
-    success: 'bg-emerald-600 text-white shadow-lg shadow-emerald-100 hover:bg-emerald-700',
-    indigo: 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 hover:bg-indigo-700',
+    danger: 'bg-rose-600 text-white shadow-none hover:bg-rose-700',
+    success: 'bg-emerald-600 text-white shadow-none hover:bg-emerald-700',
+    indigo: 'bg-indigo-600 text-white shadow-none hover:bg-indigo-700',
     ghost: 'bg-transparent text-gray-500 hover:bg-gray-50',
     'ghost-dark': 'bg-transparent text-gray-400 hover:bg-white/5 hover:text-white',
   };

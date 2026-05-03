@@ -231,17 +231,17 @@ export const SalesAutonumberView: React.FC<Props> = ({ company }) => {
 
   return (
     <div className="max-w-5xl flex flex-col space-y-6">
-      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border-2 border-gray-300 shadow-none shrink-0">
         <div>
           <H2 className="text-xl ">Format Nomor Otomatis</H2>
           <Subtext className="text-[10px] uppercase font-semibold text-gray-400">Atur pola penomoran dokumen untuk Quotation, Proforma, Invoice, dan Kwitansi.</Subtext>
         </div>
-        <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shadow-sm">
+        <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center border-2 border-blue-100/50 shadow-none">
           <Hash size={20} />
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border-2 border-gray-300 shadow-none overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
@@ -256,8 +256,8 @@ export const SalesAutonumberView: React.FC<Props> = ({ company }) => {
               return (
                 <TableRow key={s.id} className="group cursor-pointer" onClick={() => handleOpenEdit(s)}>
                   <TableCell className="px-6 py-4">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${style.gradient} text-white flex items-center justify-center shadow-md ${style.shadow}`}>
+                    <div className={`flex items-center gap-4`}>
+                      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${style.gradient} text-white flex items-center justify-center border-2 border-white/20 shadow-none`}>
                         {style.icon}
                       </div>
                       <div>
@@ -309,7 +309,7 @@ export const SalesAutonumberView: React.FC<Props> = ({ company }) => {
               onClick={handleSave}
               isLoading={isProcessing}
               leftIcon={<Save size={16} />}
-              className="!px-8 !py-3 shadow-xl"
+              className="!px-8 !py-3 shadow-none border-2 border-blue-600"
             >
               Update Konfigurasi
             </Button>
@@ -347,7 +347,7 @@ export const SalesAutonumberView: React.FC<Props> = ({ company }) => {
                       <Label>Tambah Tag Kode</Label>
                     </Button>
                     {isCodeDropdownOpen && (
-                      <div className="absolute top-[calc(100%+6px)] left-0 right-0 bg-white border border-gray-100 shadow-2xl rounded-2xl p-2 z-[100] overflow-hidden">
+                      <div className="absolute top-[calc(100%+6px)] left-0 right-0 bg-white border-2 border-gray-300 shadow-none rounded-2xl p-2 z-[100] overflow-hidden">
                         <div className="max-h-56 overflow-y-auto custom-scrollbar">
                           {codeOptions.map(t => (
                             <Button
@@ -400,7 +400,7 @@ export const SalesAutonumberView: React.FC<Props> = ({ company }) => {
                     { id: 'monthly', label: 'Setiap bulan' },
                     { id: 'yearly', label: 'Setiap tahun' }
                   ].map((opt) => (
-                    <Label key={opt.id} className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${form.reset_period === opt.id ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
+                    <Label key={opt.id} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all cursor-pointer ${form.reset_period === opt.id ? 'bg-blue-50 border-blue-400' : 'bg-white border-gray-300 hover:border-gray-400'}`}>
                       <div className="relative flex items-center justify-center">
                         <Input
                           type="radio"

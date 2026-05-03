@@ -67,7 +67,7 @@ export const Modal: React.FC<ModalProps> = ({
     >
       <div
         ref={modalRef}
-        className={`w-full ${sizeClasses[size]} bg-white rounded-2xl shadow-2xl shadow-gray-900/10 overflow-hidden transform text-gray-900`}
+        className={`w-full ${sizeClasses[size]} bg-white rounded-2xl border-2 border-gray-300 overflow-hidden transform text-gray-900 shadow-none`}
       >
         {!hideClose && (
           <div className={`px-8 pt-8 pb-4 flex items-center justify-between border-b border-gray-50 ${title === '' ? 'absolute top-0 right-0 z-50 border-none bg-transparent' : ''}`}>
@@ -86,7 +86,7 @@ export const Modal: React.FC<ModalProps> = ({
         </div>
 
         {footer && (
-          <div className="px-8 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+          <div className="px-8 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
             {footer}
           </div>
         )}
@@ -110,13 +110,13 @@ export const PermissionsList: React.FC<{
             key={perm}
             onClick={() => onToggle(perm)}
             type="button"
-            className={`flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer ${isSelected
-              ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-sm'
-              : 'bg-white border-gray-100 text-gray-500 hover:border-gray-200'
+            className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all cursor-pointer ${isSelected
+              ? 'bg-blue-50 border-blue-200 text-blue-700 shadow-none'
+              : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
               }`}
           >
             <span className="text-xs  uppercase ">{perm}</span>
-            <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-all ${isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'bg-gray-50 border-gray-200'
+            <div className={`w-5 h-5 rounded-md flex items-center justify-center border-2 transition-all ${isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'bg-gray-50 border-gray-200'
               }`}>
               {isSelected && <Check size={12} strokeWidth={4} />}
             </div>

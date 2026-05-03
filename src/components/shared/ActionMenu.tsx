@@ -55,7 +55,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ children, triggerClassNa
       {isOpen && (
         <div 
           ref={menuRef}
-          className="fixed bg-white border border-gray-100 rounded-lg shadow-xl z-[9999] py-1 animate-in fade-in zoom-in duration-200 origin-top-right w-48"
+          className="fixed bg-white border-2 border-gray-300 rounded-lg shadow-none z-[9999] py-1 animate-in fade-in zoom-in duration-200 origin-top-right w-48"
           style={{
             top: `${position.top + 8}px`,
             left: `${position.left}px`,

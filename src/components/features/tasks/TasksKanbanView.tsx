@@ -52,7 +52,7 @@ export const TasksKanbanView: React.FC<Props> = ({
   const renderTaskCard = (t: KanbanTask, isDragged: boolean) => (
     <div
       onClick={() => onEdit(t)}
-      className={`group p-3.5 bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-lg hover:border-emerald-200 transition-all cursor-pointer relative ${isDragged ? 'opacity-30' : ''}`}
+      className={`group p-3.5 bg-white border-2 border-gray-300 rounded-xl hover:border-emerald-500 transition-all cursor-pointer relative ${isDragged ? 'opacity-30' : ''}`}
     >
       <div className="flex items-center justify-between mb-2">
         <Badge variant="ghost" className="px-1.5 py-0 border border-gray-100 text-[7px] text-gray-400 uppercase bg-gray-50">T-{String(t.id).padStart(3, '0')}</Badge>
@@ -67,7 +67,7 @@ export const TasksKanbanView: React.FC<Props> = ({
       <H2 className="text-[12px] font-semibold text-gray-800 mb-3 leading-tight group-hover:text-emerald-600 transition-colors uppercase line-clamp-2">{t.title}</H2>
       <div className="flex items-center justify-between pt-3 border-t border-gray-50">
         <div className="flex items-center gap-1.5">
-          <Avatar name={t.assigned_profile?.full_name} src={t.assigned_profile?.avatar_url} size="sm" className="w-5 h-5 ring-2 ring-white shadow-sm " />
+          <Avatar name={t.assigned_profile?.full_name} src={t.assigned_profile?.avatar_url} size="sm" className="w-5 h-5 ring-2 ring-white shadow-none " />
           <Label className="text-[8px] text-gray-400 uppercase ">{t.assigned_profile?.full_name?.split(' ')[0] || 'TBD'}</Label>
         </div>
         {t.end_date && (

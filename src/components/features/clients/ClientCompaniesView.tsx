@@ -236,7 +236,7 @@ export const ClientCompaniesView: React.FC<Props> = ({
   };
 
   if (loading && items.length === 0) return (
-    <div className="flex flex-col items-center justify-center py-24 bg-white rounded-2xl border border-gray-100 min-h-[400px]">
+    <div className="flex flex-col items-center justify-center py-24 bg-white rounded-2xl border-2 border-gray-300 shadow-none min-h-[400px]">
       <LoaderIcon className="animate-spin text-indigo-600 mb-4" size={32} />
       <Subtext className="text-[10px] lowercase uppercase text-gray-400">Sinkronisasi Data Perusahaan...</Subtext>
     </div>
@@ -260,7 +260,7 @@ export const ClientCompaniesView: React.FC<Props> = ({
           selectedIds.length > 0 && (
             <Button
               onClick={() => setIsConfirmBulkOpen(true)}
-              className="px-4 py-2.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl text-[10px] uppercase flex items-center gap-2 hover:bg-rose-600 hover:text-white transition-all shadow-sm font-bold"
+              className="px-4 py-2.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl text-[10px] uppercase flex items-center gap-2 hover:bg-rose-600 hover:text-white transition-all shadow-none font-bold"
             >
               <Trash2 size={14} /> Hapus {selectedIds.length} Item
             </Button>
