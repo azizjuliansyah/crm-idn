@@ -10,7 +10,7 @@ import {
 } from '@/components/ui';
 import { StandardFilterBar } from '@/components/shared/filters/StandardFilterBar';
 import { ActionMenu } from '@/components/shared/ActionMenu';
-import { Company, Profile, CompanyRole } from '@/lib/types';
+import { Company, Profile, CompanyRole, Package } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import { PlatformWorkspaceFormModal } from './components/PlatformWorkspaceFormModal';
 import { PlatformAccessModal } from './components/PlatformAccessModal';
@@ -290,24 +290,22 @@ export const AdminCompaniesView: React.FC<AdminCompaniesViewProps> = ({
                     Atur Anggota
                   </Button>
                 </TableCell>
-                <TableCell className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="p-2 text-blue-500"
-                    onClick={() => { setCoForm({ id: co.id, name: co.name, address: co.address, package_id: co.package_id || null }); setIsCoModalOpen(true); }}
-                  >
-                    <Edit2 size={16} />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="p-2 text-red-500"
-                    onClick={() => { setPendingDelete({ id: co.id, type: 'company' }); setIsConfirmModalOpen(true); }}
-                  >
-                    <Trash2 size={16} />
-                  </Button>
+                <TableCell className="text-center">
                   <ActionMenu>
+                    <button
+                      onClick={() => { setCoForm({ id: co.id, name: co.name, address: co.address, package_id: co.package_id || null }); setIsCoModalOpen(true); }}
+                      className="w-full text-left px-4 py-2 text-xs font-medium text-blue-600 hover:bg-blue-50 flex items-center gap-2 transition-colors"
+                    >
+                      <Edit2 size={14} />
+                      Edit Workspace
+                    </button>
+                    <button
+                      onClick={() => { setPendingDelete({ id: co.id, type: 'company' }); setIsConfirmModalOpen(true); }}
+                      className="w-full text-left px-4 py-2 text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
+                    >
+                      <Trash2 size={14} />
+                      Hapus Workspace
+                    </button>
                     <button
                       onClick={() => handleToggleSuspension(co.id, !!co.is_suspended)}
                       className="w-full text-left px-4 py-2 text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"

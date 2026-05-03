@@ -29,25 +29,35 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ children, triggerClassNa
     };
   }, [isOpen]);
 
-  const toggleMenu = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!isOpen && triggerRef.current) {
+  const updatePosition = () => {
+    if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       setPosition({
-        top: rect.bottom + window.scrollY,
-        left: rect.right - 192, // 192 is the width of the menu (w-48)
+        top: rect.bottom + 8,
+        left: rect.right - 192,
       });
     }
-    setIsOpen(!isOpen);
   };
 
+  useEffect(() => {
+    if (isOpen) {
+      updatePosition();
+      window.addEventListener('scroll', updatePosition, true);
+      window.addEventListener('resize', updatePosition);
+    }
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [isOpen]);
+
   return (
-    <div className="relative" ref={triggerRef}>
+    <div className="relative inline-block" ref={triggerRef}>
       <Button
         variant="ghost"
         size="sm"
         className={`p-2 text-gray-400 hover:text-gray-600 transition-none ${triggerClassName}`}
-        onClick={toggleMenu}
+        onClick={() => setIsOpen(!isOpen)}
       >
         <MoreVertical size={16} />
       </Button>
@@ -55,9 +65,9 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ children, triggerClassNa
       {isOpen && (
         <div 
           ref={menuRef}
-          className="fixed bg-white border-2 border-gray-300 rounded-lg shadow-none z-[9999] py-1 origin-top-right w-48 transition-none"
+          className="fixed bg-white border-2 border-gray-300 rounded-lg shadow-xl z-[9999] py-1 w-48 origin-top-right transition-none"
           style={{
-            top: `${position.top + 8}px`,
+            top: `${position.top}px`,
             left: `${position.left}px`,
           }}
         >

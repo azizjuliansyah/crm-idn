@@ -7,7 +7,7 @@ interface TableProps {
 }
 
 export const Table: React.FC<TableProps> = ({ children, className = '' }) => (
-  <div className={`overflow-x-auto w-full custom-scrollbar outline-none ${className}`}>
+  <div className={`overflow-x-auto w-full custom-scrollbar outline-none rounded-2xl overflow-hidden ${className}`}>
     <table className="w-full text-left border-collapse">
       {children}
     </table>

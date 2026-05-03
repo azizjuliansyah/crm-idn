@@ -18,7 +18,7 @@ export const Card: React.FC<CardProps> = ({
   contentClassName = '',
 }) => {
   return (
-    <div className={`bg-white rounded-2xl border-2 border-gray-300 text-gray-900 ${className}`}>
+    <div className={`bg-white rounded-2xl border-2 border-gray-300 text-gray-900 overflow-hidden ${className}`}>
       {(title || action) && (
         <div className="p-8 border-b border-gray-50 flex items-center justify-between">
           <div>

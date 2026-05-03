@@ -12,16 +12,20 @@ interface SidebarFooterProps {
   currentRoleName: string;
   onLogout: () => void;
   setIsSidebarOpen: (open: boolean) => void;
+  isAdmin?: boolean;
+  activeCompany?: any;
 }
 
 export const SidebarFooter: React.FC<SidebarFooterProps> = ({
   user,
   currentRoleName,
   onLogout,
-  setIsSidebarOpen
+  setIsSidebarOpen,
+  isAdmin,
+  activeCompany
 }) => {
   return (
-    <div className="p-4 border-t border-slate-800 flex items-center justify-between gap-2 bg-[#081526]/50">
+    <div className={`p-4 border-t border-slate-800 flex items-center justify-between gap-2 ${isAdmin && !activeCompany ? 'bg-black' : 'bg-[#081526]/50'}`}>
       <Link 
         href={getPathFromViewId('profil_saya')} 
         className="flex-1 flex items-center gap-3 overflow-hidden p-2 rounded-xl text-left cursor-pointer hover:bg-white/5 transition-all border border-transparent hover:border-slate-700 group" 

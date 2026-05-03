@@ -51,7 +51,7 @@ export const WorkspaceSelector: React.FC<WorkspaceSelectorProps> = ({
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
           variant="ghost-dark"
           align="left" size='sm'
-          className={`w-full group flex items-center gap-3 p-3 rounded-2xl transition-all duration-300 border-2 cursor-pointer !normal-case ! ${isDropdownOpen ? 'bg-slate-800 border-slate-600 shadow-none' : 'bg-slate-800/40 border-slate-800 hover:border-slate-700 hover:bg-white/5 shadow-none'}`}
+          className={`w-full group flex items-center gap-3 p-3 rounded-2xl transition-all duration-300 border-2 cursor-pointer !normal-case ! ${isDropdownOpen ? 'bg-slate-800 border-slate-600 shadow-none' : (!activeCompany && isAdmin) ? 'bg-gray-900 border-gray-800 hover:border-gray-700' : 'bg-slate-800/40 border-slate-800 hover:border-slate-700 hover:bg-white/5 shadow-none'}`}
         >
           <div className="relative">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-medium text-xs shadow-none transition-transform group-hover:scale-105 duration-300 overflow-hidden ${(!activeCompany && isAdmin) ? 'bg-blue-600' : 'bg-slate-800'}`}>

@@ -8,6 +8,8 @@ import {
   Button, Table, TableHeader, TableBody, TableRow, TableCell, 
   Subtext, Card, Toast, ToastType, Modal, Input 
 } from '@/components/ui';
+import { StandardFilterBar } from '@/components/shared/filters/StandardFilterBar';
+import { ActionMenu } from '@/components/shared/ActionMenu';
 import { Package as PackageType } from '@/lib/types';
 import { supabase } from '@/lib/supabase';
 import { ConfirmDeleteModal } from '@/components/shared/modals/ConfirmDeleteModal';
@@ -104,20 +106,18 @@ export const AdminPackagesView: React.FC<AdminPackagesViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
-      <Card
+    <div className="flex flex-col gap-6">
+      <StandardFilterBar
         title="Master Paket"
-        action={
-          <Button
-            onClick={() => { setForm({ id: null, name: '', max_members: 1 }); setIsModalOpen(true); }}
-            size="sm"
-            variant='primary'
-            leftIcon={<Plus size={16} />}
-          >
-            Tambah Paket
-          </Button>
-        }
-      >
+        subtitle={`Total ${packages.length} paket tersedia`}
+        primaryAction={{
+          label: "Tambah Paket",
+          onClick: () => { setForm({ id: null, name: '', max_members: 1 }); setIsModalOpen(true); },
+          icon: <Plus size={14} />
+        }}
+      />
+
+      <Card>
         <Table>
           <TableHeader>
             <TableRow>
@@ -142,29 +142,29 @@ export const AdminPackagesView: React.FC<AdminPackagesViewProps> = ({
                     {pkg.max_members} Anggota
                   </span>
                 </TableCell>
-                <TableCell className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="p-2 text-blue-500 hover:bg-blue-50"
-                    onClick={() => { 
-                      setForm({ id: pkg.id, name: pkg.name, max_members: pkg.max_members }); 
-                      setIsModalOpen(true); 
-                    }}
-                  >
-                    <Edit2 size={16} />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="p-2 text-red-500 hover:bg-red-50"
-                    onClick={() => { 
-                      setPendingDelete(pkg.id); 
-                      setIsConfirmModalOpen(true); 
-                    }}
-                  >
-                    <Trash2 size={16} />
-                  </Button>
+                <TableCell className="text-center">
+                  <ActionMenu>
+                    <button
+                      onClick={() => { 
+                        setForm({ id: pkg.id, name: pkg.name, max_members: pkg.max_members }); 
+                        setIsModalOpen(true); 
+                      }}
+                      className="w-full text-left px-4 py-2 text-xs font-medium text-blue-600 hover:bg-blue-50 flex items-center gap-2 transition-colors"
+                    >
+                      <Edit2 size={14} />
+                      Edit Paket
+                    </button>
+                    <button
+                      onClick={() => { 
+                        setPendingDelete(pkg.id); 
+                        setIsConfirmModalOpen(true); 
+                      }}
+                      className="w-full text-left px-4 py-2 text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
+                    >
+                      <Trash2 size={14} />
+                      Hapus Paket
+                    </button>
+                  </ActionMenu>
                 </TableCell>
               </TableRow>
             ))}

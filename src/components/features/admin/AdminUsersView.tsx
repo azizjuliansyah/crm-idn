@@ -274,34 +274,32 @@ export const AdminUsersView: React.FC<AdminUsersViewProps> = ({
                     Atur Workspace
                   </Button>
                 </TableCell>
-                <TableCell className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="p-2 text-blue-500"
-                    onClick={() => { setFormUser({ id: u.id, full_name: u.full_name, email: u.email, whatsapp: u.whatsapp || '', password: '', platform_role: u.platform_role }); setIsUserModalOpen(true); }}
-                  >
-                    <Edit2 size={16} />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="p-2 text-red-500"
-                    onClick={() => { setPendingDelete({ id: u.id, type: 'user' }); setIsConfirmModalOpen(true); }}
-                  >
-                    <Trash2 size={16} />
-                  </Button>
+                <TableCell className="text-center">
                   <ActionMenu>
                     <button
-                      onClick={() => handleToggleSuspension(u.id, !!u.is_suspended)}
+                      onClick={() => { setFormUser({ id: u.id, full_name: u.full_name, email: u.email, whatsapp: u.whatsapp || '', password: '', platform_role: u.platform_role }); setIsUserModalOpen(true); }}
+                      className="w-full text-left px-4 py-2 text-xs font-medium text-blue-600 hover:bg-blue-50 flex items-center gap-2 transition-colors"
+                    >
+                      <Edit2 size={14} />
+                      Edit User
+                    </button>
+                    <button
+                      onClick={() => { setPendingDelete({ id: u.id, type: 'user' }); setIsConfirmModalOpen(true); }}
                       className="w-full text-left px-4 py-2 text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
+                    >
+                      <Trash2 size={14} />
+                      Hapus User
+                    </button>
+                    <button
+                      onClick={() => handleToggleSuspension(u.id, !!u.is_suspended)}
+                      className="w-full text-left px-4 py-2 text-xs font-medium text-amber-600 hover:bg-amber-50 flex items-center gap-2 transition-colors"
                     >
                       <ShieldAlert size={14} />
                       {u.is_suspended ? 'Aktifkan User' : 'Tangguhkan User'}
                     </button>
                     <button
                       onClick={() => handleResetPassword(u.email)}
-                      className="w-full text-left px-4 py-2 text-xs font-medium text-blue-600 hover:bg-blue-50 flex items-center gap-2 transition-colors"
+                      className="w-full text-left px-4 py-2 text-xs font-medium text-indigo-600 hover:bg-indigo-50 flex items-center gap-2 transition-colors"
                     >
                       <Key size={14} />
                       Kirim Link Reset Password
